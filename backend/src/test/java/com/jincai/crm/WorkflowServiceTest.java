@@ -1,11 +1,14 @@
 package com.jincai.crm;
 
 import com.jincai.crm.common.BusinessException;
+import com.jincai.crm.common.I18nService;
 import com.jincai.crm.notification.repository.NotificationRepository;
 import com.jincai.crm.order.entity.TravelOrder;
-import com.jincai.crm.org.repository.AppUserRepository;
-import com.jincai.crm.org.repository.RoleRepository;
-import com.jincai.crm.org.repository.UserRoleRepository;
+import com.jincai.crm.product.repository.DepartureRepository;
+import com.jincai.crm.product.repository.RouteProductRepository;
+import com.jincai.crm.system.repository.AppUserRepository;
+import com.jincai.crm.system.repository.RoleRepository;
+import com.jincai.crm.system.repository.UserRoleRepository;
 import com.jincai.crm.workflow.repository.WorkflowInstanceNodeRepository;
 import com.jincai.crm.workflow.repository.WorkflowInstanceRepository;
 import com.jincai.crm.workflow.service.WorkflowService;
@@ -41,7 +44,10 @@ class WorkflowServiceTest {
             Mockito.mock(AppUserRepository.class),
             Mockito.mock(UserRoleRepository.class),
             Mockito.mock(RoleRepository.class),
-            Mockito.mock(NotificationRepository.class)
+            Mockito.mock(RouteProductRepository.class),
+            Mockito.mock(DepartureRepository.class),
+            Mockito.mock(NotificationRepository.class),
+            Mockito.mock(I18nService.class)
         );
 
         TravelOrder order = new TravelOrder();
@@ -66,7 +72,10 @@ class WorkflowServiceTest {
             Mockito.mock(AppUserRepository.class),
             Mockito.mock(UserRoleRepository.class),
             Mockito.mock(RoleRepository.class),
-            Mockito.mock(NotificationRepository.class)
+            Mockito.mock(RouteProductRepository.class),
+            Mockito.mock(DepartureRepository.class),
+            Mockito.mock(NotificationRepository.class),
+            Mockito.mock(I18nService.class)
         );
 
         TravelOrder order = new TravelOrder();

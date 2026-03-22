@@ -45,7 +45,7 @@ public class AttachmentService {
             attachment.setContentType(file.getContentType());
             return repository.save(attachment);
         } catch (IOException ex) {
-            throw new BusinessException("File upload failed: " + ex.getMessage());
+            throw new BusinessException("error.file.uploadFailed", ex.getMessage());
         }
     }
 
@@ -54,8 +54,9 @@ public class AttachmentService {
     }
 
     public Resource download(Long id) {
-        Attachment attachment = repository.findById(id).orElseThrow(() -> new BusinessException("Attachment not found"));
+        Attachment attachment = repository.findById(id).orElseThrow(() -> new BusinessException("error.attachment.notFound"));
         return new FileSystemResource(attachment.getFilePath());
     }
 }
+
 

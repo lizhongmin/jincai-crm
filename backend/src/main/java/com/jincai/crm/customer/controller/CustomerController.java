@@ -25,7 +25,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/customers")
-@PreAuthorize("hasAnyRole('ADMIN','SALES_MANAGER','SALES')")
 public class CustomerController {
 
     private final CustomerService customerService;
@@ -35,51 +34,65 @@ public class CustomerController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('MENU_CUSTOMER')")
     public ApiResponse<List<CustomerView>> list() {
         LoginUser user = SecurityUtils.currentUser();
         return ApiResponse.ok(customerService.listVisible(user));
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('BTN_CUSTOMER_CREATE')")
     public ApiResponse<CustomerView> create(@Valid @RequestBody CustomerRequest request) {
         return ApiResponse.ok(customerService.create(request, SecurityUtils.currentUser()));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('BTN_CUSTOMER_EDIT')")
     public ApiResponse<CustomerView> update(@PathVariable Long id, @Valid @RequestBody CustomerRequest request) {
-        return ApiResponse.ok(customerService.update(id, request));
+        return ApiResponse.ok(customerService.update(id, request, SecurityUtils.currentUser()));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('BTN_CUSTOMER_DELETE')")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         customerService.delete(id);
         return ApiResponse.ok(null);
     }
 
     @GetMapping("/{id}/travelers")
+    @PreAuthorize("hasAuthority('MENU_CUSTOMER')")
     public ApiResponse<List<Traveler>> travelers(@PathVariable Long id) {
         return ApiResponse.ok(customerService.listTravelers(id));
     }
 
+    @GetMapping("/owner-options")
+    @PreAuthorize("hasAuthority('MENU_CUSTOMER')")
+    public ApiResponse<List<CustomerOwnerOptionView>> ownerOptions() {
+        return ApiResponse.ok(customerService.listOwnerOptions(SecurityUtils.currentUser()));
+    }
+
     @PostMapping("/{id}/travelers")
+    @PreAuthorize("hasAuthority('BTN_TRAVELER_CREATE')")
     public ApiResponse<Traveler> addTraveler(@PathVariable Long id, @Valid @RequestBody TravelerRequest request) {
         return ApiResponse.ok(customerService.addTraveler(id, request));
     }
 
     @PutMapping("/travelers/{travelerId}")
+    @PreAuthorize("hasAuthority('BTN_TRAVELER_EDIT')")
     public ApiResponse<Traveler> updateTraveler(@PathVariable Long travelerId, @Valid @RequestBody TravelerRequest request) {
         return ApiResponse.ok(customerService.updateTraveler(travelerId, request));
     }
 
     @DeleteMapping("/travelers/{travelerId}")
+    @PreAuthorize("hasAuthority('BTN_TRAVELER_DELETE')")
     public ApiResponse<Void> deleteTraveler(@PathVariable Long travelerId) {
         customerService.deleteTraveler(travelerId);
         return ApiResponse.ok(null);
     }
 
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAuthority('BTN_CUSTOMER_IMPORT')")
     public ApiResponse<ImportResult> importCustomers(@RequestParam("file") MultipartFile file) {
         return ApiResponse.ok(customerService.importCustomers(file, SecurityUtils.currentUser()));
     }
 }
-

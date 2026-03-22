@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/travelers")
-@PreAuthorize("hasAnyRole('ADMIN','SALES_MANAGER','SALES')")
 public class TravelerController {
 
     private final CustomerService customerService;
@@ -25,8 +24,8 @@ public class TravelerController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('MENU_CUSTOMER')")
     public ApiResponse<List<Traveler>> list(@RequestParam(value = "customerId", required = false) Long customerId) {
         return ApiResponse.ok(customerService.listTravelersVisible(customerId));
     }
 }
-

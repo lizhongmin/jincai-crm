@@ -14,10 +14,11 @@ public record WorkflowTemplateRequest(
     @NotBlank String name,
     @NotBlank String orderType,
     @NotBlank String productCategory,
+    Long routeId,
+    Long departureId,
     BigDecimal minAmount,
     BigDecimal maxAmount,
     Boolean active,
     @Valid List<WorkflowNodeRequest> nodes
 ) {
 }
-

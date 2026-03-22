@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 
 public record RouteRequest(
-    @NotBlank String code,
+    String code,
     @NotBlank String name,
     @NotBlank String category,
     String departureCity,

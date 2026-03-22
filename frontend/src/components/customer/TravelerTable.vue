@@ -1,5 +1,5 @@
-<template>
-  <a-table :columns="columns" :data-source="items" row-key="id">
+﻿<template>
+  <a-table :columns="tableColumns" :data-source="items" row-key="id" :scroll="tableScroll">
     <template #bodyCell="{ column, record }">
       <template v-if="column.dataIndex === 'actions'">
         <a-space>
@@ -14,15 +14,58 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{ items: any[] }>();
+import { computed } from 'vue';
+
+const props = withDefaults(defineProps<{ items: any[]; scrollX?: number | false }>(), {
+  scrollX: 900
+});
 defineEmits<{ (event: 'edit', value: any): void; (event: 'remove', value: any): void }>();
 
+const idTypeLabelMap: Record<string, string> = {
+  ID_CARD: '身份证',
+  PASSPORT: '护照',
+  HK_MACAO_PASS: '港澳通行证',
+  TAIWAN_PASS: '台胞证',
+  MILITARY_ID: '军官证',
+  OTHER: '其他'
+};
+
 const columns = [
-  { title: '姓名', dataIndex: 'name', width: 120 },
-  { title: '所属客户', dataIndex: 'customerName', width: 140, customRender: ({ text }: any) => text || '-' },
-  { title: '证件类型', dataIndex: 'idType', width: 120 },
-  { title: '证件号', dataIndex: 'idNo' },
-  { title: '手机号', dataIndex: 'phone', width: 140 },
-  { title: '操作', dataIndex: 'actions', width: 140 }
+  { title: '姓名', dataIndex: 'name', width: 130 },
+  { title: '所属客户', dataIndex: 'customerName', width: 150, customRender: ({ text }: any) => text || '-' },
+  { title: '证件类型', dataIndex: 'idType', width: 120, customRender: ({ text }: any) => idTypeLabelMap[text] || text || '-' },
+  { title: '证件号', dataIndex: 'idNo', width: 220, customRender: ({ text }: any) => text || '-' },
+  { title: '出生日期', dataIndex: 'birthday', width: 130, customRender: ({ text }: any) => text || '-' },
+  {
+    title: '年龄',
+    dataIndex: 'age',
+    width: 90,
+    customRender: ({ record }: any) => {
+      if (record.age === undefined || record.age === null || record.age === '') return '-';
+      return `${record.age}岁`;
+    }
+  },
+  { title: '民族', dataIndex: 'ethnicity', width: 120, customRender: ({ text }: any) => text || '-' },
+  { title: '手机号', dataIndex: 'phone', width: 150, customRender: ({ text }: any) => text || '-' },
+  { title: '操作', dataIndex: 'actions', width: 140, fixed: 'right' }
 ];
+
+const tableColumns = computed(() => {
+  if (props.scrollX === false) {
+    return columns.map((column) => {
+      if (column.dataIndex === 'actions') {
+        return { ...column, fixed: undefined };
+      }
+      return column;
+    });
+  }
+  return columns;
+});
+
+const tableScroll = computed(() => {
+  if (props.scrollX === false) {
+    return undefined;
+  }
+  return { x: props.scrollX };
+});
 </script>

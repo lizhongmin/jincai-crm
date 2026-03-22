@@ -21,7 +21,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping
-@PreAuthorize("hasAnyRole('ADMIN','SALES_MANAGER','SALES')")
 public class ProductController {
 
     private final ProductService productService;
@@ -31,67 +30,104 @@ public class ProductController {
     }
 
     @GetMapping("/routes")
+    @PreAuthorize("hasAuthority('MENU_PRODUCT')")
     public ApiResponse<List<RouteProduct>> routes() {
         return ApiResponse.ok(productService.routes());
     }
 
     @PostMapping("/routes")
+    @PreAuthorize("hasAuthority('BTN_PRODUCT_ROUTE_CREATE')")
     public ApiResponse<RouteProduct> createRoute(@Valid @RequestBody RouteRequest request) {
         return ApiResponse.ok(productService.createRoute(request));
     }
 
     @PutMapping("/routes/{id}")
+    @PreAuthorize("hasAuthority('BTN_PRODUCT_ROUTE_EDIT')")
     public ApiResponse<RouteProduct> updateRoute(@PathVariable Long id, @Valid @RequestBody RouteRequest request) {
         return ApiResponse.ok(productService.updateRoute(id, request));
     }
 
     @DeleteMapping("/routes/{id}")
+    @PreAuthorize("hasAuthority('BTN_PRODUCT_ROUTE_DELETE')")
     public ApiResponse<Void> deleteRoute(@PathVariable Long id) {
         productService.deleteRoute(id);
         return ApiResponse.ok(null);
     }
 
     @GetMapping("/departures")
+    @PreAuthorize("hasAuthority('MENU_PRODUCT')")
     public ApiResponse<List<Departure>> departures(@RequestParam(value = "routeId", required = false) Long routeId) {
         return ApiResponse.ok(productService.departures(routeId));
     }
 
     @PostMapping("/departures")
+    @PreAuthorize("hasAuthority('BTN_PRODUCT_DEPARTURE_CREATE')")
     public ApiResponse<Departure> createDeparture(@Valid @RequestBody DepartureRequest request) {
         return ApiResponse.ok(productService.createDeparture(request));
     }
 
     @PutMapping("/departures/{id}")
+    @PreAuthorize("hasAuthority('BTN_PRODUCT_DEPARTURE_EDIT')")
     public ApiResponse<Departure> updateDeparture(@PathVariable Long id, @Valid @RequestBody DepartureRequest request) {
         return ApiResponse.ok(productService.updateDeparture(id, request));
     }
 
     @DeleteMapping("/departures/{id}")
+    @PreAuthorize("hasAuthority('BTN_PRODUCT_DEPARTURE_DELETE')")
     public ApiResponse<Void> deleteDeparture(@PathVariable Long id) {
         productService.deleteDeparture(id);
         return ApiResponse.ok(null);
     }
 
     @GetMapping("/departures/{id}/prices")
+    @PreAuthorize("hasAuthority('MENU_PRODUCT')")
     public ApiResponse<List<DeparturePrice>> prices(@PathVariable Long id) {
         return ApiResponse.ok(productService.prices(id));
     }
 
     @PostMapping("/departures/{id}/prices")
+    @PreAuthorize("hasAuthority('BTN_PRODUCT_PRICE_CREATE')")
     public ApiResponse<DeparturePrice> addPrice(@PathVariable Long id, @Valid @RequestBody DeparturePriceRequest request) {
         return ApiResponse.ok(productService.addPrice(id, request));
     }
 
     @PutMapping("/departures/{id}/prices/{priceId}")
+    @PreAuthorize("hasAuthority('BTN_PRODUCT_PRICE_EDIT')")
     public ApiResponse<DeparturePrice> updatePrice(@PathVariable Long id, @PathVariable Long priceId,
                                                    @Valid @RequestBody DeparturePriceRequest request) {
         return ApiResponse.ok(productService.updatePrice(id, priceId, request));
     }
 
     @DeleteMapping("/departures/{id}/prices/{priceId}")
+    @PreAuthorize("hasAuthority('BTN_PRODUCT_PRICE_DELETE')")
     public ApiResponse<Void> deletePrice(@PathVariable Long id, @PathVariable Long priceId) {
         productService.deletePrice(id, priceId);
         return ApiResponse.ok(null);
     }
-}
 
+    @GetMapping("/routes/{id}/order-policy")
+    @PreAuthorize("hasAuthority('MENU_PRODUCT')")
+    public ApiResponse<OrderPolicyView> routePolicy(@PathVariable Long id) {
+        return ApiResponse.ok(productService.routePolicy(id));
+    }
+
+    @PutMapping("/routes/{id}/order-policy")
+    @PreAuthorize("hasAuthority('BTN_PRODUCT_ROUTE_EDIT')")
+    public ApiResponse<OrderPolicyView> updateRoutePolicy(@PathVariable Long id,
+                                                          @RequestBody OrderPolicyRequest request) {
+        return ApiResponse.ok(productService.updateRoutePolicy(id, request));
+    }
+
+    @GetMapping("/departures/{id}/order-policy")
+    @PreAuthorize("hasAuthority('MENU_PRODUCT')")
+    public ApiResponse<DepartureOrderPolicyView> departurePolicy(@PathVariable Long id) {
+        return ApiResponse.ok(productService.departurePolicy(id));
+    }
+
+    @PutMapping("/departures/{id}/order-policy")
+    @PreAuthorize("hasAuthority('BTN_PRODUCT_DEPARTURE_EDIT')")
+    public ApiResponse<DepartureOrderPolicyView> updateDeparturePolicy(@PathVariable Long id,
+                                                                       @RequestBody OrderPolicyRequest request) {
+        return ApiResponse.ok(productService.updateDeparturePolicy(id, request));
+    }
+}

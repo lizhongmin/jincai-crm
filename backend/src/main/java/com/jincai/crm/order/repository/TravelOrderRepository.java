@@ -20,6 +20,7 @@ public interface TravelOrderRepository extends JpaRepository<TravelOrder, Long> 
 
     List<TravelOrder> findBySalesDeptIdInAndDeletedFalse(Collection<Long> salesDeptIds);
 
+    List<TravelOrder> findByStatusInAndDeletedFalse(Collection<OrderStatus> statuses);
+
     Optional<TravelOrder> findByOrderNoAndDeletedFalse(String orderNo);
 }
-

@@ -6,9 +6,15 @@ import com.jincai.crm.product.repository.*;
 import com.jincai.crm.product.service.*;
 
 import com.jincai.crm.common.BaseEntity;
+import com.jincai.crm.order.entity.DepositRuleType;
+import com.jincai.crm.order.entity.OrderLockPolicy;
+import com.jincai.crm.order.entity.OrderPaymentPolicy;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -58,5 +64,31 @@ public class RouteProduct extends BaseEntity {
 
     @Column(length = 2000)
     private String description;
-}
 
+    @Column(name = "contract_required_default", nullable = false)
+    private Boolean contractRequiredDefault = false;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "lock_policy_default", nullable = false)
+    private OrderLockPolicy lockPolicyDefault = OrderLockPolicy.ON_DEPOSIT;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_policy_default", nullable = false)
+    private OrderPaymentPolicy paymentPolicyDefault = OrderPaymentPolicy.DEPOSIT_BALANCE;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "deposit_type_default", nullable = false)
+    private DepositRuleType depositTypeDefault = DepositRuleType.PERCENT;
+
+    @Column(name = "deposit_value_default", nullable = false, precision = 18, scale = 2)
+    private BigDecimal depositValueDefault = new BigDecimal("30.00");
+
+    @Column(name = "deposit_deadline_days_default", nullable = false)
+    private Integer depositDeadlineDaysDefault = 3;
+
+    @Column(name = "balance_deadline_days_default", nullable = false)
+    private Integer balanceDeadlineDaysDefault = 7;
+
+    @Column(name = "auto_cancel_hours_default", nullable = false)
+    private Integer autoCancelHoursDefault = 24;
+}

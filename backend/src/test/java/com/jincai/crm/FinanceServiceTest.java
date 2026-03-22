@@ -1,6 +1,7 @@
 package com.jincai.crm;
 
 import com.jincai.crm.common.BusinessException;
+import com.jincai.crm.common.DataScopeResolver;
 import com.jincai.crm.finance.entity.FinanceReview;
 import com.jincai.crm.finance.repository.FinanceReviewRepository;
 import com.jincai.crm.finance.dto.FinanceReviewRequest;
@@ -18,9 +19,11 @@ import com.jincai.crm.finance.dto.ReceiptRequest;
 import com.jincai.crm.finance.repository.ReceiptRepository;
 import com.jincai.crm.finance.entity.Refund;
 import com.jincai.crm.finance.repository.RefundRepository;
+import com.jincai.crm.order.entity.OrderLockPolicy;
 import com.jincai.crm.order.entity.OrderStatus;
 import com.jincai.crm.order.entity.TravelOrder;
 import com.jincai.crm.order.repository.TravelOrderRepository;
+import com.jincai.crm.product.repository.DepartureRepository;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
@@ -49,7 +52,9 @@ class FinanceServiceTest {
             Mockito.mock(RefundRepository.class),
             Mockito.mock(PayableRepository.class),
             Mockito.mock(PaymentRepository.class),
-            Mockito.mock(FinanceReviewRepository.class)
+            Mockito.mock(FinanceReviewRepository.class),
+            Mockito.mock(DepartureRepository.class),
+            Mockito.mock(DataScopeResolver.class)
         );
 
         Assertions.assertThrows(BusinessException.class,
@@ -75,7 +80,9 @@ class FinanceServiceTest {
             Mockito.mock(RefundRepository.class),
             payableRepository,
             Mockito.mock(PaymentRepository.class),
-            Mockito.mock(FinanceReviewRepository.class)
+            Mockito.mock(FinanceReviewRepository.class),
+            Mockito.mock(DepartureRepository.class),
+            Mockito.mock(DataScopeResolver.class)
         );
 
         Assertions.assertThrows(BusinessException.class,
@@ -92,7 +99,8 @@ class FinanceServiceTest {
 
         TravelOrder order = new TravelOrder();
         order.setId(88L);
-        order.setStatus(OrderStatus.FINANCE_IN_PROGRESS);
+        order.setStatus(OrderStatus.SETTLING);
+        order.setLockPolicy(OrderLockPolicy.MANUAL);
 
         Receivable receivable = new Receivable();
         receivable.setId(9L);
@@ -131,7 +139,9 @@ class FinanceServiceTest {
             Mockito.mock(RefundRepository.class),
             payableRepository,
             Mockito.mock(PaymentRepository.class),
-            reviewRepository
+            reviewRepository,
+            Mockito.mock(DepartureRepository.class),
+            Mockito.mock(DataScopeResolver.class)
         );
 
         service.review(7L, new FinanceReviewRequest("RECEIPT", true, "ok"));
@@ -160,7 +170,9 @@ class FinanceServiceTest {
             Mockito.mock(RefundRepository.class),
             Mockito.mock(PayableRepository.class),
             Mockito.mock(PaymentRepository.class),
-            Mockito.mock(FinanceReviewRepository.class)
+            Mockito.mock(FinanceReviewRepository.class),
+            Mockito.mock(DepartureRepository.class),
+            Mockito.mock(DataScopeResolver.class)
         );
 
         Assertions.assertThrows(BusinessException.class,
@@ -185,7 +197,9 @@ class FinanceServiceTest {
             Mockito.mock(RefundRepository.class),
             payableRepository,
             Mockito.mock(PaymentRepository.class),
-            Mockito.mock(FinanceReviewRepository.class)
+            Mockito.mock(FinanceReviewRepository.class),
+            Mockito.mock(DepartureRepository.class),
+            Mockito.mock(DataScopeResolver.class)
         );
 
         Assertions.assertThrows(BusinessException.class,
@@ -211,7 +225,9 @@ class FinanceServiceTest {
             refundRepository,
             Mockito.mock(PayableRepository.class),
             Mockito.mock(PaymentRepository.class),
-            Mockito.mock(FinanceReviewRepository.class)
+            Mockito.mock(FinanceReviewRepository.class),
+            Mockito.mock(DepartureRepository.class),
+            Mockito.mock(DataScopeResolver.class)
         );
 
         Assertions.assertThrows(BusinessException.class, () -> service.deleteRefund(13L));

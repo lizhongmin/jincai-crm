@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/audits")
-@PreAuthorize("hasAnyRole('ADMIN','SALES_MANAGER','FINANCE')")
 public class AuditController {
 
     private final AuditLogService auditLogService;
@@ -24,6 +23,7 @@ public class AuditController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('BTN_AUDIT_VIEW')")
     public ApiResponse<List<AuditLog>> list(@RequestParam("entityType") String entityType,
                                             @RequestParam("entityId") Long entityId) {
         return ApiResponse.ok(auditLogService.list(entityType, entityId));

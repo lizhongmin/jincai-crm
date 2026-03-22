@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <a-drawer
     :open="open"
     :title="model.id ? '编辑订单' : '新建订单'"
@@ -20,8 +20,8 @@
         </a-form-item>
         <a-form-item label="订单类型" required>
           <a-select v-model:value="model.orderType">
-            <a-select-option value="GROUP">GROUP</a-select-option>
-            <a-select-option value="CUSTOM">CUSTOM</a-select-option>
+            <a-select-option value="GROUP">跟团游</a-select-option>
+            <a-select-option value="CUSTOM">定制团</a-select-option>
           </a-select>
         </a-form-item>
       </div>
@@ -54,7 +54,7 @@
             </a-select-option>
           </a-select>
         </a-form-item>
-        <a-form-item label="已选出行人">
+        <a-form-item label="出行人">
           <a-select
             :value="selectedTravelerIds"
             mode="multiple"
@@ -64,7 +64,7 @@
           />
         </a-form-item>
         <a-form-item label="实时报价">
-          <a-input :value="quote ? `${quote.totalAmount} ${quote.currency}` : '等待选择价格项'" disabled />
+          <a-input :value="quote ? `${quote.totalAmount} ${quote.currency}` : '请选择出行人后自动计算'" disabled />
         </a-form-item>
       </div>
 
@@ -73,26 +73,19 @@
         <a-table v-else :columns="priceColumns" :data-source="prices" row-key="id" :pagination="false" size="small" />
       </a-card>
 
-      <a-card size="small" title="出行人价格配置" class="inner-card">
-        <a-empty v-if="!model.travelerSelections.length" description="先选择出行人，再为每位出行人指定价格项" />
+      <a-card size="small" title="出行人价格配置（按年龄自动匹配）" class="inner-card">
+        <a-empty v-if="!model.travelerSelections.length" description="先选择出行人，系统会按出生日期自动匹配价格类型" />
         <div v-else class="selection-list">
           <div v-for="item in model.travelerSelections" :key="item.travelerId" class="selection-row">
             <a-input :value="travelerName(item.travelerId)" disabled />
-            <a-select
-              v-model:value="item.departurePriceId"
-              placeholder="请选择价格项"
-              @change="emit('request-quote')"
-            >
-              <a-select-option v-for="price in prices" :key="price.id" :value="price.id">
-                {{ priceLabel(price) }} - {{ price.price }} {{ price.currency }}
-              </a-select-option>
-            </a-select>
+            <a-input :value="travelerAgeText(item.travelerId)" disabled />
+            <a-input :value="travelerMatchedPriceText(item.travelerId)" disabled />
           </div>
         </div>
       </a-card>
 
       <a-card size="small" title="附加收费项" class="inner-card">
-        <div class="toolbar-row" style="margin-bottom: 12px">
+        <div class="toolbar-row" style="margin-bottom: 10px">
           <a-button @click="addExtraSelection">新增收费项</a-button>
         </div>
         <a-empty v-if="!model.extraSelections.length" description="如单房差、附加包等可在此添加" />
@@ -104,7 +97,7 @@
               @change="emit('request-quote')"
             >
               <a-select-option v-for="price in prices" :key="price.id" :value="price.id">
-                {{ priceLabel(price) }} - {{ price.price }} {{ price.currency }}
+                {{ priceLabel(price) }} - {{ price.price }} {{ currencyLabel(price.currency) }}
               </a-select-option>
             </a-select>
             <a-input-number v-model:value="item.quantity" :min="1" style="width: 120px" @change="emit('request-quote')" />
@@ -129,6 +122,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { CURRENCY_LABEL_MAP, PRICE_TYPE_LABEL_MAP, enumLabel } from '../../constants/display';
 
 const props = defineProps<{
   open: boolean;
@@ -154,9 +148,18 @@ const routeDepartures = computed(() => props.departures.filter((item) => item.ro
 const selectedRoute = computed(() => props.routes.find((item) => item.id === props.model.routeId));
 const selectedTravelerIds = computed(() => props.model.travelerSelections.map((item: any) => item.travelerId));
 const travelerOptions = computed(() => props.travelers.map((item) => ({ label: `${item.name}${item.phone ? ` (${item.phone})` : ''}`, value: item.id })));
+const travelerQuoteMap = computed(() => {
+  const map = new Map<number, any>();
+  (props.quote?.priceItems || []).forEach((item: any) => {
+    if (item.travelerId) {
+      map.set(item.travelerId, item);
+    }
+  });
+  return map;
+});
 
 const priceColumns = [
-  { title: '价格类型', dataIndex: 'priceType', width: 140 },
+  { title: '价格类型', dataIndex: 'priceType', width: 140, customRender: ({ text }: any) => enumLabel(PRICE_TYPE_LABEL_MAP, text) },
   { title: '显示名称', dataIndex: 'priceLabel', width: 180 },
   { title: '价格', dataIndex: 'price', width: 120 },
   { title: '说明', dataIndex: 'description' }
@@ -171,7 +174,28 @@ const quoteColumns = [
 ];
 
 const travelerName = (travelerId: number) => props.travelers.find((item) => item.id === travelerId)?.name || `出行人#${travelerId}`;
-const priceLabel = (price: any) => price.priceLabel || price.priceType;
+const priceLabel = (price: any) => price.priceLabel || enumLabel(PRICE_TYPE_LABEL_MAP, price.priceType);
+const currencyLabel = (value?: string) => enumLabel(CURRENCY_LABEL_MAP, value);
+const travelerAgeText = (travelerId: number) => {
+  const traveler = props.travelers.find((item) => item.id === travelerId);
+  if (!traveler?.birthday) return '年龄：未填写生日';
+  const [year, month, day] = String(traveler.birthday).split('-').map((value) => Number(value));
+  if (!year || !month || !day) return '年龄：生日格式无效';
+  const departure = props.departures.find((item) => item.id === props.model.departureId);
+  const baseDate = departure?.startDate ? new Date(departure.startDate) : new Date();
+  let age = baseDate.getFullYear() - year;
+  const hasBirthdayPassed = (baseDate.getMonth() + 1 > month)
+    || (baseDate.getMonth() + 1 === month && baseDate.getDate() >= day);
+  if (!hasBirthdayPassed) {
+    age -= 1;
+  }
+  return age < 0 ? '年龄：生日无效' : `年龄：${age}岁`;
+};
+const travelerMatchedPriceText = (travelerId: number) => {
+  const priceItem = travelerQuoteMap.value.get(travelerId);
+  if (!priceItem) return '待匹配价格';
+  return `${priceItem.itemName} / ${priceItem.unitPrice} ${currencyLabel(priceItem.currency)}`;
+};
 
 const handleRouteChange = () => {
   if (!routeDepartures.value.some((item) => item.id === props.model.departureId)) {
@@ -213,7 +237,7 @@ const removeExtraSelection = (index: number) => {
 
 <style scoped>
 .inner-card {
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .selection-list {
@@ -223,7 +247,7 @@ const removeExtraSelection = (index: number) => {
 
 .selection-row {
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: 220px 180px 1fr;
   gap: 12px;
 }
 

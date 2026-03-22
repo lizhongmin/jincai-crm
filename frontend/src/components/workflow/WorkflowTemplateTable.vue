@@ -1,5 +1,5 @@
-<template>
-  <a-table :columns="columns" :data-source="items" row-key="template.id">
+﻿<template>
+  <a-table :columns="columns" :data-source="items" row-key="template.id" :scroll="{ x: 980 }">
     <template #bodyCell="{ column, record }">
       <template v-if="column.dataIndex === 'active'">
         <a-tag :color="record.template.active ? 'green' : 'default'">
@@ -22,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-const props = defineProps<{ items: any[] }>();
+defineProps<{ items: any[] }>();
 
 const emit = defineEmits<{
   (e: 'edit', record: any): void;

@@ -3,6 +3,7 @@ package com.jincai.crm.security;
 import com.jincai.crm.common.DataScope;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -18,9 +19,15 @@ public class LoginUser implements UserDetails {
     private final String password;
     private final boolean enabled;
     private final List<String> roleCodes;
+    private final List<String> permissionCodes;
 
     public LoginUser(Long userId, Long departmentId, DataScope dataScope, String username, String password,
                      boolean enabled, List<String> roleCodes) {
+        this(userId, departmentId, dataScope, username, password, enabled, roleCodes, List.of());
+    }
+
+    public LoginUser(Long userId, Long departmentId, DataScope dataScope, String username, String password,
+                     boolean enabled, List<String> roleCodes, List<String> permissionCodes) {
         this.userId = userId;
         this.departmentId = departmentId;
         this.dataScope = dataScope;
@@ -28,11 +35,24 @@ public class LoginUser implements UserDetails {
         this.password = password;
         this.enabled = enabled;
         this.roleCodes = roleCodes;
+        this.permissionCodes = permissionCodes == null ? List.of() : permissionCodes;
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return roleCodes.stream().map(code -> new SimpleGrantedAuthority("ROLE_" + code)).toList();
+        Set<String> authorities = new java.util.LinkedHashSet<>();
+        if (roleCodes != null) {
+            roleCodes.stream()
+                .filter(code -> code != null && !code.isBlank())
+                .map(code -> "ROLE_" + code)
+                .forEach(authorities::add);
+        }
+        if (permissionCodes != null) {
+            permissionCodes.stream()
+                .filter(code -> code != null && !code.isBlank())
+                .forEach(authorities::add);
+        }
+        return authorities.stream().map(SimpleGrantedAuthority::new).toList();
     }
 
     @Override

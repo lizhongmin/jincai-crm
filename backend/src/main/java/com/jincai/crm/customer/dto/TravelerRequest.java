@@ -1,20 +1,22 @@
 package com.jincai.crm.customer.dto;
 
-import com.jincai.crm.customer.controller.*;
-import com.jincai.crm.customer.entity.*;
-import com.jincai.crm.customer.repository.*;
-import com.jincai.crm.customer.service.*;
-
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import java.util.List;
 
 public record TravelerRequest(
     @NotBlank String name,
     String idType,
     String idNo,
     String birthday,
+    String gender,
+    String ethnicity,
+    String nationality,
+    String address,
     String phone,
     String emergencyContact,
-    String preferences
+    String emergencyPhone,
+    String preferences,
+    List<@Valid TravelerDocumentRequest> documents
 ) {
 }
-

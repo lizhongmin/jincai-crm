@@ -2,9 +2,13 @@ import http from './http';
 import type { ApiResponse, DashboardFunnel } from './types';
 
 export const authApi = {
-  login: (payload: { username: string; password: string }) =>
+  login: (payload: { username: string; password: string; captchaId?: string; captchaCode?: string }) =>
     http.post<ApiResponse<{ token: string; userId: number; username: string; fullName: string; roles: string[] }>>('/auth/login', payload),
-  me: () => http.get<ApiResponse<any>>('/auth/me')
+  me: () => http.get<ApiResponse<any>>('/auth/me'),
+  loginState: (username: string) => http.get<ApiResponse<{ captchaRequired: boolean; locked: boolean; lockSeconds: number }>>('/auth/login-state', { params: { username } }),
+  captcha: (username: string) => http.get<ApiResponse<{ captchaId: string; imageBase64: string; expireSeconds: number }>>('/auth/captcha', { params: { username } }),
+  changePassword: (payload: { oldPassword: string; newPassword: string; confirmPassword: string }) =>
+    http.post<ApiResponse<void>>('/auth/change-password', payload)
 };
 
 export const permissionApi = {
@@ -36,8 +40,14 @@ export const orgApi = {
     http.post<ApiResponse<void>>(`/roles/${roleId}/grant`, { permissionIds })
 };
 
+export const securityApi = {
+  loginPolicy: () => http.get<ApiResponse<any>>('/security/login-policy'),
+  updateLoginPolicy: (payload: any) => http.put<ApiResponse<any>>('/security/login-policy', payload)
+};
+
 export const customerApi = {
   customers: () => http.get<ApiResponse<any[]>>('/customers'),
+  ownerOptions: () => http.get<ApiResponse<any[]>>('/customers/owner-options'),
   createCustomer: (payload: any) => http.post<ApiResponse<any>>('/customers', payload),
   updateCustomer: (id: number, payload: any) => http.put<ApiResponse<any>>(`/customers/${id}`, payload),
   deleteCustomer: (id: number) => http.delete<ApiResponse<void>>(`/customers/${id}`),
@@ -62,11 +72,15 @@ export const productApi = {
   createRoute: (payload: any) => http.post<ApiResponse<any>>('/routes', payload),
   updateRoute: (id: number, payload: any) => http.put<ApiResponse<any>>(`/routes/${id}`, payload),
   deleteRoute: (id: number) => http.delete<ApiResponse<void>>(`/routes/${id}`),
+  routeOrderPolicy: (id: number) => http.get<ApiResponse<any>>(`/routes/${id}/order-policy`),
+  updateRouteOrderPolicy: (id: number, payload: any) => http.put<ApiResponse<any>>(`/routes/${id}/order-policy`, payload),
   departures: (routeId?: number) =>
     http.get<ApiResponse<any[]>>('/departures', { params: routeId ? { routeId } : {} }),
   createDeparture: (payload: any) => http.post<ApiResponse<any>>('/departures', payload),
   updateDeparture: (id: number, payload: any) => http.put<ApiResponse<any>>(`/departures/${id}`, payload),
   deleteDeparture: (id: number) => http.delete<ApiResponse<void>>(`/departures/${id}`),
+  departureOrderPolicy: (id: number) => http.get<ApiResponse<any>>(`/departures/${id}/order-policy`),
+  updateDepartureOrderPolicy: (id: number, payload: any) => http.put<ApiResponse<any>>(`/departures/${id}/order-policy`, payload),
   prices: (departureId: number) => http.get<ApiResponse<any[]>>(`/departures/${departureId}/prices`),
   createPrice: (departureId: number, payload: any) =>
     http.post<ApiResponse<any>>(`/departures/${departureId}/prices`, payload),
@@ -78,6 +92,7 @@ export const productApi = {
 
 export const workflowApi = {
   list: () => http.get<ApiResponse<any[]>>('/workflow/templates'),
+  contextOptions: () => http.get<ApiResponse<any>>('/workflow/templates/context-options'),
   create: (payload: any) => http.post<ApiResponse<any>>('/workflow/templates', payload),
   update: (id: number, payload: any) => http.put<ApiResponse<any>>(`/workflow/templates/${id}`, payload),
   remove: (id: number) => http.delete<ApiResponse<void>>(`/workflow/templates/${id}`)
@@ -85,11 +100,18 @@ export const workflowApi = {
 
 export const orderApi = {
   list: () => http.get<ApiResponse<any[]>>('/orders'),
+  contextOptions: () => http.get<ApiResponse<any>>('/orders/context-options'),
+  customerTravelers: (customerId: number) =>
+    http.get<ApiResponse<any[]>>(`/orders/context-options/customers/${customerId}/travelers`),
+  departurePrices: (departureId: number) =>
+    http.get<ApiResponse<any[]>>(`/orders/context-options/departures/${departureId}/prices`),
   detail: (id: number) => http.get<ApiResponse<any>>(`/orders/${id}`),
   quote: (payload: any) => http.post<ApiResponse<any>>('/orders/quote', payload),
   create: (payload: any) => http.post<ApiResponse<any>>('/orders', payload),
   update: (id: number, payload: any) => http.put<ApiResponse<any>>(`/orders/${id}`, payload),
   remove: (id: number) => http.delete<ApiResponse<void>>(`/orders/${id}`),
+  action: (id: number, payload: { action: string; comment?: string; targetRoleCode?: string }) =>
+    http.post<ApiResponse<any>>(`/orders/${id}/actions`, payload),
   submit: (id: number) => http.post<ApiResponse<any>>(`/orders/${id}/submit`),
   approve: (id: number, comment: string) =>
     http.post<ApiResponse<any>>(`/orders/${id}/approve`, { comment }),
@@ -121,6 +143,7 @@ export const auditApi = {
 };
 
 export const financeApi = {
+  orderOptions: () => http.get<ApiResponse<any[]>>('/finance/orders/options'),
   receivables: (orderId: number) => http.get<ApiResponse<any[]>>(`/orders/${orderId}/receivables`),
   payables: (orderId: number) => http.get<ApiResponse<any[]>>(`/orders/${orderId}/payables`),
   refunds: (orderId: number) => http.get<ApiResponse<any[]>>(`/orders/${orderId}/refunds`),

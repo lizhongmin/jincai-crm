@@ -49,7 +49,11 @@ public class ReportService {
         List<TravelOrder> orders = orderRepository.findByDeletedFalse();
         long total = orders.size();
         long pending = orders.stream().filter(o -> o.getStatus() == OrderStatus.PENDING_APPROVAL).count();
-        long approved = orders.stream().filter(o -> o.getStatus() == OrderStatus.APPROVED || o.getStatus() == OrderStatus.FINANCE_IN_PROGRESS || o.getStatus() == OrderStatus.COMPLETED).count();
+        long approved = orders.stream().filter(o -> o.getStatus() == OrderStatus.APPROVED
+            || o.getStatus() == OrderStatus.IN_TRAVEL
+            || o.getStatus() == OrderStatus.TRAVEL_FINISHED
+            || o.getStatus() == OrderStatus.SETTLING
+            || o.getStatus() == OrderStatus.COMPLETED).count();
         long completed = orders.stream().filter(o -> o.getStatus() == OrderStatus.COMPLETED).count();
         BigDecimal conversionRate = total == 0
             ? BigDecimal.ZERO
@@ -130,4 +134,3 @@ public class ReportService {
             .toList();
     }
 }
-

@@ -10,8 +10,9 @@ public enum OrderStatus {
     PENDING_APPROVAL,
     APPROVED,
     REJECTED,
-    FINANCE_IN_PROGRESS,
+    IN_TRAVEL,
+    TRAVEL_FINISHED,
+    SETTLING,
     COMPLETED,
     CANCELED
 }
-

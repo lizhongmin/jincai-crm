@@ -30,8 +30,9 @@ public class NotificationService {
     @Transactional
     public void markRead(Long id) {
         Notification notification = repository.findById(id)
-            .orElseThrow(() -> new BusinessException("Notification not found"));
+            .orElseThrow(() -> new BusinessException("error.notification.notFound"));
         notification.setReadFlag(true);
         repository.save(notification);
     }
 }
+

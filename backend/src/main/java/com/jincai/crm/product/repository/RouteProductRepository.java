@@ -11,5 +11,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface RouteProductRepository extends JpaRepository<RouteProduct, Long> {
 
     List<RouteProduct> findByDeletedFalse();
-}
 
+    boolean existsByCode(String code);
+}

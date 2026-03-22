@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <a-layout class="pro-layout">
     <a-layout-sider
       v-model:collapsed="collapsed"
@@ -14,11 +14,29 @@
           <span>Travel Agency Console</span>
         </div>
       </div>
-      <a-menu theme="dark" mode="inline" :selected-keys="[route.path]" @click="onMenuClick">
-        <a-menu-item v-for="item in menuItems" :key="item.path">
-          <component :is="item.icon" />
-          <span>{{ item.title }}</span>
-        </a-menu-item>
+
+      <a-menu
+        theme="dark"
+        mode="inline"
+        :selected-keys="[activeMenuKey]"
+        :open-keys="openMenuKeys"
+        @click="onMenuClick"
+      >
+        <template v-for="item in menuItems" :key="item.key">
+          <a-sub-menu v-if="item.children?.length" :key="item.key">
+            <template #icon>
+              <component :is="item.icon" />
+            </template>
+            <template #title>{{ item.title }}</template>
+            <a-menu-item v-for="child in item.children" :key="child.path">
+              <span>{{ child.title }}</span>
+            </a-menu-item>
+          </a-sub-menu>
+          <a-menu-item v-else :key="item.path">
+            <component :is="item.icon" />
+            <span>{{ item.title }}</span>
+          </a-menu-item>
+        </template>
       </a-menu>
     </a-layout-sider>
 
@@ -29,13 +47,7 @@
             <menu-unfold-outlined v-if="collapsed" />
             <menu-fold-outlined v-else />
           </a-button>
-          <div>
-            <h2>{{ pageTitle }}</h2>
-            <a-breadcrumb>
-              <a-breadcrumb-item>旅行社 CRM</a-breadcrumb-item>
-              <a-breadcrumb-item>{{ pageTitle }}</a-breadcrumb-item>
-            </a-breadcrumb>
-          </div>
+          <h2 class="head-title">{{ pageTitle }}</h2>
         </div>
 
         <div class="right-head">
@@ -87,17 +99,26 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   PieChartOutlined,
-  TeamOutlined,
   UserOutlined,
   ShopOutlined,
   SnippetsOutlined,
   PayCircleOutlined,
   BarChartOutlined,
-  ApartmentOutlined
+  ApartmentOutlined,
+  SettingOutlined
 } from '@ant-design/icons-vue';
 import { useAuthStore } from '../stores/auth';
 import { authApi, notificationApi, permissionApi } from '../api/crm';
 import { notifyError } from '../utils/notify';
+
+type MenuNode = {
+  key: string;
+  title: string;
+  path?: string;
+  permissionPath?: string;
+  icon?: any;
+  children?: MenuNode[];
+};
 
 const route = useRoute();
 const router = useRouter();
@@ -106,22 +127,79 @@ const collapsed = ref(false);
 const notificationOpen = ref(false);
 const notifications = ref<any[]>([]);
 
-const allMenuItems = [
-  { path: '/dashboard', title: '经营看板', icon: PieChartOutlined },
-  { path: '/org', title: '组织权限', icon: TeamOutlined },
-  { path: '/customers', title: '客户中心', icon: UserOutlined },
-  { path: '/products', title: '产品团期', icon: ShopOutlined },
-  { path: '/workflow', title: '流程模板', icon: ApartmentOutlined },
-  { path: '/orders', title: '订单审批', icon: SnippetsOutlined },
-  { path: '/finance', title: '收付审核', icon: PayCircleOutlined },
-  { path: '/reports', title: 'BI 报表', icon: BarChartOutlined }
+const allMenuItems: MenuNode[] = [
+  { key: '/dashboard', path: '/dashboard', title: '经营看板', icon: PieChartOutlined },
+  {
+    key: 'system',
+    title: '系统管理',
+    icon: SettingOutlined,
+    children: [
+      { key: '/system/org', path: '/system/org', title: '组织架构', permissionPath: '/org' },
+      { key: '/system/role', path: '/system/role', title: '角色权限', permissionPath: '/org' },
+      { key: '/system/security', path: '/system/security', title: '登录安全', permissionPath: '/security' }
+    ]
+  },
+  { key: '/customers', path: '/customers', title: '客户管理', icon: UserOutlined },
+  { key: '/products', path: '/products', title: '产品团期', icon: ShopOutlined },
+  { key: '/workflow', path: '/workflow', title: '流程模板', icon: ApartmentOutlined },
+  { key: '/orders', path: '/orders', title: '订单管理', icon: SnippetsOutlined },
+  { key: '/finance', path: '/finance', title: '收付审核', icon: PayCircleOutlined },
+  { key: '/reports', path: '/reports', title: 'BI 报表', icon: BarChartOutlined }
 ];
 
-const menuItems = computed(() => {
+const hasPermission = (item: MenuNode) => {
   if (!auth.allowedMenuPaths.length) {
-    return allMenuItems;
+    return true;
   }
-  return allMenuItems.filter((item) => auth.allowedMenuPaths.includes(item.path));
+  const target = String(item.permissionPath || item.path || '');
+  return target ? auth.allowedMenuPaths.includes(target) : true;
+};
+
+const filterMenuNodes = (nodes: MenuNode[]): MenuNode[] =>
+  nodes
+    .map((node) => {
+      if (!node.children?.length) {
+        return hasPermission(node) ? node : null;
+      }
+      const children = filterMenuNodes(node.children);
+      if (!children.length) {
+        return null;
+      }
+      return { ...node, children };
+    })
+    .filter(Boolean) as MenuNode[];
+
+const menuItems = computed(() => filterMenuNodes(allMenuItems));
+
+const menuLeafPaths = computed(() => {
+  const result: string[] = [];
+  const walk = (nodes: MenuNode[]) => {
+    for (const node of nodes) {
+      if (node.children?.length) {
+        walk(node.children);
+      } else if (node.path) {
+        result.push(node.path);
+      }
+    }
+  };
+  walk(menuItems.value);
+  return result;
+});
+
+const activeMenuKey = computed(() => {
+  if (route.path === '/org') return '/system/org';
+  if (route.path.startsWith('/orders/')) return '/orders';
+  return route.path;
+});
+
+const openMenuKeys = computed(() => {
+  if (collapsed.value) {
+    return [];
+  }
+  if (activeMenuKey.value.startsWith('/system/')) {
+    return ['system'];
+  }
+  return [];
 });
 
 const pageTitle = computed(() => String(route.meta.title || '工作台'));
@@ -150,8 +228,9 @@ const loadPermissions = async () => {
   );
   auth.setAllowedMenuPaths(paths);
 
-  if (paths.length > 0 && !paths.includes(route.path)) {
-    await router.replace(paths[0]);
+  const currentPermissionPath = String(route.meta.permissionPath || route.path);
+  if (paths.length > 0 && !paths.includes(currentPermissionPath)) {
+    await router.replace(menuLeafPaths.value[0] || '/dashboard');
   }
 };
 
@@ -232,7 +311,7 @@ onMounted(async () => {
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(12px);
   padding: 0 18px;
-  height: 74px;
+  height: 60px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -244,9 +323,12 @@ onMounted(async () => {
   gap: 12px;
 }
 
-.left-head h2 {
+.head-title {
   margin: 0;
   line-height: 1.2;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f2937;
 }
 
 .right-head {
@@ -263,6 +345,8 @@ onMounted(async () => {
 }
 
 .pro-content {
-  padding: 18px;
+  padding: 14px;
 }
 </style>
+
+

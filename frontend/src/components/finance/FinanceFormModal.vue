@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <a-drawer
     :open="open"
     :title="title"
@@ -45,7 +45,7 @@
 </template>
 
 <script setup lang="ts">
-const props = defineProps<{
+defineProps<{
   open: boolean;
   title: string;
   mode: 'receivable' | 'payable' | 'refund' | 'receipt' | 'payment';

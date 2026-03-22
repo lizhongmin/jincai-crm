@@ -1,7 +1,7 @@
 package com.jincai.crm.common;
 
-import com.jincai.crm.org.entity.Department;
-import com.jincai.crm.org.repository.DepartmentRepository;
+import com.jincai.crm.system.entity.Department;
+import com.jincai.crm.system.repository.DepartmentRepository;
 import com.jincai.crm.security.LoginUser;
 import java.util.ArrayDeque;
 import java.util.ArrayList;

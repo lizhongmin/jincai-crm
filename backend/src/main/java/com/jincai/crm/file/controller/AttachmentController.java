@@ -21,7 +21,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/files")
-@PreAuthorize("hasAnyRole('ADMIN','SALES_MANAGER','SALES','FINANCE')")
 public class AttachmentController {
 
     private final AttachmentService service;
@@ -31,6 +30,7 @@ public class AttachmentController {
     }
 
     @PostMapping("/upload")
+    @PreAuthorize("hasAuthority('BTN_FILE_UPLOAD')")
     public ApiResponse<Attachment> upload(@RequestParam("bizType") String bizType,
                                           @RequestParam("bizId") Long bizId,
                                           @RequestParam("file") MultipartFile file) {
@@ -38,12 +38,14 @@ public class AttachmentController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyAuthority('MENU_ORDER','MENU_CUSTOMER','MENU_PRODUCT','MENU_FINANCE')")
     public ApiResponse<java.util.List<Attachment>> list(@RequestParam("bizType") String bizType,
                                                          @RequestParam("bizId") Long bizId) {
         return ApiResponse.ok(service.list(bizType, bizId));
     }
 
     @GetMapping("/{id}/download")
+    @PreAuthorize("hasAnyAuthority('MENU_ORDER','MENU_CUSTOMER','MENU_PRODUCT','MENU_FINANCE')")
     public ResponseEntity<Resource> download(@PathVariable Long id) {
         Resource resource = service.download(id);
         return ResponseEntity.ok()

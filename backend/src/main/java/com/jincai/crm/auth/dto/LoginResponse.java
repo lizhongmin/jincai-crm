@@ -1,8 +1,5 @@
 package com.jincai.crm.auth.dto;
 
-import com.jincai.crm.auth.controller.*;
-import com.jincai.crm.auth.service.*;
-
 import java.util.List;
 
 public record LoginResponse(
@@ -13,4 +10,3 @@ public record LoginResponse(
     List<String> roles
 ) {
 }
-

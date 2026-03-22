@@ -1,5 +1,5 @@
-<template>
-  <a-table :columns="columns" :data-source="items" row-key="id">
+﻿<template>
+  <a-table :columns="columns" :data-source="items" row-key="id" :scroll="{ x: 980 }">
     <template #bodyCell="{ column, record }">
       <template v-if="column.dataIndex === 'duration'">
         {{ record.durationDays || '-' }}天{{ record.durationNights ?? '-' }}晚
@@ -27,11 +27,11 @@ defineEmits<{
 
 const columns = [
   { title: '编码', dataIndex: 'code', width: 160 },
-  { title: '线路名称', dataIndex: 'name', width: 180 },
-  { title: '出发地', dataIndex: 'departureCity', width: 120 },
-  { title: '目的地', dataIndex: 'destinationCity', width: 120 },
+  { title: '线路名称', dataIndex: 'name', width: 200 },
+  { title: '出发地', dataIndex: 'departureCity', width: 120, customRender: ({ text }: any) => text || '-' },
+  { title: '目的地', dataIndex: 'destinationCity', width: 120, customRender: ({ text }: any) => text || '-' },
   { title: '行程', dataIndex: 'duration', width: 120 },
-  { title: '分类', dataIndex: 'category', width: 120 },
-  { title: '操作', dataIndex: 'actions', width: 180 }
+  { title: '分类', dataIndex: 'category', width: 120, customRender: ({ text }: any) => text || '-' },
+  { title: '操作', dataIndex: 'actions', width: 180, fixed: 'right' }
 ];
 </script>

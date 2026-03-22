@@ -1,7 +1,6 @@
-<template>
+﻿<template>
   <div class="report-page">
     <a-card class="section-card" :bordered="false">
-      <template #title>经营分析</template>
       <template #extra>
         <a-space>
           <a-button @click="load">刷新</a-button>
@@ -33,7 +32,7 @@
     </a-card>
 
     <a-card class="section-card" :bordered="false" title="线路毛利分布">
-      <a-table :columns="columns" :data-source="profit" row-key="routeId" :pagination="{ pageSize: 10 }" />
+      <a-table :columns="columns" :data-source="profit" row-key="routeId" :pagination="{ pageSize: 10 }" :scroll="{ x: 760 }" />
     </a-card>
   </div>
 </template>
@@ -122,7 +121,7 @@ onMounted(load);
 <style scoped>
 .report-page {
   display: grid;
-  gap: 16px;
+  gap: 10px;
 }
 
 .funnel-list,

@@ -25,3 +25,6 @@ app:
     expiration-seconds: 3600
   file:
     upload-dir: ./target/test-uploads
+  order:
+    auto-cancel:
+      enabled: false

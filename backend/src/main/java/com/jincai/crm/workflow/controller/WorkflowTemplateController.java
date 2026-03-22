@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/workflow/templates")
-@PreAuthorize("hasAnyRole('ADMIN','SALES_MANAGER')")
 public class WorkflowTemplateController {
 
     private final WorkflowService workflowService;
@@ -30,21 +29,31 @@ public class WorkflowTemplateController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('MENU_WORKFLOW')")
     public ApiResponse<List<WorkflowTemplateView>> list() {
         return ApiResponse.ok(workflowService.listTemplates());
     }
 
+    @GetMapping("/context-options")
+    @PreAuthorize("hasAuthority('MENU_WORKFLOW')")
+    public ApiResponse<WorkflowContextOptionsView> contextOptions() {
+        return ApiResponse.ok(workflowService.contextOptions());
+    }
+
     @PostMapping
+    @PreAuthorize("hasAuthority('BTN_WORKFLOW_CREATE')")
     public ApiResponse<WorkflowTemplate> create(@Valid @RequestBody WorkflowTemplateRequest request) {
         return ApiResponse.ok(workflowService.saveTemplate(request));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('BTN_WORKFLOW_EDIT')")
     public ApiResponse<WorkflowTemplate> update(@PathVariable Long id, @Valid @RequestBody WorkflowTemplateRequest request) {
         return ApiResponse.ok(workflowService.updateTemplate(id, request));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('BTN_WORKFLOW_EDIT')")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         workflowService.deleteTemplate(id);
         return ApiResponse.ok(null);

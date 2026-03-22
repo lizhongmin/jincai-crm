@@ -1,10 +1,29 @@
-<template>
+﻿<template>
   <div class="finance-page">
-    <a-card class="section-card" :bordered="false" title="收付款中心">
+    <div class="biz-summary">
+      <div class="item">
+        <span class="label">应收合计</span>
+        <strong class="value">{{ receivableTotal }}</strong>
+      </div>
+      <div class="item">
+        <span class="label">实收合计</span>
+        <strong class="value">{{ receivedTotal }}</strong>
+      </div>
+      <div class="item">
+        <span class="label">应付合计</span>
+        <strong class="value">{{ payableTotal }}</strong>
+      </div>
+      <div class="item">
+        <span class="label">退款合计</span>
+        <strong class="value">{{ refundTotal }}</strong>
+      </div>
+    </div>
+
+    <a-card class="section-card" :bordered="false">
       <div class="toolbar-row">
-        <a-select v-model:value="activeOrderId" style="width: 320px" placeholder="选择订单" @change="loadForOrder">
+        <a-select v-model:value="activeOrderId" style="width: 340px" placeholder="选择订单" @change="loadForOrder">
           <a-select-option v-for="item in orderOptions" :key="item.id" :value="item.id">
-            {{ item.orderNo }} ({{ item.status }})
+            {{ item.orderNo }} ({{ orderStatusLabel(item.status) }})
           </a-select-option>
         </a-select>
         <a-button type="primary" :disabled="!activeOrderId" @click="openReceivable()">新增应收</a-button>
@@ -14,14 +33,14 @@
 
       <a-alert
         v-if="activeOrder"
-        style="margin-top: 12px"
+        style="margin-top: 10px"
         type="info"
         show-icon
-        :message="`当前订单：${activeOrder.orderNo} / ${activeOrder.status}`"
+        :message="`当前订单：${activeOrder.orderNo} / ${orderStatusLabel(activeOrder.status)}`"
         :description="`客户ID：${activeOrder.customerId}，订单金额：${activeOrder.totalAmount} ${activeOrder.currency}`"
       />
 
-      <div class="grid-3" style="margin-top: 12px">
+      <div class="grid-3" style="margin-top: 10px">
         <finance-ledger-table
           title="应收列表"
           mode="receivable"
@@ -44,6 +63,7 @@
           title="退款列表"
           mode="refund"
           :items="refunds"
+          :can-review-permission="canReviewPermission"
           @approve="(record) => reviewRefund(record, true)"
           @reject="(record) => reviewRefund(record, false)"
           @edit="openRefund"
@@ -55,10 +75,20 @@
     <a-card class="section-card" :bordered="false" title="审核记录">
       <a-tabs v-model:activeKey="recordTab">
         <a-tab-pane key="receipt" tab="收款记录">
-          <finance-record-table mode="receipt" :items="receiptRecords" @review="(record, approved) => reviewRecord(record, 'RECEIPT', approved)" />
+          <finance-record-table
+            mode="receipt"
+            :items="receiptRecords"
+            :can-review-permission="canReviewPermission"
+            @review="(record, approved) => reviewRecord(record, 'RECEIPT', approved)"
+          />
         </a-tab-pane>
         <a-tab-pane key="payment" tab="付款记录">
-          <finance-record-table mode="payment" :items="paymentRecords" @review="(record, approved) => reviewRecord(record, 'PAYMENT', approved)" />
+          <finance-record-table
+            mode="payment"
+            :items="paymentRecords"
+            :can-review-permission="canReviewPermission"
+            @review="(record, approved) => reviewRecord(record, 'PAYMENT', approved)"
+          />
         </a-tab-pane>
       </a-tabs>
     </a-card>
@@ -85,12 +115,16 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
-import { financeApi, orderApi } from '../api/crm';
+import { financeApi } from '../api/crm';
 import FinanceFormModal from '../components/finance/FinanceFormModal.vue';
 import FinanceLedgerTable from '../components/finance/FinanceLedgerTable.vue';
 import FinanceRecordTable from '../components/finance/FinanceRecordTable.vue';
+import { ORDER_STATUS_LABEL_MAP, enumLabel } from '../constants/display';
+import { useAuthStore } from '../stores/auth';
+import { canFinanceReviewByRole } from '../utils/role';
 import { notifyError, notifySuccess } from '../utils/notify';
 
+const auth = useAuthStore();
 const orders = ref<any[]>([]);
 const activeOrderId = ref<number | null>(null);
 const receivables = ref<any[]>([]);
@@ -115,9 +149,17 @@ const receiptForm = reactive({ amount: 1000, remark: '到账确认' });
 const paymentForm = reactive({ amount: 600, remark: '已打款' });
 
 const orderOptions = computed(() =>
-  orders.value.filter((item) => ['APPROVED', 'FINANCE_IN_PROGRESS', 'COMPLETED'].includes(item.status))
+  orders.value.filter((item) => ['APPROVED', 'IN_TRAVEL', 'TRAVEL_FINISHED', 'SETTLING', 'COMPLETED'].includes(item.status))
 );
 const activeOrder = computed(() => orders.value.find((item) => item.id === activeOrderId.value) || null);
+
+const receivableTotal = computed(() => Number(receivables.value.reduce((sum, item) => sum + Number(item.amount || 0), 0).toFixed(2)));
+const receivedTotal = computed(() => Number(receivables.value.reduce((sum, item) => sum + Number(item.received || 0), 0).toFixed(2)));
+const payableTotal = computed(() => Number(payables.value.reduce((sum, item) => sum + Number(item.amount || 0), 0).toFixed(2)));
+const refundTotal = computed(() => Number(refunds.value.reduce((sum, item) => sum + Number(item.amount || 0), 0).toFixed(2)));
+const canReviewPermission = computed(() => canFinanceReviewByRole(auth.profile?.roles));
+const orderStatusLabel = (value?: string) => enumLabel(ORDER_STATUS_LABEL_MAP, value);
+
 const itemModalTitle = computed(() => {
   const labelMap = {
     receivable: receivableForm.id ? '编辑应收' : '新增应收',
@@ -135,7 +177,7 @@ const itemModalModel = computed(() => {
 const flowModalModel = computed(() => (flowModalMode.value === 'receipt' ? receiptForm : paymentForm));
 
 const loadOrders = async () => {
-  const { data } = await orderApi.list();
+  const { data } = await financeApi.orderOptions();
   orders.value = data.data || [];
   if (!activeOrderId.value && orderOptions.value.length) {
     activeOrderId.value = orderOptions.value[0].id;
@@ -364,6 +406,9 @@ const loadPayments = async (payable: any) => {
 };
 
 const reviewRefund = async (refund: any, approved: boolean) => {
+  if (!canReviewPermission.value) {
+    return;
+  }
   try {
     await financeApi.review(refund.id, {
       targetType: 'REFUND',
@@ -380,6 +425,9 @@ const reviewRefund = async (refund: any, approved: boolean) => {
 };
 
 const reviewRecord = async (record: any, type: 'RECEIPT' | 'PAYMENT', approved: boolean) => {
+  if (!canReviewPermission.value) {
+    return;
+  }
   try {
     await financeApi.review(record.id, {
       targetType: type,
@@ -413,12 +461,12 @@ onMounted(async () => {
 <style scoped>
 .finance-page {
   display: grid;
-  gap: 16px;
+  gap: 10px;
 }
 
 .grid-3 {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 

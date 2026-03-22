@@ -1,6 +1,5 @@
 package com.jincai.crm.customer.service;
 
-import com.jincai.crm.customer.controller.*;
 import com.jincai.crm.customer.dto.*;
 import com.jincai.crm.customer.entity.*;
 import com.jincai.crm.customer.repository.*;
@@ -8,19 +7,22 @@ import com.jincai.crm.customer.repository.*;
 import com.jincai.crm.common.BusinessException;
 import com.jincai.crm.common.DataScope;
 import com.jincai.crm.common.DataScopeResolver;
-import com.jincai.crm.org.entity.AppUser;
-import com.jincai.crm.org.repository.AppUserRepository;
-import com.jincai.crm.org.entity.Department;
-import com.jincai.crm.org.repository.DepartmentRepository;
+import com.jincai.crm.common.I18nService;
 import com.jincai.crm.security.LoginUser;
+import com.jincai.crm.system.entity.Department;
+import com.jincai.crm.system.entity.AppUser;
+import com.jincai.crm.system.repository.DepartmentRepository;
+import com.jincai.crm.system.repository.AppUserRepository;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.poi.ss.usermodel.DataFormatter;
@@ -38,15 +40,17 @@ public class CustomerService {
     private final DataScopeResolver dataScopeResolver;
     private final AppUserRepository userRepository;
     private final DepartmentRepository departmentRepository;
+    private final I18nService i18nService;
 
     public CustomerService(CustomerRepository customerRepository, TravelerRepository travelerRepository,
                            DataScopeResolver dataScopeResolver, AppUserRepository userRepository,
-                           DepartmentRepository departmentRepository) {
+                           DepartmentRepository departmentRepository, I18nService i18nService) {
         this.customerRepository = customerRepository;
         this.travelerRepository = travelerRepository;
         this.dataScopeResolver = dataScopeResolver;
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
+        this.i18nService = i18nService;
     }
 
     public List<CustomerView> listVisible(LoginUser user) {
@@ -72,29 +76,48 @@ public class CustomerService {
 
     public CustomerView create(CustomerRequest request, LoginUser user) {
         if (user == null) {
-            throw new BusinessException("Unauthenticated");
+            throw new BusinessException("error.auth.unauthenticated");
         }
         Customer customer = new Customer();
         applyCustomer(customer, request);
-        customer.setOwnerUserId(request.ownerUserId() == null ? user.getUserId() : request.ownerUserId());
-        customer.setOwnerDeptId(request.ownerDeptId() == null ? user.getDepartmentId() : request.ownerDeptId());
+        OwnerAssignment ownerAssignment = resolveOwnerByUserId(
+            request.ownerUserId() == null ? user.getUserId() : request.ownerUserId(),
+            user
+        );
+        customer.setOwnerUserId(ownerAssignment.ownerUserId());
+        customer.setOwnerDeptId(ownerAssignment.ownerDeptId());
         return toView(customerRepository.save(customer));
     }
 
-    public CustomerView update(Long id, CustomerRequest request) {
-        Customer customer = customerRepository.findById(id).orElseThrow(() -> new BusinessException("Customer not found"));
+    public CustomerView update(Long id, CustomerRequest request, LoginUser user) {
+        Customer customer = customerRepository.findById(id).orElseThrow(() -> new BusinessException("error.customer.notFound"));
         applyCustomer(customer, request);
         if (request.ownerUserId() != null) {
-            customer.setOwnerUserId(request.ownerUserId());
-        }
-        if (request.ownerDeptId() != null) {
-            customer.setOwnerDeptId(request.ownerDeptId());
+            OwnerAssignment ownerAssignment = resolveOwnerByUserId(request.ownerUserId(), user);
+            customer.setOwnerUserId(ownerAssignment.ownerUserId());
+            customer.setOwnerDeptId(ownerAssignment.ownerDeptId());
         }
         return toView(customerRepository.save(customer));
+    }
+
+    public List<CustomerOwnerOptionView> listOwnerOptions(LoginUser user) {
+        Map<Long, Department> departmentMap = departmentRepository.findByDeletedFalse().stream()
+            .collect(Collectors.toMap(Department::getId, department -> department, (a, b) -> a, LinkedHashMap::new));
+        return listAssignableUsers(user).stream()
+            .filter(candidate -> Boolean.TRUE.equals(candidate.getEnabled()))
+            .sorted(Comparator.comparing(AppUser::getFullName, String.CASE_INSENSITIVE_ORDER))
+            .map(candidate -> new CustomerOwnerOptionView(
+                candidate.getId(),
+                candidate.getUsername(),
+                candidate.getFullName(),
+                candidate.getDepartmentId(),
+                buildDepartmentPath(candidate.getDepartmentId(), departmentMap)
+            ))
+            .toList();
     }
 
     public void delete(Long id) {
-        Customer customer = customerRepository.findById(id).orElseThrow(() -> new BusinessException("Customer not found"));
+        Customer customer = customerRepository.findById(id).orElseThrow(() -> new BusinessException("error.customer.notFound"));
         customer.setDeleted(true);
         customerRepository.save(customer);
     }
@@ -111,7 +134,7 @@ public class CustomerService {
     }
 
     public Traveler addTraveler(Long customerId, TravelerRequest request) {
-        customerRepository.findById(customerId).orElseThrow(() -> new BusinessException("Customer not found"));
+        customerRepository.findById(customerId).orElseThrow(() -> new BusinessException("error.customer.notFound"));
         Traveler traveler = new Traveler();
         traveler.setCustomerId(customerId);
         applyTraveler(traveler, request);
@@ -120,33 +143,47 @@ public class CustomerService {
 
     public Traveler updateTraveler(Long travelerId, TravelerRequest request) {
         Traveler traveler = travelerRepository.findById(travelerId)
-            .orElseThrow(() -> new BusinessException("Traveler not found"));
-        customerRepository.findById(traveler.getCustomerId()).orElseThrow(() -> new BusinessException("Customer not found"));
+            .orElseThrow(() -> new BusinessException("error.traveler.notFound"));
+        customerRepository.findById(traveler.getCustomerId()).orElseThrow(() -> new BusinessException("error.customer.notFound"));
         applyTraveler(traveler, request);
         return travelerRepository.save(traveler);
     }
 
     public void deleteTraveler(Long travelerId) {
         Traveler traveler = travelerRepository.findById(travelerId)
-            .orElseThrow(() -> new BusinessException("Traveler not found"));
+            .orElseThrow(() -> new BusinessException("error.traveler.notFound"));
         traveler.setDeleted(true);
         travelerRepository.save(traveler);
     }
 
     private void applyTraveler(Traveler traveler, TravelerRequest request) {
         traveler.setName(request.name());
-        traveler.setIdType(request.idType());
-        traveler.setIdNo(request.idNo());
+        traveler.setGender(blankToNull(request.gender()));
+        traveler.setEthnicity(blankToNull(request.ethnicity()));
+        traveler.setNationality(blankToNull(request.nationality()));
+        traveler.setAddress(blankToNull(request.address()));
         traveler.setPhone(request.phone());
-        traveler.setEmergencyContact(request.emergencyContact());
-        traveler.setPreferences(request.preferences());
-        if (request.birthday() != null && !request.birthday().isBlank()) {
-            try {
-                traveler.setBirthday(LocalDate.parse(request.birthday(), DateTimeFormatter.ISO_DATE));
-            } catch (DateTimeParseException ex) {
-                throw new BusinessException("Invalid birthday format, expected yyyy-MM-dd");
-            }
+        traveler.setEmergencyContact(blankToNull(request.emergencyContact()));
+        traveler.setEmergencyPhone(blankToNull(request.emergencyPhone()));
+        traveler.setPreferences(blankToNull(request.preferences()));
+
+        List<TravelerDocument> documents = normalizeDocuments(traveler, request);
+        traveler.getDocuments().clear();
+        traveler.getDocuments().addAll(documents);
+        if (!traveler.getDocuments().isEmpty()) {
+            TravelerDocument primary = traveler.getDocuments().get(0);
+            traveler.setIdType(primary.getDocType());
+            traveler.setIdNo(primary.getDocNo());
+        } else {
+            traveler.setIdType(blankToNull(request.idType()));
+            traveler.setIdNo(blankToNull(request.idNo()));
         }
+
+        TravelerDocument idCardDocument = traveler.getDocuments().stream()
+            .filter(document -> "ID_CARD".equals(document.getDocType()))
+            .findFirst()
+            .orElseThrow(() -> new BusinessException("error.traveler.idCard.required"));
+        traveler.setBirthday(extractBirthdayFromIdCard(idCardDocument.getDocNo()));
     }
 
     private void applyCustomer(Customer customer, CustomerRequest request) {
@@ -168,6 +205,89 @@ public class CustomerService {
         return value == null || value.isBlank() ? defaultValue : value;
     }
 
+    private String blankToNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
+    }
+
+    private List<TravelerDocument> normalizeDocuments(Traveler traveler, TravelerRequest request) {
+        List<TravelerDocument> documents = new ArrayList<>();
+        if (request.documents() != null) {
+            for (TravelerDocumentRequest documentRequest : request.documents()) {
+                if (documentRequest == null) {
+                    continue;
+                }
+                String docType = blankToNull(documentRequest.docType());
+                String docNo = blankToNull(documentRequest.docNo());
+                if (docType == null || docNo == null) {
+                    continue;
+                }
+                TravelerDocument document = new TravelerDocument();
+                document.setTraveler(traveler);
+                document.setDocType(normalizeDocType(docType));
+                document.setDocNo(docNo);
+                documents.add(document);
+            }
+        }
+        if (!documents.isEmpty()) {
+            return documents;
+        }
+        String legacyIdType = blankToNull(request.idType());
+        String legacyIdNo = blankToNull(request.idNo());
+        if (legacyIdType == null || legacyIdNo == null) {
+            return documents;
+        }
+        TravelerDocument document = new TravelerDocument();
+        document.setTraveler(traveler);
+        document.setDocType(normalizeDocType(legacyIdType));
+        document.setDocNo(legacyIdNo);
+        documents.add(document);
+        return documents;
+    }
+
+    private String normalizeDocType(String rawDocType) {
+        String value = rawDocType == null ? "" : rawDocType.trim();
+        String upper = value.toUpperCase();
+        if ("ID_CARD".equals(upper) || value.contains("身份证")) {
+            return "ID_CARD";
+        }
+        if ("PASSPORT".equals(upper) || value.contains("护照")) {
+            return "PASSPORT";
+        }
+        if ("HK_MACAO_PASS".equals(upper) || value.contains("港澳")) {
+            return "HK_MACAO_PASS";
+        }
+        if ("TAIWAN_PASS".equals(upper) || value.contains("台胞") || value.contains("台湾")) {
+            return "TAIWAN_PASS";
+        }
+        if ("MILITARY_ID".equals(upper) || value.contains("军官")) {
+            return "MILITARY_ID";
+        }
+        return upper;
+    }
+
+    private LocalDate extractBirthdayFromIdCard(String idNo) {
+        if (idNo == null) {
+            throw new BusinessException("error.traveler.idCard.noRequired");
+        }
+        String normalized = idNo.trim().toUpperCase();
+        String datePart;
+        if (normalized.matches("^\\d{17}[\\dX]$")) {
+            datePart = normalized.substring(6, 14);
+        } else if (normalized.matches("^\\d{15}$")) {
+            datePart = "19" + normalized.substring(6, 12);
+        } else {
+            throw new BusinessException("error.traveler.idCard.invalidFormat");
+        }
+        try {
+            return LocalDate.parse(datePart, DateTimeFormatter.BASIC_ISO_DATE);
+        } catch (DateTimeParseException ex) {
+            throw new BusinessException("error.traveler.idCard.invalidBirthday");
+        }
+    }
+
     public ImportResult importCustomers(MultipartFile file, LoginUser user) {
         List<String> errors = new ArrayList<>();
         int success = 0;
@@ -184,7 +304,7 @@ public class CustomerService {
                 String source = formatter.formatCellValue(row.getCell(2)).trim();
                 String level = formatter.formatCellValue(row.getCell(3)).trim();
                 if (name.isBlank() || phone.isBlank()) {
-                    errors.add("Row " + (i + 1) + " missing name/phone");
+                    errors.add(i18nService.getMessage("error.import.rowMissingNamePhone", i + 1));
                     continue;
                 }
                 Customer customer = new Customer();
@@ -201,9 +321,91 @@ public class CustomerService {
                 success++;
             }
         } catch (IOException ex) {
-            throw new BusinessException("Failed to parse file: " + ex.getMessage());
+            throw new BusinessException("error.file.parseFailed", ex.getMessage());
         }
         return new ImportResult(success, errors.size(), errors);
+    }
+
+    private List<AppUser> listAssignableUsers(LoginUser user) {
+        if (user == null) {
+            return List.of();
+        }
+        if (user.getDataScope() == DataScope.ALL) {
+            return userRepository.findByDeletedFalse();
+        }
+        if (user.getDataScope() == DataScope.SELF) {
+            return userRepository.findByIdAndDeletedFalse(user.getUserId()).stream().toList();
+        }
+        if (user.getDataScope() == DataScope.DEPARTMENT) {
+            if (user.getDepartmentId() == null) {
+                return List.of();
+            }
+            return userRepository.findByDepartmentIdAndDeletedFalse(user.getDepartmentId());
+        }
+        Set<Long> departmentIds = dataScopeResolver.resolveDepartmentIds(user);
+        if (departmentIds.isEmpty()) {
+            return List.of();
+        }
+        return userRepository.findByDepartmentIdInAndDeletedFalse(departmentIds);
+    }
+
+    private OwnerAssignment resolveOwnerByUserId(Long ownerUserId, LoginUser operator) {
+        if (operator == null) {
+            throw new BusinessException("error.auth.unauthenticated");
+        }
+        AppUser owner = userRepository.findByIdAndDeletedFalse(ownerUserId)
+            .orElseThrow(() -> new BusinessException("error.user.notFound"));
+        if (!Boolean.TRUE.equals(owner.getEnabled())) {
+            throw new BusinessException("error.customer.owner.disabled");
+        }
+        if (!canAssignOwner(operator, owner)) {
+            throw new BusinessException("error.customer.owner.outOfScope");
+        }
+        return new OwnerAssignment(owner.getId(), owner.getDepartmentId());
+    }
+
+    private boolean canAssignOwner(LoginUser operator, AppUser owner) {
+        if (operator.getDataScope() == DataScope.ALL) {
+            return true;
+        }
+        if (operator.getDataScope() == DataScope.SELF) {
+            return Objects.equals(operator.getUserId(), owner.getId());
+        }
+        if (operator.getDataScope() == DataScope.DEPARTMENT) {
+            return Objects.equals(operator.getDepartmentId(), owner.getDepartmentId());
+        }
+        Set<Long> departmentIds = dataScopeResolver.resolveDepartmentIds(operator);
+        return owner.getDepartmentId() != null && departmentIds.contains(owner.getDepartmentId());
+    }
+
+    private String buildDepartmentPath(Long departmentId, Map<Long, Department> departmentMap) {
+        if (departmentId == null) {
+            return null;
+        }
+        Department department = departmentMap.get(departmentId);
+        if (department == null) {
+            return null;
+        }
+        List<String> names = new ArrayList<>();
+        String treePath = department.getTreePath();
+        if (treePath != null && !treePath.isBlank()) {
+            for (String nodeIdText : treePath.split("/")) {
+                if (nodeIdText == null || nodeIdText.isBlank()) {
+                    continue;
+                }
+                try {
+                    Long nodeId = Long.parseLong(nodeIdText);
+                    Department node = departmentMap.get(nodeId);
+                    if (node != null) {
+                        names.add(node.getName());
+                    }
+                } catch (NumberFormatException ignored) {
+                    // ignore invalid tree path node
+                }
+            }
+        }
+        names.add(department.getName());
+        return String.join(" / ", names);
     }
 
     private List<CustomerView> toViews(List<Customer> customers) {
@@ -247,4 +449,8 @@ public class CustomerService {
             customer.getUpdatedAt()
         );
     }
+
+    private record OwnerAssignment(Long ownerUserId, Long ownerDeptId) {
+    }
 }
+

@@ -28,6 +28,12 @@ public class WorkflowTemplate extends BaseEntity {
     @Column(name = "product_category", nullable = false)
     private String productCategory;
 
+    @Column(name = "route_id")
+    private Long routeId;
+
+    @Column(name = "departure_id")
+    private Long departureId;
+
     @Column(name = "min_amount", precision = 18, scale = 2)
     private BigDecimal minAmount;
 
@@ -37,4 +43,3 @@ public class WorkflowTemplate extends BaseEntity {
     @Column(nullable = false)
     private Boolean active = true;
 }
-

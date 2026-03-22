@@ -1,19 +1,35 @@
-<template>
-  <a-card size="small" :title="title" :bordered="true">
-    <a-table :columns="columns" :data-source="items" row-key="id" size="small" :pagination="false">
+﻿<template>
+  <a-card size="small" :title="props.title" :bordered="true">
+    <a-table :columns="columns" :data-source="props.items" row-key="id" size="small" :pagination="false" :scroll="{ x: 760 }">
       <template #bodyCell="{ column, record }">
         <template v-if="column.dataIndex === 'status'">
-          <a-tag :color="statusColor(record.status)">{{ record.status }}</a-tag>
+          <a-tag :color="statusColor(record.status)">{{ statusLabel(record.status) }}</a-tag>
         </template>
         <template v-else-if="column.dataIndex === 'actions'">
           <a-space wrap>
-            <template v-if="mode === 'receivable' || mode === 'payable'">
-              <a-button size="small" type="link" @click="emit('primary', record)">{{ mode === 'receivable' ? '收款' : '付款' }}</a-button>
+            <template v-if="props.mode === 'receivable' || props.mode === 'payable'">
+              <a-button size="small" type="link" @click="emit('primary', record)">{{ props.mode === 'receivable' ? '收款' : '付款' }}</a-button>
               <a-button size="small" type="link" @click="emit('secondary', record)">记录</a-button>
             </template>
-            <template v-if="mode === 'refund'">
-              <a-button size="small" type="primary" :disabled="record.status === 'APPROVED'" @click="emit('approve', record)">通过</a-button>
-              <a-button size="small" danger :disabled="record.status === 'REJECTED'" @click="emit('reject', record)">驳回</a-button>
+            <template v-if="props.mode === 'refund'">
+              <a-button
+                v-if="props.canReviewPermission"
+                size="small"
+                type="primary"
+                :disabled="record.status === 'APPROVED'"
+                @click="emit('approve', record)"
+              >
+                通过
+              </a-button>
+              <a-button
+                v-if="props.canReviewPermission"
+                size="small"
+                danger
+                :disabled="record.status === 'REJECTED'"
+                @click="emit('reject', record)"
+              >
+                驳回
+              </a-button>
             </template>
             <a-button size="small" @click="emit('edit', record)">编辑</a-button>
             <a-popconfirm title="确认删除这条记录？" @confirm="emit('remove', record)">
@@ -29,11 +45,14 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   title: string;
   mode: 'receivable' | 'payable' | 'refund';
   items: any[];
-}>();
+  canReviewPermission?: boolean;
+}>(), {
+  canReviewPermission: true
+});
 
 const emit = defineEmits<{
   (e: 'primary', record: any): void;
@@ -81,4 +100,12 @@ const statusColor = (status: string) => {
   };
   return map[status] || 'default';
 };
+
+const statusLabel = (status: string) => ({
+  OPEN: '进行中',
+  CLOSED: '已关闭',
+  PENDING_REVIEW: '待审核',
+  APPROVED: '已通过',
+  REJECTED: '已驳回'
+}[status] || status);
 </script>

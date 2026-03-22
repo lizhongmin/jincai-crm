@@ -6,12 +6,22 @@ import com.jincai.crm.finance.entity.*;
 import com.jincai.crm.finance.repository.*;
 
 import com.jincai.crm.common.BusinessException;
+import com.jincai.crm.common.DataScope;
+import com.jincai.crm.common.DataScopeResolver;
+import com.jincai.crm.order.entity.InventoryStatus;
+import com.jincai.crm.order.entity.OrderLockPolicy;
 import com.jincai.crm.order.entity.OrderStatus;
+import com.jincai.crm.order.entity.PaymentStatus;
+import com.jincai.crm.order.entity.SettlementStatus;
 import com.jincai.crm.order.entity.TravelOrder;
 import com.jincai.crm.order.repository.TravelOrderRepository;
+import com.jincai.crm.product.entity.Departure;
+import com.jincai.crm.product.repository.DepartureRepository;
+import com.jincai.crm.security.LoginUser;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,11 +35,14 @@ public class FinanceService {
     private final PayableRepository payableRepository;
     private final PaymentRepository paymentRepository;
     private final FinanceReviewRepository reviewRepository;
+    private final DepartureRepository departureRepository;
+    private final DataScopeResolver dataScopeResolver;
 
     public FinanceService(TravelOrderRepository orderRepository, ReceivableRepository receivableRepository,
                           ReceiptRepository receiptRepository, RefundRepository refundRepository,
                           PayableRepository payableRepository, PaymentRepository paymentRepository,
-                          FinanceReviewRepository reviewRepository) {
+                          FinanceReviewRepository reviewRepository, DepartureRepository departureRepository,
+                          DataScopeResolver dataScopeResolver) {
         this.orderRepository = orderRepository;
         this.receivableRepository = receivableRepository;
         this.receiptRepository = receiptRepository;
@@ -37,32 +50,34 @@ public class FinanceService {
         this.payableRepository = payableRepository;
         this.paymentRepository = paymentRepository;
         this.reviewRepository = reviewRepository;
+        this.departureRepository = departureRepository;
+        this.dataScopeResolver = dataScopeResolver;
     }
 
     @Transactional
     public Receivable createReceivable(Long orderId, ReceivableRequest request) {
         TravelOrder order = loadApprovedOrder(orderId);
         BigDecimal amount = normalizeAmount(request.amount());
-        requirePositive(amount, "Receivable amount must be greater than 0");
+        requirePositive(amount, "error.finance.receivable.amountPositive");
 
         Receivable receivable = new Receivable();
         receivable.setOrderId(orderId);
         receivable.setItemName(request.itemName());
         receivable.setAmount(amount);
         Receivable saved = receivableRepository.save(receivable);
-        promoteFinanceStatus(order);
+        refreshOrderFinanceState(orderId, false);
         return saved;
     }
 
     @Transactional
     public Receivable updateReceivable(Long receivableId, ReceivableRequest request) {
         Receivable receivable = receivableRepository.findById(receivableId)
-            .orElseThrow(() -> new BusinessException("Receivable not found"));
+            .orElseThrow(() -> new BusinessException("error.finance.receivable.notFound"));
         ensureReceivableEditable(receivable);
         BigDecimal amount = normalizeAmount(request.amount());
-        requirePositive(amount, "Receivable amount must be greater than 0");
+        requirePositive(amount, "error.finance.receivable.amountPositive");
         if (amount.compareTo(receivable.getReceived()) < 0) {
-            throw new BusinessException("Receivable amount cannot be less than already received amount");
+            throw new BusinessException("error.finance.receivable.amountLessThanReceived");
         }
         receivable.setItemName(request.itemName());
         receivable.setAmount(amount);
@@ -72,7 +87,7 @@ public class FinanceService {
     @Transactional
     public void deleteReceivable(Long receivableId) {
         Receivable receivable = receivableRepository.findById(receivableId)
-            .orElseThrow(() -> new BusinessException("Receivable not found"));
+            .orElseThrow(() -> new BusinessException("error.finance.receivable.notFound"));
         ensureReceivableEditable(receivable);
         receivable.setDeleted(true);
         receivableRepository.save(receivable);
@@ -81,13 +96,13 @@ public class FinanceService {
     @Transactional
     public Receipt createReceipt(ReceiptRequest request) {
         Receivable receivable = receivableRepository.findById(request.receivableId())
-            .orElseThrow(() -> new BusinessException("Receivable not found"));
+            .orElseThrow(() -> new BusinessException("error.finance.receivable.notFound"));
         BigDecimal amount = normalizeAmount(request.amount());
-        requirePositive(amount, "Receipt amount must be greater than 0");
+        requirePositive(amount, "error.finance.receipt.amountPositive");
 
         BigDecimal outstanding = receivable.getAmount().subtract(receivable.getReceived());
         if (amount.compareTo(outstanding) > 0) {
-            throw new BusinessException("Receipt amount exceeds receivable outstanding");
+            throw new BusinessException("error.finance.receipt.amountExceedsOutstanding");
         }
 
         Receipt receipt = new Receipt();
@@ -101,7 +116,7 @@ public class FinanceService {
     public Refund createRefund(RefundRequest request) {
         loadApprovedOrder(request.orderId());
         BigDecimal amount = normalizeAmount(request.amount());
-        requirePositive(amount, "Refund amount must be greater than 0");
+        requirePositive(amount, "error.finance.refund.amountPositive");
 
         Refund refund = new Refund();
         refund.setOrderId(request.orderId());
@@ -112,10 +127,10 @@ public class FinanceService {
 
     @Transactional
     public Refund updateRefund(Long refundId, RefundRequest request) {
-        Refund refund = refundRepository.findById(refundId).orElseThrow(() -> new BusinessException("Refund not found"));
+        Refund refund = refundRepository.findById(refundId).orElseThrow(() -> new BusinessException("error.finance.refund.notFound"));
         ensureRefundEditable(refund);
         BigDecimal amount = normalizeAmount(request.amount());
-        requirePositive(amount, "Refund amount must be greater than 0");
+        requirePositive(amount, "error.finance.refund.amountPositive");
         refund.setAmount(amount);
         refund.setReason(request.reason());
         return refundRepository.save(refund);
@@ -123,7 +138,7 @@ public class FinanceService {
 
     @Transactional
     public void deleteRefund(Long refundId) {
-        Refund refund = refundRepository.findById(refundId).orElseThrow(() -> new BusinessException("Refund not found"));
+        Refund refund = refundRepository.findById(refundId).orElseThrow(() -> new BusinessException("error.finance.refund.notFound"));
         ensureRefundEditable(refund);
         refund.setDeleted(true);
         refundRepository.save(refund);
@@ -133,26 +148,26 @@ public class FinanceService {
     public Payable createPayable(PayableRequest request) {
         TravelOrder order = loadApprovedOrder(request.orderId());
         BigDecimal amount = normalizeAmount(request.amount());
-        requirePositive(amount, "Payable amount must be greater than 0");
+        requirePositive(amount, "error.finance.payable.amountPositive");
 
         Payable payable = new Payable();
         payable.setOrderId(request.orderId());
         payable.setItemName(request.itemName());
         payable.setAmount(amount);
         Payable saved = payableRepository.save(payable);
-        promoteFinanceStatus(order);
+        refreshOrderFinanceState(order.getId(), false);
         return saved;
     }
 
     @Transactional
     public Payable updatePayable(Long payableId, PayableRequest request) {
         Payable payable = payableRepository.findById(payableId)
-            .orElseThrow(() -> new BusinessException("Payable not found"));
+            .orElseThrow(() -> new BusinessException("error.finance.payable.notFound"));
         ensurePayableEditable(payable);
         BigDecimal amount = normalizeAmount(request.amount());
-        requirePositive(amount, "Payable amount must be greater than 0");
+        requirePositive(amount, "error.finance.payable.amountPositive");
         if (amount.compareTo(payable.getPaid()) < 0) {
-            throw new BusinessException("Payable amount cannot be less than already paid amount");
+            throw new BusinessException("error.finance.payable.amountLessThanPaid");
         }
         payable.setItemName(request.itemName());
         payable.setAmount(amount);
@@ -162,7 +177,7 @@ public class FinanceService {
     @Transactional
     public void deletePayable(Long payableId) {
         Payable payable = payableRepository.findById(payableId)
-            .orElseThrow(() -> new BusinessException("Payable not found"));
+            .orElseThrow(() -> new BusinessException("error.finance.payable.notFound"));
         ensurePayableEditable(payable);
         payable.setDeleted(true);
         payableRepository.save(payable);
@@ -171,13 +186,13 @@ public class FinanceService {
     @Transactional
     public Payment createPayment(PaymentRequest request) {
         Payable payable = payableRepository.findById(request.payableId())
-            .orElseThrow(() -> new BusinessException("Payable not found"));
+            .orElseThrow(() -> new BusinessException("error.finance.payable.notFound"));
         BigDecimal amount = normalizeAmount(request.amount());
-        requirePositive(amount, "Payment amount must be greater than 0");
+        requirePositive(amount, "error.finance.payment.amountPositive");
 
         BigDecimal outstanding = payable.getAmount().subtract(payable.getPaid());
         if (amount.compareTo(outstanding) > 0) {
-            throw new BusinessException("Payment amount exceeds payable outstanding");
+            throw new BusinessException("error.finance.payment.amountExceedsOutstanding");
         }
 
         Payment payment = new Payment();
@@ -221,142 +236,229 @@ public class FinanceService {
         return paymentRepository.findByPayableIdAndDeletedFalse(payableId);
     }
 
+    public List<FinanceOrderOptionView> listOrderOptions(LoginUser user) {
+        return listVisibleOrders(user).stream()
+            .filter(order -> isFinanceOperable(order.getStatus()))
+            .map(order -> new FinanceOrderOptionView(
+                order.getId(),
+                order.getOrderNo(),
+                order.getStatus().name(),
+                order.getCustomerId(),
+                order.getTotalAmount(),
+                order.getCurrency()
+            ))
+            .toList();
+    }
+
     private void syncFinanceObjectStatus(String targetType, Long targetId, boolean approved) {
         if ("RECEIPT".equals(targetType)) {
-            Receipt receipt = receiptRepository.findById(targetId).orElseThrow(() -> new BusinessException("Receipt not found"));
+            Receipt receipt = receiptRepository.findById(targetId).orElseThrow(() -> new BusinessException("error.finance.receipt.notFound"));
             receipt.setStatus(approved ? "APPROVED" : "REJECTED");
             receiptRepository.save(receipt);
             if (approved) {
                 Receivable receivable = receivableRepository.findById(receipt.getReceivableId())
-                    .orElseThrow(() -> new BusinessException("Receivable not found"));
+                    .orElseThrow(() -> new BusinessException("error.finance.receivable.notFound"));
                 BigDecimal outstanding = receivable.getAmount().subtract(receivable.getReceived());
                 if (receipt.getAmount().compareTo(outstanding) > 0) {
-                    throw new BusinessException("Receipt amount exceeds receivable outstanding");
+                    throw new BusinessException("error.finance.receipt.amountExceedsOutstanding");
                 }
                 receivable.setReceived(receivable.getReceived().add(receipt.getAmount()));
                 if (receivable.getReceived().compareTo(receivable.getAmount()) >= 0) {
                     receivable.setStatus("CLOSED");
                 }
                 receivableRepository.save(receivable);
-                settleOrderByReceivable(receivable.getOrderId());
+                refreshOrderFinanceState(receivable.getOrderId(), false);
             }
             return;
         }
         if ("PAYMENT".equals(targetType)) {
-            Payment payment = paymentRepository.findById(targetId).orElseThrow(() -> new BusinessException("Payment not found"));
+            Payment payment = paymentRepository.findById(targetId).orElseThrow(() -> new BusinessException("error.finance.payment.notFound"));
             payment.setStatus(approved ? "APPROVED" : "REJECTED");
             paymentRepository.save(payment);
             if (approved) {
                 Payable payable = payableRepository.findById(payment.getPayableId())
-                    .orElseThrow(() -> new BusinessException("Payable not found"));
+                    .orElseThrow(() -> new BusinessException("error.finance.payable.notFound"));
                 BigDecimal outstanding = payable.getAmount().subtract(payable.getPaid());
                 if (payment.getAmount().compareTo(outstanding) > 0) {
-                    throw new BusinessException("Payment amount exceeds payable outstanding");
+                    throw new BusinessException("error.finance.payment.amountExceedsOutstanding");
                 }
                 payable.setPaid(payable.getPaid().add(payment.getAmount()));
                 if (payable.getPaid().compareTo(payable.getAmount()) >= 0) {
                     payable.setStatus("CLOSED");
                 }
                 payableRepository.save(payable);
-                settleOrderByPayable(payable.getOrderId());
+                refreshOrderFinanceState(payable.getOrderId(), false);
             }
             return;
         }
         if ("REFUND".equals(targetType)) {
-            Refund refund = refundRepository.findById(targetId).orElseThrow(() -> new BusinessException("Refund not found"));
+            Refund refund = refundRepository.findById(targetId).orElseThrow(() -> new BusinessException("error.finance.refund.notFound"));
             refund.setStatus(approved ? "APPROVED" : "REJECTED");
             refundRepository.save(refund);
             if (approved) {
-                TravelOrder order = orderRepository.findById(refund.getOrderId())
-                    .orElseThrow(() -> new BusinessException("Order not found"));
-                if (order.getStatus() == OrderStatus.COMPLETED) {
-                    order.setStatus(OrderStatus.FINANCE_IN_PROGRESS);
-                    orderRepository.save(order);
-                }
+                refreshOrderFinanceState(refund.getOrderId(), true);
             }
         }
     }
 
     private TravelOrder loadApprovedOrder(Long orderId) {
-        TravelOrder order = orderRepository.findById(orderId).orElseThrow(() -> new BusinessException("Order not found"));
-        if (order.getStatus() != OrderStatus.APPROVED && order.getStatus() != OrderStatus.FINANCE_IN_PROGRESS
-            && order.getStatus() != OrderStatus.COMPLETED) {
-            throw new BusinessException("Order must be approved before finance operations");
+        TravelOrder order = orderRepository.findById(orderId).orElseThrow(() -> new BusinessException("error.order.notFound"));
+        if (!isFinanceOperable(order.getStatus())) {
+            throw new BusinessException("error.finance.order.mustBeApproved");
         }
         return order;
     }
 
-    private void promoteFinanceStatus(TravelOrder order) {
-        if (order.getStatus() == OrderStatus.APPROVED) {
-            order.setStatus(OrderStatus.FINANCE_IN_PROGRESS);
-            orderRepository.save(order);
-        }
+    private boolean isFinanceOperable(OrderStatus status) {
+        return status == OrderStatus.APPROVED
+            || status == OrderStatus.IN_TRAVEL
+            || status == OrderStatus.TRAVEL_FINISHED
+            || status == OrderStatus.SETTLING
+            || status == OrderStatus.COMPLETED;
     }
 
-    private void settleOrderByReceivable(Long orderId) {
-        TravelOrder order = orderRepository.findById(orderId).orElseThrow();
+    private List<TravelOrder> listVisibleOrders(LoginUser user) {
+        if (user == null) {
+            return List.of();
+        }
+        if (user.getDataScope() == DataScope.ALL) {
+            return orderRepository.findByDeletedFalse();
+        }
+        if (user.getDataScope() == DataScope.SELF) {
+            return orderRepository.findBySalesUserIdAndDeletedFalse(user.getUserId());
+        }
+        if (user.getDataScope() == DataScope.DEPARTMENT) {
+            return orderRepository.findBySalesDeptIdAndDeletedFalse(user.getDepartmentId());
+        }
+        Set<Long> departmentIds = dataScopeResolver.resolveDepartmentIds(user);
+        if (departmentIds.isEmpty()) {
+            return List.of();
+        }
+        return orderRepository.findBySalesDeptIdInAndDeletedFalse(departmentIds);
+    }
+
+    private void refreshOrderFinanceState(Long orderId, boolean approvedRefund) {
+        TravelOrder order = orderRepository.findById(orderId)
+            .orElseThrow(() -> new BusinessException("error.order.notFound"));
         List<Receivable> receivables = receivableRepository.findByOrderIdAndDeletedFalse(orderId);
-        boolean allClosed = !receivables.isEmpty() && receivables.stream().allMatch(r -> "CLOSED".equals(r.getStatus()));
-        if (allClosed) {
-            tryCompleteOrder(order);
-        }
-    }
-
-    private void settleOrderByPayable(Long orderId) {
-        TravelOrder order = orderRepository.findById(orderId).orElseThrow();
         List<Payable> payables = payableRepository.findByOrderIdAndDeletedFalse(orderId);
-        boolean allClosed = payables.isEmpty() || payables.stream().allMatch(p -> "CLOSED".equals(p.getStatus()));
-        if (allClosed) {
-            tryCompleteOrder(order);
+        List<Refund> refunds = refundRepository.findByOrderIdAndDeletedFalse(orderId);
+
+        BigDecimal receivableAmount = receivables.stream()
+            .map(Receivable::getAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal receivedAmount = receivables.stream()
+            .map(Receivable::getReceived)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal approvedRefundAmount = refunds.stream()
+            .filter(r -> "APPROVED".equalsIgnoreCase(r.getStatus()))
+            .map(Refund::getAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal netReceived = receivedAmount.subtract(approvedRefundAmount);
+        if (netReceived.compareTo(BigDecimal.ZERO) < 0) {
+            netReceived = BigDecimal.ZERO;
         }
+
+        if (approvedRefund) {
+            order.setPaymentStatus(netReceived.compareTo(BigDecimal.ZERO) == 0 ? PaymentStatus.REFUNDED : PaymentStatus.REFUNDING);
+        } else if (receivableAmount.compareTo(BigDecimal.ZERO) <= 0 || netReceived.compareTo(BigDecimal.ZERO) <= 0) {
+            order.setPaymentStatus(PaymentStatus.UNPAID);
+        } else if (netReceived.compareTo(receivableAmount) >= 0) {
+            order.setPaymentStatus(PaymentStatus.PAID);
+        } else {
+            order.setPaymentStatus(PaymentStatus.PARTIAL);
+        }
+
+        boolean hasPositiveCollection = netReceived.compareTo(BigDecimal.ZERO) > 0;
+        if (order.getLockPolicy() == OrderLockPolicy.ON_DEPOSIT
+            && hasPositiveCollection
+            && order.getInventoryStatus() != InventoryStatus.LOCKED
+            && order.getStatus() != OrderStatus.CANCELED) {
+            lockInventory(order);
+        }
+
+        boolean receivableDone = !receivables.isEmpty() && receivables.stream().allMatch(r -> "CLOSED".equalsIgnoreCase(r.getStatus()));
+        boolean payableDone = payables.isEmpty() || payables.stream().allMatch(p -> "CLOSED".equalsIgnoreCase(p.getStatus()));
+        boolean hasFinanceProgress = receivables.stream().anyMatch(r -> r.getReceived().compareTo(BigDecimal.ZERO) > 0 || "CLOSED".equalsIgnoreCase(r.getStatus()))
+            || payables.stream().anyMatch(p -> p.getPaid().compareTo(BigDecimal.ZERO) > 0 || "CLOSED".equalsIgnoreCase(p.getStatus()));
+
+        if (approvedRefund) {
+            order.setSettlementStatus(SettlementStatus.PARTIAL);
+        } else if (receivableDone && payableDone) {
+            order.setSettlementStatus(SettlementStatus.SETTLED);
+        } else if (hasFinanceProgress) {
+            order.setSettlementStatus(SettlementStatus.PARTIAL);
+        } else {
+            order.setSettlementStatus(SettlementStatus.UNSETTLED);
+        }
+
+        if (order.getSettlementStatus() == SettlementStatus.SETTLED) {
+            if (order.getStatus() == OrderStatus.TRAVEL_FINISHED || order.getStatus() == OrderStatus.SETTLING) {
+                order.setStatus(OrderStatus.COMPLETED);
+                if (order.getCompletedAt() == null) {
+                    order.setCompletedAt(java.time.LocalDateTime.now());
+                }
+            }
+        } else {
+            if (order.getStatus() == OrderStatus.TRAVEL_FINISHED || order.getStatus() == OrderStatus.COMPLETED) {
+                order.setStatus(OrderStatus.SETTLING);
+            }
+        }
+
+        orderRepository.save(order);
     }
 
-    private void tryCompleteOrder(TravelOrder order) {
-        List<Receivable> receivables = receivableRepository.findByOrderIdAndDeletedFalse(order.getId());
-        List<Payable> payables = payableRepository.findByOrderIdAndDeletedFalse(order.getId());
-        boolean receivableDone = !receivables.isEmpty() && receivables.stream().allMatch(r -> "CLOSED".equals(r.getStatus()));
-        boolean payableDone = payables.isEmpty() || payables.stream().allMatch(p -> "CLOSED".equals(p.getStatus()));
-        if (receivableDone && payableDone) {
-            order.setStatus(OrderStatus.COMPLETED);
-            orderRepository.save(order);
+    private void lockInventory(TravelOrder order) {
+        if (order.getInventoryStatus() == InventoryStatus.LOCKED) {
+            return;
         }
+        Departure departure = departureRepository.findById(order.getDepartureId())
+            .orElseThrow(() -> new BusinessException("error.departure.notFound"));
+        Integer stock = departure.getStock() == null ? 0 : departure.getStock();
+        if (stock < order.getTravelerCount()) {
+            throw new BusinessException("error.departure.stock.insufficient");
+        }
+        departure.setStock(stock - order.getTravelerCount());
+        departureRepository.save(departure);
+        order.setInventoryStatus(InventoryStatus.LOCKED);
     }
 
     private BigDecimal normalizeAmount(BigDecimal amount) {
         if (amount == null) {
-            throw new BusinessException("Amount is required");
+            throw new BusinessException("error.finance.amount.required");
         }
         return amount.setScale(2, RoundingMode.HALF_UP);
     }
 
-    private void requirePositive(BigDecimal amount, String message) {
+    private void requirePositive(BigDecimal amount, String messageKey) {
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessException(message);
+            throw new BusinessException(messageKey);
         }
     }
 
     private void ensureReceivableEditable(Receivable receivable) {
         if (receivable.getReceived().compareTo(BigDecimal.ZERO) > 0) {
-            throw new BusinessException("Receivable with received amount cannot be edited or deleted");
+            throw new BusinessException("error.finance.receivable.lockedByReceived");
         }
         if (!receiptRepository.findByReceivableIdAndDeletedFalse(receivable.getId()).isEmpty()) {
-            throw new BusinessException("Receivable with receipt records cannot be edited or deleted");
+            throw new BusinessException("error.finance.receivable.lockedByReceipts");
         }
     }
 
     private void ensurePayableEditable(Payable payable) {
         if (payable.getPaid().compareTo(BigDecimal.ZERO) > 0) {
-            throw new BusinessException("Payable with paid amount cannot be edited or deleted");
+            throw new BusinessException("error.finance.payable.lockedByPaid");
         }
         if (!paymentRepository.findByPayableIdAndDeletedFalse(payable.getId()).isEmpty()) {
-            throw new BusinessException("Payable with payment records cannot be edited or deleted");
+            throw new BusinessException("error.finance.payable.lockedByPayments");
         }
     }
 
     private void ensureRefundEditable(Refund refund) {
         if ("APPROVED".equalsIgnoreCase(refund.getStatus())) {
-            throw new BusinessException("Approved refund cannot be edited or deleted");
+            throw new BusinessException("error.finance.refund.lockedByApproved");
         }
     }
 }
+
 

@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/reports")
-@PreAuthorize("hasAnyRole('ADMIN','SALES_MANAGER','FINANCE')")
 public class ReportController {
 
     private final ReportService reportService;
@@ -30,21 +29,25 @@ public class ReportController {
     }
 
     @GetMapping("/sales-funnel")
+    @PreAuthorize("hasAuthority('MENU_REPORT')")
     public ApiResponse<Map<String, Object>> salesFunnel() {
         return ApiResponse.ok(reportService.salesFunnel());
     }
 
     @GetMapping("/cashflow-aging")
+    @PreAuthorize("hasAuthority('MENU_REPORT')")
     public ApiResponse<Map<String, Object>> cashflowAging() {
         return ApiResponse.ok(reportService.cashflowAging());
     }
 
     @GetMapping("/profit")
+    @PreAuthorize("hasAuthority('MENU_REPORT')")
     public ApiResponse<List<Map<String, Object>>> profit() {
         return ApiResponse.ok(reportService.profit());
     }
 
     @GetMapping("/sales-funnel/export")
+    @PreAuthorize("hasAuthority('BTN_REPORT_EXPORT')")
     public ResponseEntity<byte[]> exportSalesFunnel() throws IOException {
         Map<String, Object> funnel = reportService.salesFunnel();
         try (XSSFWorkbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -66,6 +69,7 @@ public class ReportController {
 
     @GetMapping("/cashflow-aging/export")
     @SuppressWarnings("unchecked")
+    @PreAuthorize("hasAuthority('BTN_REPORT_EXPORT')")
     public ResponseEntity<byte[]> exportCashflowAging() throws IOException {
         Map<String, Object> aging = reportService.cashflowAging();
         Map<String, Object> receivableAging = (Map<String, Object>) aging.getOrDefault("receivableAging", Map.of());
@@ -89,6 +93,7 @@ public class ReportController {
     }
 
     @GetMapping("/profit/export")
+    @PreAuthorize("hasAuthority('BTN_REPORT_EXPORT')")
     public ResponseEntity<byte[]> exportProfit() throws IOException {
         List<Map<String, Object>> rows = reportService.profit();
         try (XSSFWorkbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {

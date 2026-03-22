@@ -11,7 +11,7 @@ import jakarta.validation.constraints.NotNull;
 
 public record DepartureRequest(
     @NotNull Long routeId,
-    @NotBlank String code,
+    String code,
     @NotBlank String startDate,
     @NotBlank String endDate,
     @NotNull @Min(0) Integer stock,

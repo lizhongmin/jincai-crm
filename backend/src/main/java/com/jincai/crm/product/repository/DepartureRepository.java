@@ -13,5 +13,6 @@ public interface DepartureRepository extends JpaRepository<Departure, Long> {
     List<Departure> findByDeletedFalse();
 
     List<Departure> findByRouteIdAndDeletedFalse(Long routeId);
-}
 
+    boolean existsByCode(String code);
+}

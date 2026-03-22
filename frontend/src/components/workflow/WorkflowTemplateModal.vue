@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <a-drawer
     :open="open"
     :title="model.id ? '编辑模板' : '新增模板'"
@@ -40,6 +40,21 @@
       </div>
 
       <div class="grid-2">
+        <a-form-item label="限定线路（可选）">
+          <a-select v-model:value="model.routeId" allow-clear placeholder="不限制线路">
+            <a-select-option v-for="item in routes" :key="item.id" :value="item.id">{{ item.name }}</a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item label="限定团期（可选）">
+          <a-select v-model:value="model.departureId" allow-clear placeholder="不限制团期">
+            <a-select-option v-for="item in filteredDepartures" :key="item.id" :value="item.id">
+              {{ item.code }} ({{ item.startDate }} ~ {{ item.endDate }})
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+      </div>
+
+      <div class="grid-2">
         <a-form-item label="最小金额">
           <a-input-number v-model:value="model.minAmount" :min="0" style="width: 100%" />
         </a-form-item>
@@ -69,12 +84,23 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
+
 const props = defineProps<{
   open: boolean;
   saving: boolean;
   model: any;
+  routes: any[];
+  departures: any[];
   roles: Array<{ code: string; name: string }>;
 }>();
+
+const filteredDepartures = computed(() => {
+  if (!props.model.routeId) {
+    return props.departures || [];
+  }
+  return (props.departures || []).filter((item: any) => item.routeId === props.model.routeId);
+});
 
 const emit = defineEmits<{
   (e: 'update:open', value: boolean): void;

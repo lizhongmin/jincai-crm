@@ -5,17 +5,21 @@ import com.jincai.crm.workflow.entity.*;
 import com.jincai.crm.workflow.repository.*;
 
 import com.jincai.crm.common.BusinessException;
+import com.jincai.crm.common.I18nService;
 import com.jincai.crm.notification.entity.Notification;
 import com.jincai.crm.notification.repository.NotificationRepository;
 import com.jincai.crm.order.entity.TravelOrder;
-import com.jincai.crm.org.entity.AppUser;
-import com.jincai.crm.org.repository.AppUserRepository;
-import com.jincai.crm.org.entity.Role;
-import com.jincai.crm.org.repository.RoleRepository;
-import com.jincai.crm.org.entity.UserRole;
-import com.jincai.crm.org.repository.UserRoleRepository;
+import com.jincai.crm.product.repository.DepartureRepository;
+import com.jincai.crm.product.repository.RouteProductRepository;
+import com.jincai.crm.system.entity.AppUser;
+import com.jincai.crm.system.repository.AppUserRepository;
+import com.jincai.crm.system.entity.Role;
+import com.jincai.crm.system.repository.RoleRepository;
+import com.jincai.crm.system.entity.UserRole;
+import com.jincai.crm.system.repository.UserRoleRepository;
 import com.jincai.crm.security.LoginUser;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -37,7 +41,10 @@ public class WorkflowService {
     private final AppUserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
     private final RoleRepository roleRepository;
+    private final RouteProductRepository routeRepository;
+    private final DepartureRepository departureRepository;
     private final NotificationRepository notificationRepository;
+    private final I18nService i18nService;
 
     public WorkflowService(WorkflowTemplateRepository templateRepository,
                            WorkflowTemplateNodeRepository templateNodeRepository,
@@ -46,7 +53,10 @@ public class WorkflowService {
                            AppUserRepository userRepository,
                            UserRoleRepository userRoleRepository,
                            RoleRepository roleRepository,
-                           NotificationRepository notificationRepository) {
+                           RouteProductRepository routeRepository,
+                           DepartureRepository departureRepository,
+                           NotificationRepository notificationRepository,
+                           I18nService i18nService) {
         this.templateRepository = templateRepository;
         this.templateNodeRepository = templateNodeRepository;
         this.instanceRepository = instanceRepository;
@@ -54,7 +64,10 @@ public class WorkflowService {
         this.userRepository = userRepository;
         this.userRoleRepository = userRoleRepository;
         this.roleRepository = roleRepository;
+        this.routeRepository = routeRepository;
+        this.departureRepository = departureRepository;
         this.notificationRepository = notificationRepository;
+        this.i18nService = i18nService;
     }
 
     public List<WorkflowTemplateView> listTemplates() {
@@ -64,12 +77,22 @@ public class WorkflowService {
             .toList();
     }
 
+    public WorkflowContextOptionsView contextOptions() {
+        return new WorkflowContextOptionsView(
+            roleRepository.findByDeletedFalse(),
+            routeRepository.findByDeletedFalse(),
+            departureRepository.findByDeletedFalse()
+        );
+    }
+
     @Transactional
     public WorkflowTemplate saveTemplate(WorkflowTemplateRequest request) {
         WorkflowTemplate template = new WorkflowTemplate();
         template.setName(request.name());
         template.setOrderType(request.orderType());
         template.setProductCategory(request.productCategory());
+        template.setRouteId(request.routeId());
+        template.setDepartureId(request.departureId());
         template.setMinAmount(request.minAmount());
         template.setMaxAmount(request.maxAmount());
         template.setActive(request.active() == null ? true : request.active());
@@ -80,13 +103,15 @@ public class WorkflowService {
 
     @Transactional
     public WorkflowTemplate updateTemplate(Long id, WorkflowTemplateRequest request) {
-        WorkflowTemplate template = templateRepository.findById(id).orElseThrow(() -> new BusinessException("Workflow template not found"));
+        WorkflowTemplate template = templateRepository.findById(id).orElseThrow(() -> new BusinessException("error.workflow.template.notFound"));
         if (Boolean.TRUE.equals(template.getDeleted())) {
-            throw new BusinessException("Workflow template not found");
+            throw new BusinessException("error.workflow.template.notFound");
         }
         template.setName(request.name());
         template.setOrderType(request.orderType());
         template.setProductCategory(request.productCategory());
+        template.setRouteId(request.routeId());
+        template.setDepartureId(request.departureId());
         template.setMinAmount(request.minAmount());
         template.setMaxAmount(request.maxAmount());
         template.setActive(request.active() == null ? true : request.active());
@@ -103,7 +128,7 @@ public class WorkflowService {
 
     @Transactional
     public void deleteTemplate(Long id) {
-        WorkflowTemplate template = templateRepository.findById(id).orElseThrow(() -> new BusinessException("Workflow template not found"));
+        WorkflowTemplate template = templateRepository.findById(id).orElseThrow(() -> new BusinessException("error.workflow.template.notFound"));
         if (Boolean.TRUE.equals(template.getDeleted())) {
             return;
         }
@@ -122,17 +147,23 @@ public class WorkflowService {
         return candidates.stream()
             .filter(t -> t.getOrderType().equalsIgnoreCase(order.getOrderType()))
             .filter(t -> t.getProductCategory().equalsIgnoreCase(order.getProductCategory()))
+            .filter(t -> t.getRouteId() == null || t.getRouteId().equals(order.getRouteId()))
+            .filter(t -> t.getDepartureId() == null || t.getDepartureId().equals(order.getDepartureId()))
             .filter(t -> withinAmount(t, order.getTotalAmount()))
+            .sorted(Comparator
+                .comparingInt((WorkflowTemplate t) -> templateSpecificityScore(order, t)).reversed()
+                .thenComparing(t -> t.getMinAmount() == null ? BigDecimal.ZERO : t.getMinAmount(), Comparator.reverseOrder()))
             .findFirst()
-            .orElseThrow(() -> new BusinessException("No workflow template matched"));
+            .orElseThrow(() -> new BusinessException("error.workflow.template.notMatched"));
     }
 
     @Transactional
     public void startWorkflow(TravelOrder order) {
+        closeActiveInstance(order.getId(), "REPLACED");
         WorkflowTemplate template = matchTemplate(order);
         List<WorkflowTemplateNode> templateNodes = templateNodeRepository.findByTemplateIdAndDeletedFalseOrderByStepOrderAsc(template.getId());
         if (templateNodes.isEmpty()) {
-            throw new BusinessException("Workflow template has no nodes");
+            throw new BusinessException("error.workflow.template.noNodes");
         }
         WorkflowInstance instance = new WorkflowInstance();
         instance.setTemplateId(template.getId());
@@ -157,13 +188,13 @@ public class WorkflowService {
     @Transactional
     public boolean approve(Long orderId, LoginUser currentUser, String comment) {
         WorkflowInstance instance = instanceRepository.findByOrderIdAndDeletedFalse(orderId)
-            .orElseThrow(() -> new BusinessException("Workflow instance not found"));
+            .orElseThrow(() -> new BusinessException("error.workflow.instance.notFound"));
         if (!"RUNNING".equals(instance.getStatus())) {
-            throw new BusinessException("Workflow is not running");
+            throw new BusinessException("error.workflow.instance.notRunning");
         }
         WorkflowInstanceNode node = instanceNodeRepository
             .findByInstanceIdAndStepOrderAndDeletedFalse(instance.getId(), instance.getCurrentStep())
-            .orElseThrow(() -> new BusinessException("Current workflow node not found"));
+            .orElseThrow(() -> new BusinessException("error.workflow.node.currentNotFound"));
         checkApprover(currentUser, node.getApproverRoleCode());
         node.setStatus("APPROVED");
         node.setComment(comment);
@@ -189,10 +220,13 @@ public class WorkflowService {
     @Transactional
     public void reject(Long orderId, LoginUser currentUser, String comment) {
         WorkflowInstance instance = instanceRepository.findByOrderIdAndDeletedFalse(orderId)
-            .orElseThrow(() -> new BusinessException("Workflow instance not found"));
+            .orElseThrow(() -> new BusinessException("error.workflow.instance.notFound"));
+        if (!"RUNNING".equals(instance.getStatus())) {
+            throw new BusinessException("error.workflow.instance.notRunning");
+        }
         WorkflowInstanceNode node = instanceNodeRepository
             .findByInstanceIdAndStepOrderAndDeletedFalse(instance.getId(), instance.getCurrentStep())
-            .orElseThrow(() -> new BusinessException("Current workflow node not found"));
+            .orElseThrow(() -> new BusinessException("error.workflow.node.currentNotFound"));
         checkApprover(currentUser, node.getApproverRoleCode());
         node.setStatus("REJECTED");
         node.setComment(comment);
@@ -201,9 +235,51 @@ public class WorkflowService {
         instanceRepository.save(instance);
     }
 
+    @Transactional
+    public void withdraw(Long orderId, LoginUser currentUser, String comment) {
+        WorkflowInstance instance = instanceRepository.findByOrderIdAndDeletedFalse(orderId)
+            .orElseThrow(() -> new BusinessException("error.workflow.instance.notFound"));
+        if (!"RUNNING".equals(instance.getStatus())) {
+            throw new BusinessException("error.workflow.instance.notRunning");
+        }
+        WorkflowInstanceNode node = instanceNodeRepository
+            .findByInstanceIdAndStepOrderAndDeletedFalse(instance.getId(), instance.getCurrentStep())
+            .orElseThrow(() -> new BusinessException("error.workflow.node.currentNotFound"));
+        if (currentUser == null) {
+            throw new BusinessException("error.auth.required");
+        }
+        node.setStatus("WITHDRAWN");
+        node.setComment(comment == null || comment.isBlank() ? i18nService.getMessage("common.workflow.withdrawnBySubmitter") : comment);
+        instanceNodeRepository.save(node);
+        instance.setStatus("WITHDRAWN");
+        instanceRepository.save(instance);
+    }
+
+    @Transactional
+    public void transfer(Long orderId, LoginUser currentUser, String targetRoleCode, String comment) {
+        if (targetRoleCode == null || targetRoleCode.isBlank()) {
+            throw new BusinessException("error.workflow.transfer.targetRole.required");
+        }
+        WorkflowInstance instance = instanceRepository.findByOrderIdAndDeletedFalse(orderId)
+            .orElseThrow(() -> new BusinessException("error.workflow.instance.notFound"));
+        if (!"RUNNING".equals(instance.getStatus())) {
+            throw new BusinessException("error.workflow.instance.notRunning");
+        }
+        WorkflowInstanceNode node = instanceNodeRepository
+            .findByInstanceIdAndStepOrderAndDeletedFalse(instance.getId(), instance.getCurrentStep())
+            .orElseThrow(() -> new BusinessException("error.workflow.node.currentNotFound"));
+        checkApprover(currentUser, node.getApproverRoleCode());
+
+        node.setApproverRoleCode(targetRoleCode.trim().toUpperCase());
+        node.setComment(comment == null || comment.isBlank()
+            ? i18nService.getMessage("common.workflow.transferredAt", LocalDateTime.now())
+            : comment);
+        instanceNodeRepository.save(node);
+    }
+
     private void saveTemplateNodes(Long templateId, List<WorkflowNodeRequest> nodes) {
         if (nodes == null || nodes.isEmpty()) {
-            throw new BusinessException("Workflow template must contain at least one node");
+            throw new BusinessException("error.workflow.template.nodeRequired");
         }
         List<WorkflowNodeRequest> sorted = nodes.stream()
             .sorted(Comparator.comparing(WorkflowNodeRequest::stepOrder))
@@ -220,7 +296,7 @@ public class WorkflowService {
 
     private void checkApprover(LoginUser user, String approverRoleCode) {
         if (user == null || user.getRoleCodes() == null || user.getRoleCodes().stream().noneMatch(approverRoleCode::equalsIgnoreCase)) {
-            throw new BusinessException("Current user has no permission to approve this node");
+            throw new BusinessException("error.workflow.node.noApprovePermission");
         }
     }
 
@@ -230,9 +306,45 @@ public class WorkflowService {
         return minPass && maxPass;
     }
 
+    private int templateSpecificityScore(TravelOrder order, WorkflowTemplate template) {
+        int score = 0;
+        if (template.getRouteId() != null && template.getRouteId().equals(order.getRouteId())) {
+            score += 10;
+        }
+        if (template.getDepartureId() != null && template.getDepartureId().equals(order.getDepartureId())) {
+            score += 20;
+        }
+        if (template.getMinAmount() != null) {
+            score += 2;
+        }
+        if (template.getMaxAmount() != null) {
+            score += 2;
+        }
+        return score;
+    }
+
+    private void closeActiveInstance(Long orderId, String reason) {
+        instanceRepository.findByOrderIdAndDeletedFalse(orderId).ifPresent(instance -> {
+            if (!"APPROVED".equalsIgnoreCase(instance.getStatus())
+                && !"REJECTED".equalsIgnoreCase(instance.getStatus())
+                && !"WITHDRAWN".equalsIgnoreCase(instance.getStatus())
+                && !"REPLACED".equalsIgnoreCase(instance.getStatus())) {
+                instance.setStatus(reason);
+                instanceRepository.save(instance);
+                instanceNodeRepository.findByInstanceIdAndDeletedFalseOrderByStepOrderAsc(instance.getId())
+                    .stream()
+                    .filter(node -> "PENDING".equalsIgnoreCase(node.getStatus()) || "WAITING".equalsIgnoreCase(node.getStatus()))
+                    .forEach(node -> {
+                        node.setStatus(reason);
+                        instanceNodeRepository.save(node);
+                    });
+            }
+        });
+    }
+
     private void sendNodeNotification(Long instanceId, Integer step, String orderNo) {
         WorkflowInstanceNode node = instanceNodeRepository.findByInstanceIdAndStepOrderAndDeletedFalse(instanceId, step)
-            .orElseThrow(() -> new BusinessException("Pending node not found"));
+            .orElseThrow(() -> new BusinessException("error.workflow.node.pendingNotFound"));
         List<AppUser> users = userRepository.findByDeletedFalse();
         List<UserRole> userRoles = new ArrayList<>();
         users.forEach(user -> userRoles.addAll(userRoleRepository.findByUserIdAndDeletedFalse(user.getId())));
@@ -248,8 +360,9 @@ public class WorkflowService {
             .forEach(userId -> {
                 Notification notification = new Notification();
                 notification.setUserId(userId);
-                notification.setContent("Order " + orderNo + " pending your approval");
+                notification.setContent("Order " + (orderNo == null ? ("ORDER-" + instanceId) : orderNo) + " pending your approval");
                 notificationRepository.save(notification);
             });
     }
 }
+

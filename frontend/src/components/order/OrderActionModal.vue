@@ -1,7 +1,23 @@
+<script setup lang="ts">
+defineProps<{
+  open: boolean;
+  saving: boolean;
+  title: string;
+  placeholder?: string;
+  comment: string;
+}>();
+
+const emit = defineEmits<{
+  (e: 'update:open', value: boolean): void;
+  (e: 'update:comment', value: string): void;
+  (e: 'confirm'): void;
+}>();
+</script>
+
 <template>
   <a-drawer
     :open="open"
-    :title="actionType === 'approve' ? '审批通过' : '审批驳回'"
+    :title="title"
     placement="right"
     width="460"
     @update:open="(value) => emit('update:open', value)"
@@ -14,29 +30,14 @@
       </a-space>
     </template>
     <a-form layout="vertical">
-      <a-form-item label="审批意见">
+      <a-form-item label="备注">
         <a-textarea
           :value="comment"
           :rows="3"
-          :placeholder="actionType === 'approve' ? '请输入通过意见' : '请输入驳回原因'"
+          :placeholder="placeholder || '请输入备注信息'"
           @update:value="(value) => emit('update:comment', value || '')"
         />
       </a-form-item>
     </a-form>
   </a-drawer>
 </template>
-
-<script setup lang="ts">
-const props = defineProps<{
-  open: boolean;
-  saving: boolean;
-  actionType: 'approve' | 'reject';
-  comment: string;
-}>();
-
-const emit = defineEmits<{
-  (e: 'update:open', value: boolean): void;
-  (e: 'update:comment', value: string): void;
-  (e: 'confirm'): void;
-}>();
-</script>

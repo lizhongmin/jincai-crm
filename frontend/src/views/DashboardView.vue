@@ -1,22 +1,22 @@
-<template>
+﻿<template>
   <div class="dashboard">
-    <div class="metric-grid">
-      <a-card class="section-card metric" :bordered="false">
-        <span>订单总数</span>
-        <strong>{{ funnel.totalOrders || 0 }}</strong>
-      </a-card>
-      <a-card class="section-card metric" :bordered="false">
-        <span>待审批</span>
-        <strong>{{ funnel.pendingApproval || 0 }}</strong>
-      </a-card>
-      <a-card class="section-card metric" :bordered="false">
-        <span>已通过</span>
-        <strong>{{ funnel.approvedOrders || 0 }}</strong>
-      </a-card>
-      <a-card class="section-card metric" :bordered="false">
-        <span>已完结</span>
-        <strong>{{ funnel.completedOrders || 0 }}</strong>
-      </a-card>
+    <div class="metric-grid biz-summary">
+      <div class="item">
+        <span class="label">订单总数</span>
+        <strong class="value">{{ funnel.totalOrders || 0 }}</strong>
+      </div>
+      <div class="item">
+        <span class="label">待审批</span>
+        <strong class="value">{{ funnel.pendingApproval || 0 }}</strong>
+      </div>
+      <div class="item">
+        <span class="label">已审批</span>
+        <strong class="value">{{ funnel.approvedOrders || 0 }}</strong>
+      </div>
+      <div class="item">
+        <span class="label">已完结</span>
+        <strong class="value">{{ funnel.completedOrders || 0 }}</strong>
+      </div>
     </div>
 
     <div class="grid-2">
@@ -39,8 +39,8 @@
       </a-card>
     </div>
 
-    <a-card class="section-card" :bordered="false" title="线路毛利 Top">
-      <a-table :columns="profitCols" :data-source="profitTop" row-key="routeId" :pagination="false" />
+    <a-card class="section-card" :bordered="false" title="线路毛利 Top 8">
+      <a-table :columns="profitCols" :data-source="profitTop" row-key="routeId" :pagination="false" :scroll="{ x: 720 }" />
     </a-card>
   </div>
 </template>
@@ -90,25 +90,13 @@ onMounted(load);
 <style scoped>
 .dashboard {
   display: grid;
-  gap: 16px;
+  gap: 10px;
 }
 
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.metric span {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.metric strong {
-  margin-top: 10px;
-  display: block;
-  font-size: 30px;
-  line-height: 1;
+  gap: 8px;
 }
 
 .aging-list {
