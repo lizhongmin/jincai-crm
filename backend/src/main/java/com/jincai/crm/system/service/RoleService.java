@@ -1,6 +1,7 @@
 package com.jincai.crm.system.service;
 
 import com.jincai.crm.common.BusinessException;
+import com.jincai.crm.common.PageResult;
 import com.jincai.crm.system.dto.RoleGrantRequest;
 import com.jincai.crm.system.dto.RoleRequest;
 import com.jincai.crm.system.entity.Permission;
@@ -10,7 +11,12 @@ import com.jincai.crm.system.repository.PermissionRepository;
 import com.jincai.crm.system.repository.RolePermissionRepository;
 import com.jincai.crm.system.repository.RoleRepository;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +38,34 @@ public class RoleService {
 
     public List<Role> list() {
         return roleRepository.findByDeletedFalse();
+    }
+
+    public PageResult<Role> page(int page, int size, String keyword) {
+        int normalizedPage = normalizePage(page);
+        int normalizedSize = normalizeSize(size);
+        String normalizedKeyword = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
+        Specification<Role> spec = (root, query, cb) -> {
+            List<jakarta.persistence.criteria.Predicate> predicates = new java.util.ArrayList<>();
+            predicates.add(cb.isFalse(root.get("deleted")));
+            if (!normalizedKeyword.isBlank()) {
+                String likeValue = "%" + normalizedKeyword + "%";
+                predicates.add(cb.or(
+                    cb.like(cb.lower(cb.coalesce(root.get("name"), "")), likeValue),
+                    cb.like(cb.lower(cb.coalesce(root.get("code"), "")), likeValue),
+                    cb.like(cb.lower(cb.coalesce(root.get("description"), "")), likeValue)
+                ));
+            }
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
+        Page<Role> result = roleRepository.findAll(
+            spec,
+            PageRequest.of(
+                normalizedPage - 1,
+                normalizedSize,
+                Sort.by(Sort.Direction.DESC, "updatedAt").and(Sort.by(Sort.Direction.DESC, "id"))
+            )
+        );
+        return new PageResult<>(result.getContent(), result.getTotalElements(), normalizedPage, normalizedSize);
     }
 
     public Set<Long> permissionIds(Long id) {
@@ -96,6 +130,17 @@ public class RoleService {
         if (ADMIN_ROLE_CODE.equalsIgnoreCase(role.getCode())) {
             throw new BusinessException("error.role.admin.modifyDenied");
         }
+    }
+
+    private int normalizePage(int page) {
+        return Math.max(page, 1);
+    }
+
+    private int normalizeSize(int size) {
+        if (size <= 0) {
+            return 10;
+        }
+        return Math.min(size, 100);
     }
 }
 

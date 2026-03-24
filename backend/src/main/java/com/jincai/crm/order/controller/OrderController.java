@@ -8,6 +8,7 @@ import com.jincai.crm.customer.entity.Traveler;
 import com.jincai.crm.product.entity.DeparturePrice;
 
 import com.jincai.crm.common.ApiResponse;
+import com.jincai.crm.common.PageResult;
 import com.jincai.crm.security.SecurityUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -39,6 +40,16 @@ public class OrderController {
     @PreAuthorize("hasAuthority('MENU_ORDER')")
     public ApiResponse<List<TravelOrder>> list() {
         return ApiResponse.ok(orderService.listVisible(SecurityUtils.currentUser()));
+    }
+
+    @GetMapping("/page")
+    @PreAuthorize("hasAuthority('MENU_ORDER')")
+    public ApiResponse<PageResult<TravelOrder>> page(@RequestParam(defaultValue = "1") int page,
+                                                     @RequestParam(defaultValue = "10") int size,
+                                                     @RequestParam(required = false) String keyword,
+                                                     @RequestParam(required = false) String status,
+                                                     @RequestParam(required = false) Long customerId) {
+        return ApiResponse.ok(orderService.pageVisible(SecurityUtils.currentUser(), page, size, keyword, status, customerId));
     }
 
     @GetMapping("/context-options")

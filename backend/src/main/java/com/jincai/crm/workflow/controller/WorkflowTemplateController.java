@@ -6,6 +6,7 @@ import com.jincai.crm.workflow.repository.*;
 import com.jincai.crm.workflow.service.*;
 
 import com.jincai.crm.common.ApiResponse;
+import com.jincai.crm.common.PageResult;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -32,6 +34,16 @@ public class WorkflowTemplateController {
     @PreAuthorize("hasAuthority('MENU_WORKFLOW')")
     public ApiResponse<List<WorkflowTemplateView>> list() {
         return ApiResponse.ok(workflowService.listTemplates());
+    }
+
+    @GetMapping("/page")
+    @PreAuthorize("hasAuthority('MENU_WORKFLOW')")
+    public ApiResponse<PageResult<WorkflowTemplateView>> page(
+        @RequestParam(defaultValue = "1") int page,
+        @RequestParam(defaultValue = "10") int size,
+        @RequestParam(required = false) String keyword
+    ) {
+        return ApiResponse.ok(workflowService.pageTemplates(page, size, keyword));
     }
 
     @GetMapping("/context-options")

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { orderApi } from '../api/crm';
 import OrderActionModal from '../components/order/OrderActionModal.vue';
@@ -35,6 +35,9 @@ const quote = ref<any | null>(null);
 const keyword = ref('');
 const statusFilter = ref('ALL');
 const activeListTab = ref('all');
+const orderPage = ref(1);
+const orderPageSize = ref(10);
+const orderTotal = ref(0);
 const saving = ref(false);
 
 const createModal = ref(false);
@@ -100,21 +103,8 @@ const decorateOrder = (item: any) => ({
   departureLabel: departureMap.value[item.departureId]?.name || `团期#${item.departureId}`
 });
 
-const keywordOrders = computed(() => {
-  const kw = keyword.value.trim().toLowerCase();
-  const source = orders.value.map(decorateOrder);
-  if (!kw) return source;
-  return source.filter((item) =>
-    [item.orderNo, item.customerName, item.routeName, item.orderType]
-      .filter(Boolean)
-      .some((value) => String(value).toLowerCase().includes(kw))
-  );
-});
-
-const allOrders = computed(() => {
-  if (statusFilter.value === 'ALL') return keywordOrders.value;
-  return keywordOrders.value.filter((item) => item.status === statusFilter.value);
-});
+const decoratedOrders = computed(() => orders.value.map(decorateOrder));
+const allOrders = computed(() => decoratedOrders.value);
 
 const groupDefs = [
   { key: 'pendingApproval', label: '待审批', match: (item: any) => item.status === 'PENDING_APPROVAL' },
@@ -144,17 +134,17 @@ const statusGroups = computed(() =>
     .map((group) => ({
       key: group.key,
       label: group.label,
-      items: keywordOrders.value.filter(group.match)
+      items: decoratedOrders.value.filter(group.match)
     }))
     .filter((group) => group.items.length > 0)
 );
 
-const pendingOrders = computed(() => keywordOrders.value.filter((item) => item.status === 'PENDING_APPROVAL'));
+const pendingOrders = computed(() => decoratedOrders.value.filter((item) => item.status === 'PENDING_APPROVAL'));
 const pendingCount = computed(() => pendingOrders.value.length);
 const approvedCount = computed(() =>
-  orders.value.filter((item) => ['APPROVED', 'IN_TRAVEL', 'TRAVEL_FINISHED', 'SETTLING'].includes(item.status)).length
+  decoratedOrders.value.filter((item) => ['APPROVED', 'IN_TRAVEL', 'TRAVEL_FINISHED', 'SETTLING'].includes(item.status)).length
 );
-const completedCount = computed(() => orders.value.filter((item) => item.status === 'COMPLETED').length);
+const completedCount = computed(() => decoratedOrders.value.filter((item) => item.status === 'COMPLETED').length);
 
 const actionConfig: Record<OrderAction, { title: string; placeholder: string; defaultComment: string; successText: string }> = {
   SUBMIT: { title: '提交审批', placeholder: '请输入提交说明', defaultComment: '提交审批', successText: '订单已提交审批' },
@@ -181,15 +171,39 @@ const openAction = (record: any, action: OrderAction) => {
   actionModal.value = true;
 };
 
+const listStatusParam = computed(() => {
+  if (activeListTab.value === 'pending') {
+    return 'PENDING_APPROVAL';
+  }
+  if (activeListTab.value === 'all' && statusFilter.value !== 'ALL') {
+    return statusFilter.value;
+  }
+  return undefined;
+});
+
+const loadOrders = async () => {
+  const { data } = await orderApi.page({
+    page: orderPage.value,
+    size: orderPageSize.value,
+    keyword: keyword.value.trim() || undefined,
+    status: listStatusParam.value
+  });
+  orders.value = data.data?.items || [];
+  orderTotal.value = Number(data.data?.total || 0);
+};
+
+const loadContextOptions = async () => {
+  const { data } = await orderApi.contextOptions();
+  customers.value = data.data?.customers || [];
+  routes.value = data.data?.routes || [];
+  departures.value = data.data?.departures || [];
+};
+
 const loadBase = async () => {
-  const [orderRes, contextRes] = await Promise.all([
-    orderApi.list(),
-    orderApi.contextOptions()
+  await Promise.all([
+    loadOrders(),
+    loadContextOptions()
   ]);
-  orders.value = orderRes.data.data || [];
-  customers.value = contextRes.data.data?.customers || [];
-  routes.value = contextRes.data.data?.routes || [];
-  departures.value = contextRes.data.data?.departures || [];
 };
 
 const loadCustomerTravelers = async (customerId?: number) => {
@@ -373,6 +387,17 @@ const beforeImportOrder = async (file: File) => {
   return false;
 };
 
+const onOrderPageChange = (page: number, pageSize: number) => {
+  orderPage.value = page;
+  orderPageSize.value = pageSize;
+  void loadOrders();
+};
+
+watch([keyword, statusFilter, activeListTab], async () => {
+  orderPage.value = 1;
+  await loadOrders();
+});
+
 onMounted(async () => {
   try {
     await loadBase();
@@ -387,7 +412,7 @@ onMounted(async () => {
     <div class="biz-summary">
       <div class="item">
         <span class="label">订单总数</span>
-        <strong class="value">{{ orders.length }}</strong>
+        <strong class="value">{{ orderTotal }}</strong>
       </div>
       <div class="item">
         <span class="label">待审批</span>
@@ -413,7 +438,7 @@ onMounted(async () => {
       </div>
 
       <a-tabs v-model:activeKey="activeListTab" class="list-tabs">
-        <a-tab-pane key="all" :tab="`订单列表 (${allOrders.length})`">
+        <a-tab-pane key="all" :tab="`订单列表 (${orderTotal})`">
           <div class="toolbar-row" style="margin-top: 10px">
             <a-select v-model:value="statusFilter" style="width: 180px">
               <a-select-option value="ALL">全部状态</a-select-option>
@@ -429,9 +454,19 @@ onMounted(async () => {
             @action="openAction"
             @remove="removeOrder"
           />
+          <a-pagination
+            style="margin-top: 12px; text-align: right"
+            :current="orderPage"
+            :page-size="orderPageSize"
+            :total="orderTotal"
+            :show-size-changer="true"
+            :page-size-options="['10', '20', '50']"
+            :show-total="(total:number) => `共 ${total} 条`"
+            @change="onOrderPageChange"
+          />
         </a-tab-pane>
 
-        <a-tab-pane key="pending" :tab="`待审核订单 (${pendingOrders.length})`">
+        <a-tab-pane key="pending" :tab="`待审核订单 (${orderTotal})`">
           <order-table
             style="margin-top: 10px"
             :items="pendingOrders"
@@ -440,6 +475,16 @@ onMounted(async () => {
             @edit="openCreate"
             @action="openAction"
             @remove="removeOrder"
+          />
+          <a-pagination
+            style="margin-top: 12px; text-align: right"
+            :current="orderPage"
+            :page-size="orderPageSize"
+            :total="orderTotal"
+            :show-size-changer="true"
+            :page-size-options="['10', '20', '50']"
+            :show-total="(total:number) => `共 ${total} 条`"
+            @change="onOrderPageChange"
           />
         </a-tab-pane>
 

@@ -30,6 +30,7 @@ const emit = defineEmits<{
   (e: 'edit', record: any): void;
   (e: 'action', record: any, action: OrderAction): void;
   (e: 'remove', record: any): void;
+  (e: 'table-change', pagination: { current?: number; pageSize?: number }): void;
 }>();
 
 const columns = [
@@ -125,6 +126,10 @@ const tableScroll = computed(() => ({ x: 2000 }));
 const customRow = (record: any) => ({
   onClick: () => emit('view', record)
 });
+
+const onTableChange = (pagination: { current?: number; pageSize?: number }) => {
+  emit('table-change', pagination);
+};
 </script>
 
 <template>
@@ -132,9 +137,10 @@ const customRow = (record: any) => ({
     :columns="columns"
     :data-source="props.items"
     row-key="id"
-    :pagination="{ pageSize: 10, showSizeChanger: false }"
+    :pagination="false"
     :scroll="tableScroll"
     :custom-row="customRow"
+    @change="onTableChange"
   >
     <template #bodyCell="{ column, record }">
       <template v-if="column.dataIndex === 'status'">

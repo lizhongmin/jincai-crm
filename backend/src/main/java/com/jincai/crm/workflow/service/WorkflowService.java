@@ -6,6 +6,7 @@ import com.jincai.crm.workflow.repository.*;
 
 import com.jincai.crm.common.BusinessException;
 import com.jincai.crm.common.I18nService;
+import com.jincai.crm.common.PageResult;
 import com.jincai.crm.notification.entity.Notification;
 import com.jincai.crm.notification.repository.NotificationRepository;
 import com.jincai.crm.order.entity.TravelOrder;
@@ -23,11 +24,16 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -75,6 +81,38 @@ public class WorkflowService {
             .filter(t -> !Boolean.TRUE.equals(t.getDeleted()))
             .map(t -> new WorkflowTemplateView(t, templateNodeRepository.findByTemplateIdAndDeletedFalseOrderByStepOrderAsc(t.getId())))
             .toList();
+    }
+
+    public PageResult<WorkflowTemplateView> pageTemplates(int page, int size, String keyword) {
+        int normalizedPage = normalizePage(page);
+        int normalizedSize = normalizeSize(size);
+        String normalizedKeyword = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
+        Specification<WorkflowTemplate> spec = (root, query, cb) -> {
+            List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.isFalse(root.get("deleted")));
+            if (!normalizedKeyword.isBlank()) {
+                String likeValue = "%" + normalizedKeyword + "%";
+                predicates.add(cb.or(
+                    cb.like(cb.lower(cb.coalesce(root.get("name"), "")), likeValue),
+                    cb.like(cb.lower(cb.coalesce(root.get("orderType"), "")), likeValue),
+                    cb.like(cb.lower(cb.coalesce(root.get("productCategory"), "")), likeValue)
+                ));
+            }
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
+
+        Page<WorkflowTemplate> result = templateRepository.findAll(
+            spec,
+            PageRequest.of(
+                normalizedPage - 1,
+                normalizedSize,
+                Sort.by(Sort.Direction.DESC, "updatedAt").and(Sort.by(Sort.Direction.DESC, "id"))
+            )
+        );
+        List<WorkflowTemplateView> views = result.getContent().stream()
+            .map(t -> new WorkflowTemplateView(t, templateNodeRepository.findByTemplateIdAndDeletedFalseOrderByStepOrderAsc(t.getId())))
+            .toList();
+        return new PageResult<>(views, result.getTotalElements(), normalizedPage, normalizedSize);
     }
 
     public WorkflowContextOptionsView contextOptions() {
@@ -363,6 +401,17 @@ public class WorkflowService {
                 notification.setContent("Order " + (orderNo == null ? ("ORDER-" + instanceId) : orderNo) + " pending your approval");
                 notificationRepository.save(notification);
             });
+    }
+
+    private int normalizePage(int page) {
+        return Math.max(page, 1);
+    }
+
+    private int normalizeSize(int size) {
+        if (size <= 0) {
+            return 10;
+        }
+        return Math.min(size, 100);
     }
 }
 

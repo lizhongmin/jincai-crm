@@ -4,6 +4,13 @@ export interface ApiResponse<T> {
   data: T;
 }
 
+export interface PageResult<T> {
+  items: T[];
+  total: number;
+  page: number;
+  size: number;
+}
+
 export interface LoginResponse {
   token: string;
   userId: number;

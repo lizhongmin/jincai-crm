@@ -3,11 +3,11 @@
     <div class="biz-summary">
       <div class="item">
         <span class="label">线路总数</span>
-        <strong class="value">{{ routes.length }}</strong>
+        <strong class="value">{{ routeTotal }}</strong>
       </div>
       <div class="item">
         <span class="label">团期总数</span>
-        <strong class="value">{{ departures.length }}</strong>
+        <strong class="value">{{ departureTotal }}</strong>
       </div>
       <div class="item">
         <span class="label">可售团期</span>
@@ -28,10 +28,20 @@
           </div>
           <route-table
             style="margin-top: 10px"
-            :items="filteredRoutes"
+            :items="routeRows"
             @view="openRouteDetail"
             @edit="openRoute"
             @remove="removeRoute"
+          />
+          <a-pagination
+            style="margin-top: 12px; text-align: right"
+            :current="routePage"
+            :page-size="routePageSize"
+            :total="routeTotal"
+            show-size-changer
+            :page-size-options="['10', '20', '50']"
+            @change="onRoutePageChange"
+            @showSizeChange="onRoutePageChange"
           />
         </a-tab-pane>
 
@@ -42,7 +52,6 @@
               allow-clear
               placeholder="按线路筛选"
               style="width: 240px"
-              @change="loadDepartures"
             >
               <a-select-option v-for="item in routes" :key="item.id" :value="item.id">{{ item.name }}</a-select-option>
             </a-select>
@@ -50,10 +59,20 @@
           </div>
           <departure-table
             style="margin-top: 10px"
-            :items="decoratedDepartures"
+            :items="decoratedDepartureRows"
             @view="openDepartureDetail"
             @edit="openDeparture"
             @remove="removeDeparture"
+          />
+          <a-pagination
+            style="margin-top: 12px; text-align: right"
+            :current="departurePage"
+            :page-size="departurePageSize"
+            :total="departureTotal"
+            show-size-changer
+            :page-size-options="['10', '20', '50']"
+            @change="onDeparturePageChange"
+            @showSizeChange="onDeparturePageChange"
           />
         </a-tab-pane>
       </a-tabs>
@@ -375,7 +394,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import DeparturePriceTable from '../components/product/DeparturePriceTable.vue';
 import DepartureTable from '../components/product/DepartureTable.vue';
 import RouteTable from '../components/product/RouteTable.vue';
@@ -402,9 +421,17 @@ const routePolicyOpen = ref(false);
 const departurePolicyOpen = ref(false);
 const routeKeyword = ref('');
 const departureFilterRouteId = ref<number | undefined>();
+const routePage = ref(1);
+const routePageSize = ref(10);
+const routeTotal = ref(0);
+const departurePage = ref(1);
+const departurePageSize = ref(10);
+const departureTotal = ref(0);
 
 const routes = ref<any[]>([]);
 const departures = ref<any[]>([]);
+const routeRows = ref<any[]>([]);
+const departureRows = ref<any[]>([]);
 const prices = ref<any[]>([]);
 const activeRoute = ref<any>(null);
 const activeDeparture = ref<any>(null);
@@ -490,32 +517,45 @@ const departureForm = reactive({
 });
 
 const routeMap = computed(() => Object.fromEntries(routes.value.map((item) => [item.id, item.name])));
-const openDepartureCount = computed(() => departures.value.filter((item) => item.status === 'OPEN').length);
+const openDepartureCount = computed(() => departureRows.value.filter((item) => item.status === 'OPEN').length);
 
-const filteredRoutes = computed(() => {
-  const keyword = routeKeyword.value.trim().toLowerCase();
-  if (!keyword) return routes.value;
-  return routes.value.filter((item) =>
-    [item.name, item.destinationCity, item.departureCity].filter(Boolean).some((value) => String(value).toLowerCase().includes(keyword))
-  );
-});
-
-const decoratedDepartures = computed(() =>
-  departures.value.map((item) => ({
+const decoratedDepartureRows = computed(() =>
+  departureRows.value.map((item) => ({
     ...item,
     routeName: routeMap.value[item.routeId] || '-',
     statusLabel: enumLabel(DEPARTURE_STATUS_LABEL_MAP, item.status)
   }))
 );
 
-const loadRoutes = async () => {
+const loadRouteOptions = async () => {
   const { data } = await productApi.routes();
   routes.value = data.data || [];
 };
 
-const loadDepartures = async () => {
-  const { data } = await productApi.departures(departureFilterRouteId.value);
+const loadDepartureOptions = async () => {
+  const { data } = await productApi.departures();
   departures.value = data.data || [];
+};
+
+const loadRoutePage = async () => {
+  const { data } = await productApi.routePage({
+    page: routePage.value,
+    size: routePageSize.value,
+    keyword: routeKeyword.value.trim() || undefined
+  });
+  routeRows.value = data.data?.items || [];
+  routeTotal.value = Number(data.data?.total || 0);
+};
+
+const loadDepartures = async () => {
+  const { data } = await productApi.departurePage({
+    page: departurePage.value,
+    size: departurePageSize.value,
+    routeId: departureFilterRouteId.value,
+    keyword: undefined
+  });
+  departureRows.value = data.data?.items || [];
+  departureTotal.value = Number(data.data?.total || 0);
 };
 
 const loadPrices = async (departureId: number) => {
@@ -612,7 +652,7 @@ const saveRoute = async () => {
       notifySuccess('线路创建成功');
     }
     routeModal.value = false;
-    await loadRoutes();
+    await Promise.all([loadRouteOptions(), loadRoutePage()]);
   } catch (error) {
     notifyError(error);
   } finally {
@@ -628,7 +668,7 @@ const removeRoute = async (record: any) => {
       activeRoute.value = null;
       routeDetailOpen.value = false;
     }
-    await Promise.all([loadRoutes(), loadDepartures()]);
+    await Promise.all([loadRouteOptions(), loadRoutePage(), loadDepartures()]);
   } catch (error) {
     notifyError(error);
   }
@@ -725,7 +765,7 @@ const saveDeparture = async () => {
       }
     }
     departureModal.value = false;
-    await Promise.all([loadDepartures(), loadPrices(departureId)]);
+    await Promise.all([loadDepartureOptions(), loadDepartures(), loadPrices(departureId)]);
   } catch (error) {
     notifyError(error);
   } finally {
@@ -742,7 +782,7 @@ const removeDeparture = async (record: any) => {
       departureDetailOpen.value = false;
       prices.value = [];
     }
-    await loadDepartures();
+    await Promise.all([loadDepartureOptions(), loadDepartures()]);
   } catch (error) {
     notifyError(error);
   }
@@ -809,9 +849,31 @@ const saveDeparturePolicy = async () => {
   }
 };
 
+const onRoutePageChange = (page: number, pageSize: number) => {
+  routePage.value = page;
+  routePageSize.value = pageSize;
+  void loadRoutePage();
+};
+
+const onDeparturePageChange = (page: number, pageSize: number) => {
+  departurePage.value = page;
+  departurePageSize.value = pageSize;
+  void loadDepartures();
+};
+
+watch(routeKeyword, () => {
+  routePage.value = 1;
+  void loadRoutePage();
+});
+
+watch(departureFilterRouteId, () => {
+  departurePage.value = 1;
+  void loadDepartures();
+});
+
 onMounted(async () => {
   try {
-    await Promise.all([loadRoutes(), loadDepartures()]);
+    await Promise.all([loadRouteOptions(), loadDepartureOptions(), loadRoutePage(), loadDepartures()]);
   } catch (error) {
     notifyError(error);
   }

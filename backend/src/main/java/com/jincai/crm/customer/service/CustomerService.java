@@ -8,6 +8,7 @@ import com.jincai.crm.common.BusinessException;
 import com.jincai.crm.common.DataScope;
 import com.jincai.crm.common.DataScopeResolver;
 import com.jincai.crm.common.I18nService;
+import com.jincai.crm.common.PageResult;
 import com.jincai.crm.security.LoginUser;
 import com.jincai.crm.system.entity.Department;
 import com.jincai.crm.system.entity.AppUser;
@@ -21,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -29,6 +31,10 @@ import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -72,6 +78,25 @@ public class CustomerService {
             customers = customerRepository.findByOwnerDeptIdInAndDeletedFalse(departmentIds);
         }
         return toViews(customers);
+    }
+
+    public PageResult<CustomerView> pageVisible(LoginUser user, int page, int size, String keyword, String tab, String ownerScope) {
+        if (user == null) {
+            return new PageResult<>(List.of(), 0, normalizePage(page), normalizeSize(size));
+        }
+
+        int normalizedPage = normalizePage(page);
+        int normalizedSize = normalizeSize(size);
+        Specification<Customer> spec = buildCustomerSpec(user, keyword, tab, ownerScope);
+        Page<Customer> result = customerRepository.findAll(
+            spec,
+            PageRequest.of(
+                normalizedPage - 1,
+                normalizedSize,
+                Sort.by(Sort.Direction.DESC, "updatedAt").and(Sort.by(Sort.Direction.DESC, "id"))
+            )
+        );
+        return new PageResult<>(toViews(result.getContent()), result.getTotalElements(), normalizedPage, normalizedSize);
     }
 
     public CustomerView create(CustomerRequest request, LoginUser user) {
@@ -451,6 +476,68 @@ public class CustomerService {
     }
 
     private record OwnerAssignment(Long ownerUserId, Long ownerDeptId) {
+    }
+
+    private int normalizePage(int page) {
+        return Math.max(page, 1);
+    }
+
+    private int normalizeSize(int size) {
+        if (size <= 0) {
+            return 10;
+        }
+        return Math.min(size, 100);
+    }
+
+    private Specification<Customer> buildCustomerSpec(LoginUser user, String keyword, String tab, String ownerScope) {
+        Set<Long> departmentIds = null;
+        if (user.getDataScope() == DataScope.DEPARTMENT_TREE) {
+            departmentIds = dataScopeResolver.resolveDepartmentIds(user);
+            if (departmentIds.isEmpty()) {
+                return (root, query, cb) -> cb.disjunction();
+            }
+        }
+
+        final Set<Long> scopedDepartmentIds = departmentIds;
+        String normalizedKeyword = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
+        String normalizedTab = tab == null ? "" : tab.trim().toLowerCase(Locale.ROOT);
+        String normalizedOwnerScope = ownerScope == null ? "" : ownerScope.trim().toLowerCase(Locale.ROOT);
+
+        return (root, query, cb) -> {
+            List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.isFalse(root.get("deleted")));
+
+            if (user.getDataScope() == DataScope.SELF) {
+                predicates.add(cb.equal(root.get("ownerUserId"), user.getUserId()));
+            } else if (user.getDataScope() == DataScope.DEPARTMENT) {
+                predicates.add(cb.equal(root.get("ownerDeptId"), user.getDepartmentId()));
+            } else if (user.getDataScope() == DataScope.DEPARTMENT_TREE) {
+                predicates.add(root.get("ownerDeptId").in(scopedDepartmentIds));
+            }
+
+            if ("pool".equals(normalizedTab)) {
+                predicates.add(root.get("status").in(List.of("INACTIVE", "BLACKLIST")));
+            } else if ("customer".equals(normalizedTab)) {
+                predicates.add(cb.not(root.get("status").in(List.of("INACTIVE", "BLACKLIST"))));
+                if ("mine".equals(normalizedOwnerScope)) {
+                    predicates.add(cb.equal(root.get("ownerUserId"), user.getUserId()));
+                } else if ("cooperate".equals(normalizedOwnerScope)) {
+                    predicates.add(cb.notEqual(root.get("ownerUserId"), user.getUserId()));
+                }
+            }
+
+            if (!normalizedKeyword.isBlank()) {
+                String likeValue = "%" + normalizedKeyword + "%";
+                List<jakarta.persistence.criteria.Predicate> keywordPredicates = new ArrayList<>();
+                keywordPredicates.add(cb.like(cb.lower(root.get("name")), likeValue));
+                keywordPredicates.add(cb.like(cb.lower(root.get("phone")), likeValue));
+                keywordPredicates.add(cb.like(cb.lower(cb.coalesce(root.get("city"), "")), likeValue));
+                keywordPredicates.add(cb.like(cb.lower(cb.coalesce(root.get("tags"), "")), likeValue));
+                predicates.add(cb.or(keywordPredicates.toArray(new jakarta.persistence.criteria.Predicate[0])));
+            }
+
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
     }
 }
 

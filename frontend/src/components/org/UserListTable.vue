@@ -2,10 +2,12 @@
   <a-table
     class="org-user-table"
     :columns="columns"
-    :data-source="items"
+    :data-source="props.items"
     :pagination="paginationConfig"
+    :loading="props.loading"
     row-key="id"
     size="middle"
+    @change="handleTableChange"
   >
     <template #bodyCell="{ column, record }">
       <template v-if="column.dataIndex === 'enabled'">
@@ -49,13 +51,19 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{ items: any[] }>();
+import { computed } from 'vue';
 
-defineEmits<{
+const props = withDefaults(defineProps<{ items: any[]; loading?: boolean; pagination?: any }>(), {
+  loading: false,
+  pagination: undefined
+});
+
+const emit = defineEmits<{
   (event: 'edit', value: any): void;
   (event: 'toggle-status', value: any): void;
   (event: 'reset-password', value: any): void;
   (event: 'remove', value: any): void;
+  (event: 'page-change', value: { current?: number; pageSize?: number }): void;
 }>();
 
 const columns = [
@@ -69,11 +77,17 @@ const columns = [
   { title: '操作', dataIndex: 'actions', width: 220 }
 ];
 
-const paginationConfig = {
+const defaultPaginationConfig = {
   pageSize: 10,
   showSizeChanger: true,
   showQuickJumper: true,
   showTotal: (total: number) => `共 ${total} 条`
+};
+
+const paginationConfig = computed(() => props.pagination || defaultPaginationConfig);
+
+const handleTableChange = (pagination: { current?: number; pageSize?: number }) => {
+  emit('page-change', pagination);
 };
 
 const genderLabel = (gender?: string) => {

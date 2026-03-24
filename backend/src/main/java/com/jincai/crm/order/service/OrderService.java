@@ -10,6 +10,7 @@ import com.jincai.crm.common.BusinessException;
 import com.jincai.crm.common.DataScope;
 import com.jincai.crm.common.DataScopeResolver;
 import com.jincai.crm.common.I18nService;
+import com.jincai.crm.common.PageResult;
 import com.jincai.crm.customer.entity.Customer;
 import com.jincai.crm.customer.repository.CustomerRepository;
 import com.jincai.crm.customer.entity.Traveler;
@@ -30,6 +31,7 @@ import java.time.LocalDateTime;
 import java.time.Period;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -42,6 +44,10 @@ import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -105,6 +111,24 @@ public class OrderService {
             return List.of();
         }
         return orderRepository.findBySalesDeptIdInAndDeletedFalse(departmentIds);
+    }
+
+    public PageResult<TravelOrder> pageVisible(LoginUser user, int page, int size, String keyword, String status, Long customerId) {
+        if (user == null) {
+            return new PageResult<>(List.of(), 0, normalizePage(page), normalizeSize(size));
+        }
+        int normalizedPage = normalizePage(page);
+        int normalizedSize = normalizeSize(size);
+        Specification<TravelOrder> spec = buildOrderSpec(user, keyword, status, customerId);
+        Page<TravelOrder> result = orderRepository.findAll(
+            spec,
+            PageRequest.of(
+                normalizedPage - 1,
+                normalizedSize,
+                Sort.by(Sort.Direction.DESC, "updatedAt").and(Sort.by(Sort.Direction.DESC, "id"))
+            )
+        );
+        return new PageResult<>(result.getContent(), result.getTotalElements(), normalizedPage, normalizedSize);
     }
 
     public OrderContextOptionsView contextOptions(LoginUser user) {
@@ -774,6 +798,88 @@ public class OrderService {
         );
     }
 
+    private Specification<TravelOrder> buildOrderSpec(LoginUser user, String keyword, String status, Long customerId) {
+        Set<Long> scopedDepartmentIds = Set.of();
+        if (user.getDataScope() == DataScope.DEPARTMENT_TREE) {
+            scopedDepartmentIds = dataScopeResolver.resolveDepartmentIds(user);
+            if (scopedDepartmentIds.isEmpty()) {
+                return (root, query, cb) -> cb.disjunction();
+            }
+        }
+
+        String normalizedKeyword = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
+        String normalizedStatus = status == null ? "" : status.trim().toUpperCase(Locale.ROOT);
+        if ("ALL".equals(normalizedStatus)) {
+            normalizedStatus = "";
+        }
+        OrderStatus statusEnum = null;
+        if (!normalizedStatus.isBlank()) {
+            try {
+                statusEnum = OrderStatus.valueOf(normalizedStatus);
+            } catch (IllegalArgumentException ex) {
+                statusEnum = null;
+            }
+        }
+
+        Set<Long> matchedCustomerIds = Set.of();
+        Set<Long> matchedRouteIds = Set.of();
+        if (!normalizedKeyword.isBlank()) {
+            matchedCustomerIds = customerRepository.findByDeletedFalse().stream()
+                .filter(item -> containsIgnoreCase(item.getName(), normalizedKeyword)
+                    || containsIgnoreCase(item.getPhone(), normalizedKeyword))
+                .map(Customer::getId)
+                .collect(java.util.stream.Collectors.toCollection(HashSet::new));
+            matchedRouteIds = routeRepository.findByDeletedFalse().stream()
+                .filter(item -> containsIgnoreCase(item.getName(), normalizedKeyword)
+                    || containsIgnoreCase(item.getCode(), normalizedKeyword))
+                .map(RouteProduct::getId)
+                .collect(java.util.stream.Collectors.toCollection(HashSet::new));
+        }
+
+        final Set<Long> finalScopedDepartmentIds = scopedDepartmentIds;
+        final Set<Long> finalMatchedCustomerIds = matchedCustomerIds;
+        final Set<Long> finalMatchedRouteIds = matchedRouteIds;
+        final String finalKeyword = normalizedKeyword;
+        final OrderStatus finalStatus = statusEnum;
+        return (root, query, cb) -> {
+            List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.isFalse(root.get("deleted")));
+
+            if (user.getDataScope() == DataScope.SELF) {
+                predicates.add(cb.equal(root.get("salesUserId"), user.getUserId()));
+            } else if (user.getDataScope() == DataScope.DEPARTMENT) {
+                predicates.add(cb.equal(root.get("salesDeptId"), user.getDepartmentId()));
+            } else if (user.getDataScope() == DataScope.DEPARTMENT_TREE) {
+                predicates.add(root.get("salesDeptId").in(finalScopedDepartmentIds));
+            }
+
+            if (customerId != null) {
+                predicates.add(cb.equal(root.get("customerId"), customerId));
+            }
+
+            if (finalStatus != null) {
+                predicates.add(cb.equal(root.get("status"), finalStatus));
+            }
+
+            if (!finalKeyword.isBlank()) {
+                String likeValue = "%" + finalKeyword + "%";
+                List<jakarta.persistence.criteria.Predicate> keywordPredicates = new ArrayList<>();
+                keywordPredicates.add(cb.like(cb.lower(cb.coalesce(root.get("orderNo"), "")), likeValue));
+                keywordPredicates.add(cb.like(cb.lower(cb.coalesce(root.get("orderType"), "")), likeValue));
+                keywordPredicates.add(cb.like(cb.lower(cb.coalesce(root.get("productCategory"), "")), likeValue));
+                if (!finalMatchedCustomerIds.isEmpty()) {
+                    keywordPredicates.add(root.get("customerId").in(finalMatchedCustomerIds));
+                }
+                if (!finalMatchedRouteIds.isEmpty()) {
+                    keywordPredicates.add(root.get("routeId").in(finalMatchedRouteIds));
+                }
+                predicates.add(cb.or(keywordPredicates.toArray(new jakarta.persistence.criteria.Predicate[0])));
+            }
+
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
+    }
+
     private List<Customer> listVisibleCustomers(LoginUser user) {
         if (user == null) {
             return List.of();
@@ -792,6 +898,24 @@ public class OrderService {
             return List.of();
         }
         return customerRepository.findByOwnerDeptIdInAndDeletedFalse(departmentIds);
+    }
+
+    private int normalizePage(int page) {
+        return Math.max(page, 1);
+    }
+
+    private int normalizeSize(int size) {
+        if (size <= 0) {
+            return 10;
+        }
+        return Math.min(size, 100);
+    }
+
+    private boolean containsIgnoreCase(String source, String keyword) {
+        if (source == null || source.isBlank()) {
+            return false;
+        }
+        return source.toLowerCase(Locale.ROOT).contains(keyword);
     }
 
     private DeparturePrice resolveTravelerDefaultPrice(Departure departure, Traveler traveler) {

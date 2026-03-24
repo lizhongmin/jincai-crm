@@ -6,6 +6,7 @@ import com.jincai.crm.product.entity.*;
 import com.jincai.crm.product.repository.*;
 
 import com.jincai.crm.common.BusinessException;
+import com.jincai.crm.common.PageResult;
 import com.jincai.crm.order.entity.DepositRuleType;
 import com.jincai.crm.order.entity.OrderLockPolicy;
 import com.jincai.crm.order.entity.OrderPaymentPolicy;
@@ -19,6 +20,10 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +49,36 @@ public class ProductService {
 
     public List<RouteProduct> routes() {
         return routeRepository.findByDeletedFalse();
+    }
+
+    public PageResult<RouteProduct> pageRoutes(int page, int size, String keyword) {
+        int normalizedPage = normalizePage(page);
+        int normalizedSize = normalizeSize(size);
+        String normalizedKeyword = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
+        Specification<RouteProduct> spec = (root, query, cb) -> {
+            List<jakarta.persistence.criteria.Predicate> predicates = new java.util.ArrayList<>();
+            predicates.add(cb.isFalse(root.get("deleted")));
+            if (!normalizedKeyword.isBlank()) {
+                String likeValue = "%" + normalizedKeyword + "%";
+                predicates.add(cb.or(
+                    cb.like(cb.lower(cb.coalesce(root.get("name"), "")), likeValue),
+                    cb.like(cb.lower(cb.coalesce(root.get("code"), "")), likeValue),
+                    cb.like(cb.lower(cb.coalesce(root.get("departureCity"), "")), likeValue),
+                    cb.like(cb.lower(cb.coalesce(root.get("destinationCity"), "")), likeValue)
+                ));
+            }
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
+
+        Page<RouteProduct> result = routeRepository.findAll(
+            spec,
+            PageRequest.of(
+                normalizedPage - 1,
+                normalizedSize,
+                Sort.by(Sort.Direction.DESC, "updatedAt").and(Sort.by(Sort.Direction.DESC, "id"))
+            )
+        );
+        return new PageResult<>(result.getContent(), result.getTotalElements(), normalizedPage, normalizedSize);
     }
 
     @Transactional
@@ -72,6 +107,37 @@ public class ProductService {
             return departureRepository.findByRouteIdAndDeletedFalse(routeId);
         }
         return departureRepository.findByDeletedFalse();
+    }
+
+    public PageResult<Departure> pageDepartures(int page, int size, Long routeId, String keyword) {
+        int normalizedPage = normalizePage(page);
+        int normalizedSize = normalizeSize(size);
+        String normalizedKeyword = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
+        Specification<Departure> spec = (root, query, cb) -> {
+            List<jakarta.persistence.criteria.Predicate> predicates = new java.util.ArrayList<>();
+            predicates.add(cb.isFalse(root.get("deleted")));
+            if (routeId != null) {
+                predicates.add(cb.equal(root.get("routeId"), routeId));
+            }
+            if (!normalizedKeyword.isBlank()) {
+                String likeValue = "%" + normalizedKeyword + "%";
+                predicates.add(cb.or(
+                    cb.like(cb.lower(cb.coalesce(root.get("code"), "")), likeValue),
+                    cb.like(cb.lower(cb.coalesce(root.get("status"), "")), likeValue)
+                ));
+            }
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
+
+        Page<Departure> result = departureRepository.findAll(
+            spec,
+            PageRequest.of(
+                normalizedPage - 1,
+                normalizedSize,
+                Sort.by(Sort.Direction.DESC, "updatedAt").and(Sort.by(Sort.Direction.DESC, "id"))
+            )
+        );
+        return new PageResult<>(result.getContent(), result.getTotalElements(), normalizedPage, normalizedSize);
     }
 
     @Transactional
@@ -452,6 +518,17 @@ public class ProductService {
             return null;
         }
         return LocalDate.parse(raw, DateTimeFormatter.ISO_DATE);
+    }
+
+    private int normalizePage(int page) {
+        return Math.max(page, 1);
+    }
+
+    private int normalizeSize(int size) {
+        if (size <= 0) {
+            return 10;
+        }
+        return Math.min(size, 100);
     }
 }
 

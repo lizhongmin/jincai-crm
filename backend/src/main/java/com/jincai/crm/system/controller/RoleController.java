@@ -1,6 +1,7 @@
 package com.jincai.crm.system.controller;
 
 import com.jincai.crm.common.ApiResponse;
+import com.jincai.crm.common.PageResult;
 import com.jincai.crm.system.dto.RoleGrantRequest;
 import com.jincai.crm.system.dto.RoleRequest;
 import com.jincai.crm.system.entity.Role;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -32,6 +34,14 @@ public class RoleController {
     @PreAuthorize("hasAuthority('MENU_ORG')")
     public ApiResponse<List<Role>> list() {
         return ApiResponse.ok(roleService.list());
+    }
+
+    @GetMapping("/page")
+    @PreAuthorize("hasAuthority('MENU_ORG')")
+    public ApiResponse<PageResult<Role>> page(@RequestParam(defaultValue = "1") int page,
+                                              @RequestParam(defaultValue = "10") int size,
+                                              @RequestParam(required = false) String keyword) {
+        return ApiResponse.ok(roleService.page(page, size, keyword));
     }
 
     @GetMapping("/{id}/permissions")

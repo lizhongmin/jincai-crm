@@ -6,6 +6,7 @@ import com.jincai.crm.customer.repository.*;
 import com.jincai.crm.customer.service.*;
 
 import com.jincai.crm.common.ApiResponse;
+import com.jincai.crm.common.PageResult;
 import com.jincai.crm.security.LoginUser;
 import com.jincai.crm.security.SecurityUtils;
 import jakarta.validation.Valid;
@@ -38,6 +39,19 @@ public class CustomerController {
     public ApiResponse<List<CustomerView>> list() {
         LoginUser user = SecurityUtils.currentUser();
         return ApiResponse.ok(customerService.listVisible(user));
+    }
+
+    @GetMapping("/page")
+    @PreAuthorize("hasAuthority('MENU_CUSTOMER')")
+    public ApiResponse<PageResult<CustomerView>> page(
+        @RequestParam(defaultValue = "1") int page,
+        @RequestParam(defaultValue = "10") int size,
+        @RequestParam(required = false) String keyword,
+        @RequestParam(required = false) String tab,
+        @RequestParam(required = false) String ownerScope
+    ) {
+        LoginUser user = SecurityUtils.currentUser();
+        return ApiResponse.ok(customerService.pageVisible(user, page, size, keyword, tab, ownerScope));
     }
 
     @PostMapping

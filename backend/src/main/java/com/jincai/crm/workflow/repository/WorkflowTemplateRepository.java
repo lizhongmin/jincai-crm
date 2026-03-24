@@ -7,9 +7,9 @@ import com.jincai.crm.workflow.service.*;
 
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
-public interface WorkflowTemplateRepository extends JpaRepository<WorkflowTemplate, Long> {
+public interface WorkflowTemplateRepository extends JpaRepository<WorkflowTemplate, Long>, JpaSpecificationExecutor<WorkflowTemplate> {
 
     List<WorkflowTemplate> findByActiveTrueAndDeletedFalse();
 }
-

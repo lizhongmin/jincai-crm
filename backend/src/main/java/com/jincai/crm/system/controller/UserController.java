@@ -1,6 +1,7 @@
 package com.jincai.crm.system.controller;
 
 import com.jincai.crm.common.ApiResponse;
+import com.jincai.crm.common.PageResult;
 import com.jincai.crm.system.dto.AppUserView;
 import com.jincai.crm.system.dto.ResetPasswordRequest;
 import com.jincai.crm.system.dto.UserStatusRequest;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -32,6 +34,16 @@ public class UserController {
     @PreAuthorize("hasAuthority('MENU_ORG')")
     public ApiResponse<List<AppUserView>> list() {
         return ApiResponse.ok(userService.list());
+    }
+
+    @GetMapping("/page")
+    @PreAuthorize("hasAuthority('MENU_ORG')")
+    public ApiResponse<PageResult<AppUserView>> page(@RequestParam(defaultValue = "1") int page,
+                                                     @RequestParam(defaultValue = "10") int size,
+                                                     @RequestParam(required = false) String keyword,
+                                                     @RequestParam(required = false) Long departmentId,
+                                                     @RequestParam(required = false) Long roleId) {
+        return ApiResponse.ok(userService.page(page, size, keyword, departmentId, roleId));
     }
 
     @PostMapping

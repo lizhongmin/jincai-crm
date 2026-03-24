@@ -7,7 +7,7 @@
       </div>
       <div class="item">
         <span class="label">用户数量</span>
-        <strong class="value">{{ users.length }}</strong>
+        <strong class="value">{{ userTotal }}</strong>
       </div>
       <div class="item">
         <span class="label">启用账号</span>
@@ -113,11 +113,22 @@
           </div>
 
           <user-list-table
-            :items="visibleUsers"
+            :items="users"
+            :loading="userLoading"
+            :pagination="{
+              current: userPage,
+              pageSize: userPageSize,
+              total: userTotal,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              pageSizeOptions: ['10', '20', '50'],
+              showTotal: (total: number) => `共 ${total} 条`
+            }"
             @edit="openUser"
             @toggle-status="toggleUserStatus"
             @reset-password="resetPassword"
             @remove="removeUser"
+            @page-change="onUserTableChange"
           />
         </section>
       </div>
@@ -221,7 +232,7 @@ import {
   SearchOutlined,
   UserAddOutlined
 } from '@ant-design/icons-vue';
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import UserListTable from '../components/org/UserListTable.vue';
 import { orgApi } from '../api/crm';
 import { notifyError, notifySuccess } from '../utils/notify';
@@ -233,6 +244,10 @@ const userModal = ref(false);
 const departmentTree = ref<any[]>([]);
 const users = ref<any[]>([]);
 const roles = ref<any[]>([]);
+const userPage = ref(1);
+const userPageSize = ref(10);
+const userTotal = ref(0);
+const userLoading = ref(false);
 
 const departmentKeyword = ref('');
 const userKeyword = ref('');
@@ -298,26 +313,6 @@ const parentDepartmentOptions = computed(() => {
   return allDepartmentNodes.value.filter((item) => !blocked.has(item.id));
 });
 
-const visibleUsers = computed(() => {
-  let result = [...(users.value || [])];
-
-  if (selectedDepartmentId.value) {
-    const allowedIds = new Set<number>([selectedDepartmentId.value, ...collectDescendantIds(selectedDepartmentId.value)]);
-    result = result.filter((item) => item.departmentId && allowedIds.has(item.departmentId));
-  }
-
-  const keyword = userKeyword.value.trim().toLowerCase();
-  if (keyword) {
-    result = result.filter((item) =>
-      [item.fullName, item.username, item.phone, item.email]
-        .filter(Boolean)
-        .some((field) => String(field).toLowerCase().includes(keyword))
-    );
-  }
-
-  return result;
-});
-
 function mapTreeWithKey(nodes: any[]): any[] {
   return (nodes || []).map((node) => ({
     ...node,
@@ -380,15 +375,31 @@ const clearDepartmentFilter = () => {
   selectedDepartmentId.value = undefined;
 };
 
+const loadUsersPage = async () => {
+  userLoading.value = true;
+  try {
+    const { data } = await orgApi.usersPage({
+      page: userPage.value,
+      size: userPageSize.value,
+      keyword: userKeyword.value.trim() || undefined,
+      departmentId: selectedDepartmentId.value
+    });
+    users.value = data.data?.items || [];
+    userTotal.value = Number(data.data?.total || 0);
+  } catch (error) {
+    notifyError(error);
+  } finally {
+    userLoading.value = false;
+  }
+};
+
 const load = async () => {
   try {
-    const [treeRes, userRes, roleRes] = await Promise.all([
+    const [treeRes, roleRes] = await Promise.all([
       orgApi.departmentsTree(),
-      orgApi.users(),
       orgApi.roles()
     ]);
     departmentTree.value = treeRes.data.data || [];
-    users.value = userRes.data.data || [];
     roles.value = roleRes.data.data || [];
 
     if (selectedDepartmentId.value) {
@@ -397,9 +408,16 @@ const load = async () => {
         selectedDepartmentId.value = undefined;
       }
     }
+    await loadUsersPage();
   } catch (error) {
     notifyError(error);
   }
+};
+
+const onUserTableChange = (pagination: { current?: number; pageSize?: number }) => {
+  userPage.value = pagination.current || 1;
+  userPageSize.value = pagination.pageSize || 10;
+  void loadUsersPage();
 };
 
 const openDepartment = (record?: any) => {
@@ -493,7 +511,7 @@ const saveUser = async () => {
       notifySuccess('用户创建成功（默认密码 123456）');
     }
     userModal.value = false;
-    await load();
+    await loadUsersPage();
   } catch (error) {
     notifyError(error);
   } finally {
@@ -505,7 +523,7 @@ const toggleUserStatus = async (record: any) => {
   try {
     await orgApi.updateUserStatus(record.id, !record.enabled);
     notifySuccess(`用户已${record.enabled ? '禁用' : '启用'}`);
-    await load();
+    await loadUsersPage();
   } catch (error) {
     notifyError(error);
   }
@@ -524,11 +542,16 @@ const removeUser = async (record: any) => {
   try {
     await orgApi.deleteUser(record.id);
     notifySuccess('用户删除成功');
-    await load();
+    await loadUsersPage();
   } catch (error) {
     notifyError(error);
   }
 };
+
+watch([selectedDepartmentId, userKeyword], async () => {
+  userPage.value = 1;
+  await loadUsersPage();
+});
 
 onMounted(load);
 </script>

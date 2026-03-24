@@ -3,7 +3,7 @@
     <div class="biz-summary">
       <div class="item">
         <span class="label">模板总数</span>
-        <strong class="value">{{ templates.length }}</strong>
+        <strong class="value">{{ templateTotal }}</strong>
       </div>
       <div class="item">
         <span class="label">启用模板</span>
@@ -21,10 +21,23 @@
 
     <a-card class="section-card" :bordered="false">
       <template #extra>
-        <a-button type="primary" @click="openCreate">新增模板</a-button>
+        <a-space>
+          <a-input-search v-model:value="templateKeyword" placeholder="按模板名/分类检索" style="width: 260px" />
+          <a-button type="primary" @click="openCreate">新增模板</a-button>
+        </a-space>
       </template>
 
       <workflow-template-table :items="templates" @edit="openEdit" @remove="remove" />
+      <a-pagination
+        style="margin-top: 12px; text-align: right"
+        :current="templatePage"
+        :page-size="templatePageSize"
+        :total="templateTotal"
+        show-size-changer
+        :page-size-options="['10', '20', '50']"
+        @change="onTemplatePageChange"
+        @showSizeChange="onTemplatePageChange"
+      />
     </a-card>
 
     <workflow-template-modal
@@ -42,7 +55,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { workflowApi } from '../api/crm';
 import WorkflowTemplateModal from '../components/workflow/WorkflowTemplateModal.vue';
 import WorkflowTemplateTable from '../components/workflow/WorkflowTemplateTable.vue';
@@ -54,6 +67,10 @@ const routes = ref<any[]>([]);
 const departures = ref<any[]>([]);
 const modalOpen = ref(false);
 const saving = ref(false);
+const templatePage = ref(1);
+const templatePageSize = ref(10);
+const templateTotal = ref(0);
+const templateKeyword = ref('');
 
 const form = reactive<any>({
   id: undefined as number | undefined,
@@ -83,10 +100,15 @@ const normalize = (item: any) => ({
 const load = async () => {
   try {
     const [workflowRes, contextRes] = await Promise.all([
-      workflowApi.list(),
+      workflowApi.page({
+        page: templatePage.value,
+        size: templatePageSize.value,
+        keyword: templateKeyword.value.trim() || undefined
+      }),
       workflowApi.contextOptions()
     ]);
-    templates.value = (workflowRes.data.data || []).map(normalize);
+    templates.value = (workflowRes.data.data?.items || []).map(normalize);
+    templateTotal.value = Number(workflowRes.data.data?.total || 0);
     roleOptions.value = (contextRes.data.data?.roles || []).map((item: any) => ({ code: item.code, name: item.name }));
     routes.value = contextRes.data.data?.routes || [];
     departures.value = contextRes.data.data?.departures || [];
@@ -198,6 +220,17 @@ const remove = async (id: number) => {
     notifyError(error);
   }
 };
+
+const onTemplatePageChange = (page: number, pageSize: number) => {
+  templatePage.value = page;
+  templatePageSize.value = pageSize;
+  void load();
+};
+
+watch(templateKeyword, () => {
+  templatePage.value = 1;
+  void load();
+});
 
 onMounted(load);
 </script>

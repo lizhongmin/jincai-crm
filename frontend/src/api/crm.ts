@@ -1,5 +1,5 @@
 import http from './http';
-import type { ApiResponse, DashboardFunnel } from './types';
+import type { ApiResponse, DashboardFunnel, PageResult } from './types';
 
 export const authApi = {
   login: (payload: { username: string; password: string; captchaId?: string; captchaCode?: string }) =>
@@ -24,12 +24,16 @@ export const orgApi = {
     http.put<ApiResponse<any>>(`/departments/${id}`, payload),
   deleteDepartment: (id: number) => http.delete<ApiResponse<void>>(`/departments/${id}`),
   users: () => http.get<ApiResponse<any[]>>('/users'),
+  usersPage: (params: { page?: number; size?: number; keyword?: string; departmentId?: number; roleId?: number }) =>
+    http.get<ApiResponse<PageResult<any>>>('/users/page', { params }),
   createUser: (payload: any) => http.post<ApiResponse<any>>('/users', payload),
   updateUser: (id: number, payload: any) => http.put<ApiResponse<any>>(`/users/${id}`, payload),
   updateUserStatus: (id: number, enabled: boolean) => http.post<ApiResponse<any>>(`/users/${id}/status`, { enabled }),
   resetUserPassword: (id: number, password?: string) => http.post<ApiResponse<void>>(`/users/${id}/reset-password`, password ? { password } : {}),
   deleteUser: (id: number) => http.delete<ApiResponse<void>>(`/users/${id}`),
   roles: () => http.get<ApiResponse<any[]>>('/roles'),
+  rolesPage: (params: { page?: number; size?: number; keyword?: string }) =>
+    http.get<ApiResponse<PageResult<any>>>('/roles/page', { params }),
   createRole: (payload: any) => http.post<ApiResponse<any>>('/roles', payload),
   updateRole: (id: number, payload: any) => http.put<ApiResponse<any>>(`/roles/${id}`, payload),
   deleteRole: (id: number) => http.delete<ApiResponse<void>>(`/roles/${id}`),
@@ -47,6 +51,8 @@ export const securityApi = {
 
 export const customerApi = {
   customers: () => http.get<ApiResponse<any[]>>('/customers'),
+  customersPage: (params: { page?: number; size?: number; keyword?: string; tab?: string; ownerScope?: string }) =>
+    http.get<ApiResponse<PageResult<any>>>('/customers/page', { params }),
   ownerOptions: () => http.get<ApiResponse<any[]>>('/customers/owner-options'),
   createCustomer: (payload: any) => http.post<ApiResponse<any>>('/customers', payload),
   updateCustomer: (id: number, payload: any) => http.put<ApiResponse<any>>(`/customers/${id}`, payload),
@@ -69,6 +75,8 @@ export const customerApi = {
 
 export const productApi = {
   routes: () => http.get<ApiResponse<any[]>>('/routes'),
+  routePage: (params: { page?: number; size?: number; keyword?: string }) =>
+    http.get<ApiResponse<PageResult<any>>>('/routes/page', { params }),
   createRoute: (payload: any) => http.post<ApiResponse<any>>('/routes', payload),
   updateRoute: (id: number, payload: any) => http.put<ApiResponse<any>>(`/routes/${id}`, payload),
   deleteRoute: (id: number) => http.delete<ApiResponse<void>>(`/routes/${id}`),
@@ -76,6 +84,8 @@ export const productApi = {
   updateRouteOrderPolicy: (id: number, payload: any) => http.put<ApiResponse<any>>(`/routes/${id}/order-policy`, payload),
   departures: (routeId?: number) =>
     http.get<ApiResponse<any[]>>('/departures', { params: routeId ? { routeId } : {} }),
+  departurePage: (params: { page?: number; size?: number; routeId?: number; keyword?: string }) =>
+    http.get<ApiResponse<PageResult<any>>>('/departures/page', { params }),
   createDeparture: (payload: any) => http.post<ApiResponse<any>>('/departures', payload),
   updateDeparture: (id: number, payload: any) => http.put<ApiResponse<any>>(`/departures/${id}`, payload),
   deleteDeparture: (id: number) => http.delete<ApiResponse<void>>(`/departures/${id}`),
@@ -92,6 +102,8 @@ export const productApi = {
 
 export const workflowApi = {
   list: () => http.get<ApiResponse<any[]>>('/workflow/templates'),
+  page: (params: { page?: number; size?: number; keyword?: string }) =>
+    http.get<ApiResponse<PageResult<any>>>('/workflow/templates/page', { params }),
   contextOptions: () => http.get<ApiResponse<any>>('/workflow/templates/context-options'),
   create: (payload: any) => http.post<ApiResponse<any>>('/workflow/templates', payload),
   update: (id: number, payload: any) => http.put<ApiResponse<any>>(`/workflow/templates/${id}`, payload),
@@ -100,6 +112,8 @@ export const workflowApi = {
 
 export const orderApi = {
   list: () => http.get<ApiResponse<any[]>>('/orders'),
+  page: (params: { page?: number; size?: number; keyword?: string; status?: string; customerId?: number }) =>
+    http.get<ApiResponse<PageResult<any>>>('/orders/page', { params }),
   contextOptions: () => http.get<ApiResponse<any>>('/orders/context-options'),
   customerTravelers: (customerId: number) =>
     http.get<ApiResponse<any[]>>(`/orders/context-options/customers/${customerId}/travelers`),

@@ -6,6 +6,7 @@ import com.jincai.crm.product.repository.*;
 import com.jincai.crm.product.service.*;
 
 import com.jincai.crm.common.ApiResponse;
+import com.jincai.crm.common.PageResult;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -35,6 +36,16 @@ public class ProductController {
         return ApiResponse.ok(productService.routes());
     }
 
+    @GetMapping("/routes/page")
+    @PreAuthorize("hasAuthority('MENU_PRODUCT')")
+    public ApiResponse<PageResult<RouteProduct>> pageRoutes(
+        @RequestParam(defaultValue = "1") int page,
+        @RequestParam(defaultValue = "10") int size,
+        @RequestParam(required = false) String keyword
+    ) {
+        return ApiResponse.ok(productService.pageRoutes(page, size, keyword));
+    }
+
     @PostMapping("/routes")
     @PreAuthorize("hasAuthority('BTN_PRODUCT_ROUTE_CREATE')")
     public ApiResponse<RouteProduct> createRoute(@Valid @RequestBody RouteRequest request) {
@@ -58,6 +69,17 @@ public class ProductController {
     @PreAuthorize("hasAuthority('MENU_PRODUCT')")
     public ApiResponse<List<Departure>> departures(@RequestParam(value = "routeId", required = false) Long routeId) {
         return ApiResponse.ok(productService.departures(routeId));
+    }
+
+    @GetMapping("/departures/page")
+    @PreAuthorize("hasAuthority('MENU_PRODUCT')")
+    public ApiResponse<PageResult<Departure>> pageDepartures(
+        @RequestParam(defaultValue = "1") int page,
+        @RequestParam(defaultValue = "10") int size,
+        @RequestParam(value = "routeId", required = false) Long routeId,
+        @RequestParam(required = false) String keyword
+    ) {
+        return ApiResponse.ok(productService.pageDepartures(page, size, routeId, keyword));
     }
 
     @PostMapping("/departures")

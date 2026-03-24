@@ -45,8 +45,16 @@
         :data-source="visibleCustomers"
         :columns="customerColumns"
         row-key="id"
-        :pagination="false"
+        :pagination="{
+          current: customerPage,
+          pageSize: customerPageSize,
+          total: customerTotal,
+          showSizeChanger: true,
+          pageSizeOptions: ['10', '20', '50'],
+          showTotal: (total: number) => `共 ${total} 条`
+        }"
         :scroll="{ x: 1280 }"
+        @change="onCustomerTableChange"
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.dataIndex === 'name'">
@@ -102,7 +110,7 @@
         @remove="removeTraveler"
       />
 
-      <div class="list-footer">共 {{ moduleTab === 'contact' ? visibleContacts.length : visibleCustomers.length }} 条</div>
+      <div class="list-footer">共 {{ moduleTab === 'contact' ? visibleContacts.length : customerTotal }} 条</div>
     </a-card>
     <template v-else>
       <div class="detail-header">
@@ -173,7 +181,20 @@
             <div class="list-toolbar">
               <a-input-search v-model:value="detailOrderKeyword" placeholder="按订单号/类型/状态搜索" style="width: 260px" />
             </div>
-            <a-table :columns="detailOrderColumns" :data-source="detailOrders" row-key="id" :pagination="{ pageSize: 8 }">
+            <a-table
+              :columns="detailOrderColumns"
+              :data-source="detailOrders"
+              row-key="id"
+              :pagination="{
+                current: detailOrderPage,
+                pageSize: detailOrderPageSize,
+                total: detailOrderTotal,
+                showSizeChanger: true,
+                pageSizeOptions: ['8', '16', '32'],
+                showTotal: (total: number) => `共 ${total} 条`
+              }"
+              @change="onDetailOrderTableChange"
+            >
               <template #bodyCell="{ column, record }">
                 <template v-if="column.dataIndex === 'status'">
                   {{ mapOrderStatus(record.status) }}
@@ -379,7 +400,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import TravelerTable from '../components/customer/TravelerTable.vue';
 import { customerApi, orderApi } from '../api/crm';
@@ -402,6 +423,9 @@ const saving = ref(false);
 const customerModal = ref(false);
 const travelerModal = ref(false);
 const transferOpen = ref(false);
+const customerPage = ref(1);
+const customerPageSize = ref(10);
+const customerTotal = ref(0);
 
 const keyword = ref('');
 const viewLabel = ref('所有客户');
@@ -411,13 +435,21 @@ const detailOrderKeyword = ref('');
 const customers = ref<any[]>([]);
 const travelers = ref<any[]>([]);
 const users = ref<any[]>([]);
-const orders = ref<any[]>([]);
+const detailOrderRows = ref<any[]>([]);
+const detailOrderPage = ref(1);
+const detailOrderPageSize = ref(8);
+const detailOrderTotal = ref(0);
 const selectedCustomer = ref<any | null>(null);
 const transferCustomer = ref<any | null>(null);
 const transferOwnerUserId = ref<number | undefined>();
 
 const customerColumns = [
-  { title: '序号', dataIndex: 'seq', width: 74, customRender: ({ index }: any) => index + 1 },
+  {
+    title: '序号',
+    dataIndex: 'seq',
+    width: 74,
+    customRender: ({ index }: any) => (customerPage.value - 1) * customerPageSize.value + index + 1
+  },
   { title: '客户名称', dataIndex: 'name', width: 180 },
   { title: '手机号', dataIndex: 'phone', width: 140 },
   { title: '客户等级', dataIndex: 'level', width: 120 },
@@ -544,14 +576,7 @@ const detailContacts = computed(() => {
 });
 
 const detailOrders = computed(() => {
-  const normalizedKeyword = detailOrderKeyword.value.trim().toLowerCase();
-  const rows = orders.value.filter((item) => item.customerId === selectedCustomer.value?.id);
-  if (!normalizedKeyword) {
-    return rows;
-  }
-  return rows.filter((item) =>
-    [item.orderNo, item.orderType, item.status].filter(Boolean).some((value) => String(value).toLowerCase().includes(normalizedKeyword))
-  );
+  return detailOrderRows.value;
 });
 
 const travelerResolvedBirthday = computed(() => {
@@ -645,8 +670,17 @@ const formatDateTime = (value?: string) => {
 };
 
 const loadCustomers = async () => {
-  const { data } = await customerApi.customers();
-  customers.value = data.data || [];
+  const tabParam = moduleTab.value === 'pool' ? 'pool' : 'customer';
+  const ownerScopeParam = moduleTab.value === 'customer' ? listFilter.value : undefined;
+  const { data } = await customerApi.customersPage({
+    page: customerPage.value,
+    size: customerPageSize.value,
+    keyword: keyword.value.trim() || undefined,
+    tab: tabParam,
+    ownerScope: ownerScopeParam
+  });
+  customers.value = data.data?.items || [];
+  customerTotal.value = Number(data.data?.total || 0);
   if (selectedCustomer.value) {
     selectedCustomer.value = customers.value.find((item) => item.id === selectedCustomer.value?.id) || null;
     if (!selectedCustomer.value) {
@@ -665,9 +699,32 @@ const loadUsers = async () => {
   users.value = data.data || [];
 };
 
-const loadOrders = async () => {
-  const { data } = await orderApi.list();
-  orders.value = data.data || [];
+const loadDetailOrders = async () => {
+  if (!selectedCustomer.value?.id) {
+    detailOrderRows.value = [];
+    detailOrderTotal.value = 0;
+    return;
+  }
+  const { data } = await orderApi.page({
+    page: detailOrderPage.value,
+    size: detailOrderPageSize.value,
+    customerId: selectedCustomer.value.id,
+    keyword: detailOrderKeyword.value.trim() || undefined
+  });
+  detailOrderRows.value = data.data?.items || [];
+  detailOrderTotal.value = Number(data.data?.total || 0);
+};
+
+const onCustomerTableChange = (pagination: { current?: number; pageSize?: number }) => {
+  customerPage.value = pagination.current || 1;
+  customerPageSize.value = pagination.pageSize || 10;
+  void loadCustomers();
+};
+
+const onDetailOrderTableChange = (pagination: { current?: number; pageSize?: number }) => {
+  detailOrderPage.value = pagination.current || 1;
+  detailOrderPageSize.value = pagination.pageSize || 8;
+  void loadDetailOrders();
 };
 
 const buildCustomerPayload = (base: any, overrides: Record<string, any> = {}) => ({
@@ -708,6 +765,11 @@ const openCustomer = (record?: any) => {
 const openCustomerDetail = (record: any, targetTab: DetailTab = 'contact') => {
   selectedCustomer.value = record;
   detailTab.value = targetTab;
+  detailOrderPage.value = 1;
+  detailOrderPageSize.value = 8;
+  if (targetTab === 'order') {
+    void loadDetailOrders();
+  }
   basicInfoCollapsed.value = false;
   detailMode.value = true;
 };
@@ -718,6 +780,8 @@ const backToList = () => {
   basicInfoCollapsed.value = false;
   detailContactKeyword.value = '';
   detailOrderKeyword.value = '';
+  detailOrderRows.value = [];
+  detailOrderTotal.value = 0;
 };
 
 const saveCustomer = async () => {
@@ -921,6 +985,37 @@ const beforeImport = async (file: File) => {
   return false;
 };
 
+watch([moduleTab, listFilter], async () => {
+  customerPage.value = 1;
+  if (moduleTab.value !== 'contact') {
+    await loadCustomers();
+  }
+});
+
+watch(keyword, async () => {
+  if (moduleTab.value === 'contact') {
+    return;
+  }
+  customerPage.value = 1;
+  await loadCustomers();
+});
+
+watch(detailTab, async (tab) => {
+  if (tab !== 'order' || !detailMode.value) {
+    return;
+  }
+  detailOrderPage.value = 1;
+  await loadDetailOrders();
+});
+
+watch(detailOrderKeyword, async () => {
+  if (!detailMode.value || detailTab.value !== 'order') {
+    return;
+  }
+  detailOrderPage.value = 1;
+  await loadDetailOrders();
+});
+
 const exportCustomerCsv = () => {
   const head = ['客户名称', '手机号', '客户等级', '客户类型', '客户来源', '客户标签', '城市', '负责人'];
   const rows = customers.value.map((item) => [
@@ -946,7 +1041,7 @@ const exportCustomerCsv = () => {
 
 onMounted(async () => {
   try {
-    await Promise.all([loadCustomers(), loadTravelers(), loadUsers(), loadOrders()]);
+    await Promise.all([loadCustomers(), loadTravelers(), loadUsers()]);
   } catch (error) {
     notifyError(error);
   }
