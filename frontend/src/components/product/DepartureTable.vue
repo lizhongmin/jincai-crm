@@ -1,5 +1,5 @@
-﻿<template>
-  <a-table :columns="columns" :data-source="items" row-key="id" :scroll="{ x: 1120 }">
+<template>
+  <pro-table :columns="columns" :data-source="items" row-key="id" :scroll="{ x: 'max-content' }">
     <template #bodyCell="{ column, record }">
       <template v-if="column.dataIndex === 'groupSize'">
         {{ record.minGroupSize || 0 }} / {{ record.maxGroupSize || '不限' }}
@@ -17,10 +17,11 @@
         </a-space>
       </template>
     </template>
-  </a-table>
+  </pro-table>
 </template>
 
 <script setup lang="ts">
+import ProTable from '../common/ProTable.vue';
 import { DEPARTURE_STATUS_LABEL_MAP, enumLabel } from '../../constants/display';
 
 defineProps<{ items: any[] }>();
@@ -40,6 +41,6 @@ const columns = [
   { title: '库存', dataIndex: 'stock', width: 90 },
   { title: '成团人数', dataIndex: 'groupSize', width: 120 },
   { title: '状态', dataIndex: 'status', width: 110 },
-  { title: '操作', dataIndex: 'actions', width: 180, fixed: 'right' }
+  { title: '操作', dataIndex: 'actions', width: 180, fixed: 'right' as const }
 ];
 </script>

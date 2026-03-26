@@ -1,5 +1,5 @@
-﻿<template>
-  <a-table :columns="columns" :data-source="items" row-key="template.id" :scroll="{ x: 980 }">
+<template>
+  <pro-table :columns="columns" :data-source="items" row-key="template.id" :scroll="{ x: 'max-content' }">
     <template #bodyCell="{ column, record }">
       <template v-if="column.dataIndex === 'active'">
         <a-tag :color="record.template.active ? 'green' : 'default'">
@@ -18,10 +18,12 @@
         </a-space>
       </template>
     </template>
-  </a-table>
+  </pro-table>
 </template>
 
 <script setup lang="ts">
+import ProTable from '../common/ProTable.vue';
+
 defineProps<{ items: any[] }>();
 
 const emit = defineEmits<{
@@ -36,6 +38,6 @@ const columns = [
   { title: '金额范围', dataIndex: 'amount', width: 180 },
   { title: '状态', dataIndex: 'active', width: 90 },
   { title: '审批节点', dataIndex: 'nodes' },
-  { title: '操作', dataIndex: 'actions', width: 130 }
+  { title: '操作', dataIndex: 'actions', width: 130, fixed: 'right' as const }
 ];
 </script>

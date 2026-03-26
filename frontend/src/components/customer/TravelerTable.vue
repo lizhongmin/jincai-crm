@@ -1,5 +1,5 @@
-﻿<template>
-  <a-table :columns="tableColumns" :data-source="items" row-key="id" :scroll="tableScroll">
+<template>
+  <pro-table :columns="tableColumns" :data-source="items" row-key="id" :scroll="tableScroll">
     <template #bodyCell="{ column, record }">
       <template v-if="column.dataIndex === 'actions'">
         <a-space>
@@ -10,14 +10,15 @@
         </a-space>
       </template>
     </template>
-  </a-table>
+  </pro-table>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import ProTable from '../common/ProTable.vue';
 
-const props = withDefaults(defineProps<{ items: any[]; scrollX?: number | false }>(), {
-  scrollX: 900
+const props = withDefaults(defineProps<{ items: any[]; scrollX?: number | string | false }>(), {
+  scrollX: 'max-content'
 });
 defineEmits<{ (event: 'edit', value: any): void; (event: 'remove', value: any): void }>();
 
@@ -47,7 +48,7 @@ const columns = [
   },
   { title: '民族', dataIndex: 'ethnicity', width: 120, customRender: ({ text }: any) => text || '-' },
   { title: '手机号', dataIndex: 'phone', width: 150, customRender: ({ text }: any) => text || '-' },
-  { title: '操作', dataIndex: 'actions', width: 140, fixed: 'right' }
+  { title: '操作', dataIndex: 'actions', width: 140, fixed: 'right' as const }
 ];
 
 const tableColumns = computed(() => {

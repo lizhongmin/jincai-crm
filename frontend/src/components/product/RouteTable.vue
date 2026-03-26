@@ -1,5 +1,5 @@
-﻿<template>
-  <a-table :columns="columns" :data-source="items" row-key="id" :scroll="{ x: 980 }">
+<template>
+  <pro-table :columns="columns" :data-source="items" row-key="id" :scroll="{ x: 'max-content' }">
     <template #bodyCell="{ column, record }">
       <template v-if="column.dataIndex === 'duration'">
         {{ record.durationDays || '-' }}天{{ record.durationNights ?? '-' }}晚
@@ -14,10 +14,11 @@
         </a-space>
       </template>
     </template>
-  </a-table>
+  </pro-table>
 </template>
 
 <script setup lang="ts">
+import ProTable from '../common/ProTable.vue';
 defineProps<{ items: any[] }>();
 defineEmits<{
   (event: 'view', value: any): void;
@@ -32,6 +33,6 @@ const columns = [
   { title: '目的地', dataIndex: 'destinationCity', width: 120, customRender: ({ text }: any) => text || '-' },
   { title: '行程', dataIndex: 'duration', width: 120 },
   { title: '分类', dataIndex: 'category', width: 120, customRender: ({ text }: any) => text || '-' },
-  { title: '操作', dataIndex: 'actions', width: 180, fixed: 'right' }
+  { title: '操作', dataIndex: 'actions', width: 180, fixed: 'right' as const }
 ];
 </script>

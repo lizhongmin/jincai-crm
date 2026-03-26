@@ -1,5 +1,5 @@
-﻿<template>
-  <a-table
+<template>
+  <pro-table
     class="org-user-table"
     :columns="columns"
     :data-source="props.items"
@@ -7,6 +7,7 @@
     :loading="props.loading"
     row-key="id"
     size="middle"
+    :scroll="{ x: 'max-content' }"
     @change="handleTableChange"
   >
     <template #bodyCell="{ column, record }">
@@ -47,11 +48,12 @@
         </a-space>
       </template>
     </template>
-  </a-table>
+  </pro-table>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import ProTable from '../common/ProTable.vue';
 
 const props = withDefaults(defineProps<{ items: any[]; loading?: boolean; pagination?: any }>(), {
   loading: false,
@@ -74,7 +76,7 @@ const columns = [
   { title: '邮箱', dataIndex: 'email', width: 200 },
   { title: '部门', dataIndex: 'departmentName', width: 120 },
   { title: '角色', dataIndex: 'roleNames', width: 180 },
-  { title: '操作', dataIndex: 'actions', width: 220 }
+  { title: '操作', dataIndex: 'actions', width: 220, fixed: 'right' as const }
 ];
 
 const defaultPaginationConfig = {

@@ -1,5 +1,5 @@
-﻿<template>
-  <a-table :columns="columns" :data-source="items" row-key="id" :pagination="false" :scroll="{ x: 900 }">
+<template>
+  <pro-table :columns="columns" :data-source="items" row-key="id" :pagination="false" :scroll="{ x: 'max-content' }">
     <template #bodyCell="{ column, record }">
       <template v-if="column.dataIndex === 'actions' && editable">
         <a-space>
@@ -10,10 +10,11 @@
         </a-space>
       </template>
     </template>
-  </a-table>
+  </pro-table>
 </template>
 
 <script setup lang="ts">
+import ProTable from '../common/ProTable.vue';
 import { CURRENCY_LABEL_MAP, PRICE_TYPE_LABEL_MAP, enumLabel } from '../../constants/display';
 
 const props = withDefaults(defineProps<{ items: any[]; editable?: boolean }>(), {

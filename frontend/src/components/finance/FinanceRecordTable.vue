@@ -1,5 +1,5 @@
-﻿<template>
-  <a-table :columns="columns" :data-source="props.items" row-key="id" :pagination="false" :scroll="{ x: 760 }">
+<template>
+  <pro-table :columns="columns" :data-source="props.items" row-key="id" :pagination="false" :scroll="{ x: 'max-content' }">
     <template #bodyCell="{ column, record }">
       <template v-if="column.dataIndex === 'status'">
         <a-tag :color="statusColor(record.status)">{{ statusLabel(record.status) }}</a-tag>
