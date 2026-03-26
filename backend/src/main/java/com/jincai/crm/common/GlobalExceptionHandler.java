@@ -1,5 +1,6 @@
 package com.jincai.crm.common;
 
+import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -40,7 +41,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiResponse<String>> handleConstraint(ConstraintViolationException ex) {
         String message = ex.getConstraintViolations().stream()
-            .map(v -> v.getMessage())
+            .map(ConstraintViolation::getMessage)
             .distinct()
             .collect(Collectors.joining("; "));
         if (message.isBlank()) {

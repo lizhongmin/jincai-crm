@@ -1,7 +1,10 @@
 package com.jincai.crm.common;
 
+import lombok.Getter;
+
 public class BusinessException extends RuntimeException {
 
+    @Getter
     private final String messageKey;
     private final Object[] messageArgs;
 
@@ -9,10 +12,6 @@ public class BusinessException extends RuntimeException {
         super(messageKey);
         this.messageKey = messageKey;
         this.messageArgs = messageArgs == null ? new Object[0] : messageArgs.clone();
-    }
-
-    public String getMessageKey() {
-        return messageKey;
     }
 
     public Object[] getMessageArgs() {

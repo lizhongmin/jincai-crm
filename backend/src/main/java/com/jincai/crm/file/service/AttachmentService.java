@@ -29,16 +29,46 @@ public class AttachmentService {
 
     public Attachment upload(String bizType, Long bizId, MultipartFile file) {
         try {
+            // 验证文件是否为空
+            if (file.isEmpty()) {
+                throw new BusinessException("error.file.empty");
+            }
+            
+            // 获取原始文件名并验证
+            String originalFilename = file.getOriginalFilename();
+            if (originalFilename == null || originalFilename.trim().isEmpty()) {
+                throw new BusinessException("error.file.invalidName");
+            }
+            
+            // 防止路径遍历攻击
+            if (originalFilename.contains("..") || originalFilename.contains("/") || originalFilename.contains("\\")) {
+                throw new BusinessException("error.file.invalidName");
+            }
+            
+            // 获取文件扩展名
+            String extension = getFileExtension(originalFilename);
+            
+            // 验证文件扩展名
+            if (!isAllowedExtension(extension)) {
+                throw new BusinessException("error.file.typeNotAllowed");
+            }
+            
             Path root = Path.of(properties.uploadDir());
             Files.createDirectories(root);
-            String filename = UUID.randomUUID() + "_" + file.getOriginalFilename();
-            Path target = root.resolve(filename);
-            Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+            
+            // 生成安全的文件名：UUID + 扩展名
+            String filename = UUID.randomUUID() + "." + extension;
+            Path target = root.resolve(filename).normalize();
+            
+            // 使用 try-with-resources 确保输入流被关闭
+            try (var inputStream = file.getInputStream()) {
+                Files.copy(inputStream, target, StandardCopyOption.REPLACE_EXISTING);
+            }
 
             Attachment attachment = new Attachment();
             attachment.setBizType(bizType);
             attachment.setBizId(bizId);
-            attachment.setFileName(file.getOriginalFilename());
+            attachment.setFileName(originalFilename);  // 保存原始文件名用于显示
             attachment.setFilePath(target.toString());
             attachment.setFileSize(file.getSize());
             attachment.setContentType(file.getContentType());
@@ -46,6 +76,40 @@ public class AttachmentService {
         } catch (IOException ex) {
             throw new BusinessException("error.file.uploadFailed", ex.getMessage());
         }
+    }
+    
+    /**
+     * 获取文件扩展名
+     */
+    private String getFileExtension(String filename) {
+        int lastDotIndex = filename.lastIndexOf('.');
+        if (lastDotIndex == -1 || lastDotIndex == filename.length() - 1) {
+            return "";
+        }
+        return filename.substring(lastDotIndex + 1).toLowerCase();
+    }
+    
+    /**
+     * 检查文件扩展名是否允许
+     */
+    private boolean isAllowedExtension(String extension) {
+        if (extension == null || extension.isEmpty()) {
+            return false;
+        }
+        
+        // 允许的常见安全文件类型
+        String[] allowedExtensions = {
+            "jpg", "jpeg", "png", "gif", "bmp", "webp",
+            "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+            "txt", "csv", "zip", "rar", "7z"
+        };
+        
+        for (String allowed : allowedExtensions) {
+            if (allowed.equals(extension)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public List<Attachment> list(String bizType, Long bizId) {
