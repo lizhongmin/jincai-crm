@@ -1,17 +1,13 @@
 package com.jincai.crm.order.entity;
 
-import com.jincai.crm.order.controller.*;
-import com.jincai.crm.order.dto.*;
-import com.jincai.crm.order.repository.*;
-import com.jincai.crm.order.service.*;
-
 import com.jincai.crm.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
-import java.math.BigDecimal;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.math.BigDecimal;
 
 @Getter
 @Setter
@@ -20,16 +16,16 @@ import lombok.Setter;
 public class OrderPriceItem extends BaseEntity {
 
     @Column(name = "order_id", nullable = false)
-    private Long orderId;
+    private String orderId;
 
     @Column(name = "traveler_id")
-    private Long travelerId;
+    private String travelerId;
 
     @Column(name = "traveler_name")
     private String travelerName;
 
     @Column(name = "departure_price_id", nullable = false)
-    private Long departurePriceId;
+    private String departurePriceId;
 
     @Column(name = "price_type", nullable = false)
     private String priceType;

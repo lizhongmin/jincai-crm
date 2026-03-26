@@ -1,16 +1,12 @@
 package com.jincai.crm.finance.dto;
 
-import com.jincai.crm.finance.controller.*;
-import com.jincai.crm.finance.entity.*;
-import com.jincai.crm.finance.repository.*;
-import com.jincai.crm.finance.service.*;
-
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+
 import java.math.BigDecimal;
 
 public record PayableRequest(
-    @NotNull Long orderId,
+    @NotNull String orderId,
     @NotBlank String itemName,
     @NotNull BigDecimal amount
 ) {

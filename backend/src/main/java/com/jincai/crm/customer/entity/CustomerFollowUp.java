@@ -1,10 +1,5 @@
 package com.jincai.crm.customer.entity;
 
-import com.jincai.crm.customer.controller.*;
-import com.jincai.crm.customer.dto.*;
-import com.jincai.crm.customer.repository.*;
-import com.jincai.crm.customer.service.*;
-
 import com.jincai.crm.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

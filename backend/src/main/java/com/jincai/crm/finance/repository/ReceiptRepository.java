@@ -1,16 +1,13 @@
 package com.jincai.crm.finance.repository;
 
-import com.jincai.crm.finance.controller.*;
-import com.jincai.crm.finance.dto.*;
-import com.jincai.crm.finance.entity.*;
-import com.jincai.crm.finance.service.*;
-
-import java.util.List;
+import com.jincai.crm.finance.entity.Receipt;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface ReceiptRepository extends JpaRepository<Receipt, Long> {
+import java.util.List;
 
-    List<Receipt> findByReceivableIdAndDeletedFalse(Long receivableId);
+public interface ReceiptRepository extends JpaRepository<Receipt, String> {
+
+    List<Receipt> findByReceivableIdAndDeletedFalse(String receivableId);
 
     List<Receipt> findByDeletedFalse();
 }

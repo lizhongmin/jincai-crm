@@ -1,21 +1,20 @@
 package com.jincai.crm.file.service;
 
-import com.jincai.crm.file.config.*;
-import com.jincai.crm.file.controller.*;
-import com.jincai.crm.file.entity.*;
-import com.jincai.crm.file.repository.*;
-
 import com.jincai.crm.common.BusinessException;
+import com.jincai.crm.file.config.FileProperties;
+import com.jincai.crm.file.entity.Attachment;
+import com.jincai.crm.file.repository.AttachmentRepository;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.UUID;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class AttachmentService {
@@ -53,7 +52,7 @@ public class AttachmentService {
         return repository.findByBizTypeAndBizIdAndDeletedFalse(bizType, bizId);
     }
 
-    public Resource download(Long id) {
+    public Resource download(String id) {
         Attachment attachment = repository.findById(id).orElseThrow(() -> new BusinessException("error.attachment.notFound"));
         return new FileSystemResource(attachment.getFilePath());
     }

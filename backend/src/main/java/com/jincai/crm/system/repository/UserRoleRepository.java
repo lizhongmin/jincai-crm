@@ -1,19 +1,19 @@
 package com.jincai.crm.system.repository;
 
 import com.jincai.crm.system.entity.UserRole;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Collection;
 import java.util.List;
-import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface UserRoleRepository extends JpaRepository<UserRole, Long> {
+public interface UserRoleRepository extends JpaRepository<UserRole, String> {
 
-    List<UserRole> findByUserIdAndDeletedFalse(Long userId);
+    List<UserRole> findByUserIdAndDeletedFalse(String userId);
 
-    List<UserRole> findByRoleIdAndDeletedFalse(Long roleId);
+    List<UserRole> findByRoleIdAndDeletedFalse(String roleId);
 
-    List<UserRole> findByUserIdInAndDeletedFalse(Collection<Long> userIds);
+    List<UserRole> findByUserIdInAndDeletedFalse(Collection<String> userIds);
 
-    void deleteByUserId(Long userId);
+    void deleteByUserId(String userId);
 }
 

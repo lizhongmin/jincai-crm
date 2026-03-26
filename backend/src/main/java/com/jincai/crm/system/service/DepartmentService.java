@@ -3,25 +3,22 @@ package com.jincai.crm.system.service;
 import com.jincai.crm.common.BusinessException;
 import com.jincai.crm.system.dto.DepartmentRequest;
 import com.jincai.crm.system.dto.DepartmentTreeView;
-import com.jincai.crm.system.entity.AppUser;
 import com.jincai.crm.system.entity.Department;
-import com.jincai.crm.system.repository.AppUserRepository;
+import com.jincai.crm.system.entity.OrgUser;
 import com.jincai.crm.system.repository.DepartmentRepository;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
+import com.jincai.crm.system.repository.OrgUserRepository;
 import org.springframework.stereotype.Service;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class DepartmentService {
 
     private final DepartmentRepository departmentRepository;
-    private final AppUserRepository userRepository;
+    private final OrgUserRepository userRepository;
 
-    public DepartmentService(DepartmentRepository departmentRepository, AppUserRepository userRepository) {
+    public DepartmentService(DepartmentRepository departmentRepository, OrgUserRepository userRepository) {
         this.departmentRepository = departmentRepository;
         this.userRepository = userRepository;
     }
@@ -43,7 +40,7 @@ public class DepartmentService {
         return departmentRepository.save(department);
     }
 
-    public Department update(Long id, DepartmentRequest request) {
+    public Department update(String id, DepartmentRequest request) {
         Department department = departmentRepository.findById(id)
             .orElseThrow(() -> new BusinessException("error.department.notFound"));
         if (Boolean.TRUE.equals(department.getDeleted())) {
@@ -61,7 +58,7 @@ public class DepartmentService {
         return saved;
     }
 
-    public void delete(Long id) {
+    public void delete(String id) {
         Department department = departmentRepository.findById(id)
             .orElseThrow(() -> new BusinessException("error.department.notFound"));
         if (Boolean.TRUE.equals(department.getDeleted())) {
@@ -80,7 +77,7 @@ public class DepartmentService {
         departmentRepository.save(department);
     }
 
-    private void validateParentSelection(Long id, Long parentId) {
+    private void validateParentSelection(String id, String parentId) {
         if (parentId == null) {
             return;
         }
@@ -93,27 +90,27 @@ public class DepartmentService {
             throw new BusinessException("error.department.parent.notFound");
         }
 
-        Set<Long> descendantIds = collectDescendantIds(id);
+        Set<String> descendantIds = collectDescendantIds(id);
         if (descendantIds.contains(parentId)) {
             throw new BusinessException("error.department.parent.circular");
         }
     }
 
-    private void validateRootDepartmentGuaranteeOnMove(Department department, Long newParentId) {
+    private void validateRootDepartmentGuaranteeOnMove(Department department, String newParentId) {
         if (department.getParentId() == null && newParentId != null
             && departmentRepository.countByParentIdIsNullAndDeletedFalse() <= 1) {
             throw new BusinessException("error.department.root.required");
         }
     }
 
-    private Set<Long> collectDescendantIds(Long rootId) {
-        Map<Long, List<Department>> childrenMap = departmentRepository.findByDeletedFalse().stream()
-            .collect(Collectors.groupingBy(d -> d.getParentId() == null ? -1L : d.getParentId()));
-        Set<Long> ids = new java.util.HashSet<>();
-        java.util.ArrayDeque<Long> queue = new java.util.ArrayDeque<>();
+    private Set<String> collectDescendantIds(String rootId) {
+        Map<String, List<Department>> childrenMap = departmentRepository.findByDeletedFalse().stream()
+            .collect(Collectors.groupingBy(d -> d.getParentId() == null ? "0" : d.getParentId()));
+        Set<String> ids = new java.util.HashSet<>();
+        java.util.ArrayDeque<String> queue = new java.util.ArrayDeque<>();
         queue.add(rootId);
         while (!queue.isEmpty()) {
-            Long current = queue.poll();
+            String current = queue.poll();
             List<Department> children = childrenMap.getOrDefault(current, List.of());
             for (Department child : children) {
                 if (ids.add(child.getId())) {
@@ -124,15 +121,15 @@ public class DepartmentService {
         return ids;
     }
 
-    private void refreshDescendantTreePath(Long rootId) {
-        Map<Long, Department> map = departmentRepository.findByDeletedFalse().stream()
+    private void refreshDescendantTreePath(String rootId) {
+        Map<String, Department> map = departmentRepository.findByDeletedFalse().stream()
             .collect(Collectors.toMap(Department::getId, d -> d));
         Department root = map.get(rootId);
         if (root == null) {
             return;
         }
-        Map<Long, List<Department>> childrenMap = map.values().stream()
-            .collect(Collectors.groupingBy(d -> d.getParentId() == null ? -1L : d.getParentId()));
+        Map<String, List<Department>> childrenMap = map.values().stream()
+            .collect(Collectors.groupingBy(d -> d.getParentId() == null ? "0" : d.getParentId()));
         java.util.ArrayDeque<Department> queue = new java.util.ArrayDeque<>();
         queue.add(root);
         while (!queue.isEmpty()) {
@@ -146,7 +143,7 @@ public class DepartmentService {
         }
     }
 
-    private String buildTreePath(Long parentId) {
+    private String buildTreePath(String parentId) {
         if (parentId == null) {
             return "/";
         }
@@ -160,18 +157,18 @@ public class DepartmentService {
 
     private List<DepartmentTreeView> buildTreeViews() {
         List<Department> departments = departmentRepository.findByDeletedFalse();
-        Map<Long, Department> departmentMap = departments.stream()
+        Map<String, Department> departmentMap = departments.stream()
             .collect(Collectors.toMap(Department::getId, d -> d, (a, b) -> a, LinkedHashMap::new));
 
-        Map<Long, String> userNameMap = userRepository.findByDeletedFalse().stream()
-            .collect(Collectors.toMap(AppUser::getId, AppUser::getFullName, (a, b) -> a, LinkedHashMap::new));
+        Map<String, String> userNameMap = userRepository.findByDeletedFalse().stream()
+            .collect(Collectors.toMap(OrgUser::getId, OrgUser::getFullName, (a, b) -> a, LinkedHashMap::new));
 
-        Map<Long, Boolean> hasUsersMap = new LinkedHashMap<>();
+        Map<String, Boolean> hasUsersMap = new LinkedHashMap<>();
         for (Department department : departments) {
             hasUsersMap.put(department.getId(), userRepository.existsByDepartmentIdAndDeletedFalse(department.getId()));
         }
 
-        Map<Long, Boolean> hasChildrenMap = new LinkedHashMap<>();
+        Map<String, Boolean> hasChildrenMap = new LinkedHashMap<>();
         for (Department department : departments) {
             hasChildrenMap.put(department.getId(), false);
         }
@@ -181,7 +178,7 @@ public class DepartmentService {
             }
         }
 
-        Map<Long, DepartmentTreeView> nodeMap = new LinkedHashMap<>();
+        Map<String, DepartmentTreeView> nodeMap = new LinkedHashMap<>();
         departments.forEach(department -> {
             Department parent = department.getParentId() == null ? null : departmentMap.get(department.getParentId());
             nodeMap.put(

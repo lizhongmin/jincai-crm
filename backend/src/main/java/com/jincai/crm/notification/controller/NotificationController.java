@@ -1,17 +1,12 @@
 package com.jincai.crm.notification.controller;
 
-import com.jincai.crm.notification.entity.*;
-import com.jincai.crm.notification.repository.*;
-import com.jincai.crm.notification.service.*;
-
 import com.jincai.crm.common.ApiResponse;
-import java.util.List;
+import com.jincai.crm.notification.entity.Notification;
+import com.jincai.crm.notification.service.NotificationService;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/notifications")
@@ -31,7 +26,7 @@ public class NotificationController {
 
     @PostMapping("/{id}/read")
     @PreAuthorize("isAuthenticated()")
-    public ApiResponse<Void> read(@PathVariable Long id) {
+    public ApiResponse<Void> read(@PathVariable String id) {
         notificationService.markRead(id);
         return ApiResponse.ok(null);
     }

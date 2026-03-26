@@ -6,25 +6,14 @@ import com.jincai.crm.system.dto.AppUserView;
 import com.jincai.crm.system.dto.ResetPasswordRequest;
 import com.jincai.crm.system.dto.UserStatusRequest;
 import com.jincai.crm.system.dto.UserUpsertRequest;
-import com.jincai.crm.system.entity.AppUser;
 import com.jincai.crm.system.entity.Department;
-import com.jincai.crm.system.repository.AppUserRepository;
-import com.jincai.crm.system.repository.DepartmentRepository;
+import com.jincai.crm.system.entity.OrgUser;
 import com.jincai.crm.system.entity.Role;
 import com.jincai.crm.system.entity.UserRole;
+import com.jincai.crm.system.repository.DepartmentRepository;
+import com.jincai.crm.system.repository.OrgUserRepository;
 import com.jincai.crm.system.repository.RoleRepository;
 import com.jincai.crm.system.repository.UserRoleRepository;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -33,18 +22,24 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.*;
+import java.util.stream.Collectors;
+
 @Service
 public class UserService {
 
     private static final String ADMIN_USERNAME = "admin";
 
-    private final AppUserRepository userRepository;
+    private final OrgUserRepository userRepository;
     private final DepartmentRepository departmentRepository;
     private final UserRoleRepository userRoleRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public UserService(AppUserRepository userRepository, DepartmentRepository departmentRepository,
+    public UserService(OrgUserRepository userRepository, DepartmentRepository departmentRepository,
                        UserRoleRepository userRoleRepository, RoleRepository roleRepository,
                        PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
@@ -56,19 +51,19 @@ public class UserService {
 
     public List<AppUserView> list() {
         List<Department> departments = departmentRepository.findByDeletedFalse();
-        Map<Long, Department> departmentMap = departments.stream()
+        Map<String, Department> departmentMap = departments.stream()
             .collect(Collectors.toMap(Department::getId, d -> d, (a, b) -> a, LinkedHashMap::new));
-        Map<Long, String> roleNamesById = roleRepository.findByDeletedFalse().stream()
+        Map<String, String> roleNamesById = roleRepository.findByDeletedFalse().stream()
             .collect(Collectors.toMap(Role::getId, Role::getName, (a, b) -> a, LinkedHashMap::new));
         return toViews(userRepository.findByDeletedFalse(), departmentMap, roleNamesById);
     }
 
-    public PageResult<AppUserView> page(int page, int size, String keyword, Long departmentId, Long roleId) {
+    public PageResult<AppUserView> page(int page, int size, String keyword, String departmentId, String roleId) {
         int normalizedPage = normalizePage(page);
         int normalizedSize = normalizeSize(size);
         String normalizedKeyword = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
 
-        Set<Long> userIdsByRole = Set.of();
+        Set<String> userIdsByRole = Set.of();
         if (roleId != null) {
             userIdsByRole = userRoleRepository.findByRoleIdAndDeletedFalse(roleId).stream()
                 .map(UserRole::getUserId)
@@ -78,8 +73,8 @@ public class UserService {
             }
         }
 
-        final Set<Long> scopedUserIds = userIdsByRole;
-        Specification<AppUser> spec = (root, query, cb) -> {
+        final Set<String> scopedUserIds = userIdsByRole;
+        Specification<OrgUser> spec = (root, query, cb) -> {
             List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
             predicates.add(cb.isFalse(root.get("deleted")));
             if (departmentId != null) {
@@ -101,7 +96,7 @@ public class UserService {
             return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
         };
 
-        Page<AppUser> result = userRepository.findAll(
+        Page<OrgUser> result = userRepository.findAll(
             spec,
             PageRequest.of(
                 normalizedPage - 1,
@@ -109,9 +104,9 @@ public class UserService {
                 Sort.by(Sort.Direction.DESC, "updatedAt").and(Sort.by(Sort.Direction.DESC, "id"))
             )
         );
-        Map<Long, Department> departmentMap = departmentRepository.findByDeletedFalse().stream()
+        Map<String, Department> departmentMap = departmentRepository.findByDeletedFalse().stream()
             .collect(Collectors.toMap(Department::getId, d -> d, (a, b) -> a, LinkedHashMap::new));
-        Map<Long, String> roleNamesById = roleRepository.findByDeletedFalse().stream()
+        Map<String, String> roleNamesById = roleRepository.findByDeletedFalse().stream()
             .collect(Collectors.toMap(Role::getId, Role::getName, (a, b) -> a, LinkedHashMap::new));
         List<AppUserView> items = toViews(result.getContent(), departmentMap, roleNamesById);
         return new PageResult<>(items, result.getTotalElements(), normalizedPage, normalizedSize);
@@ -123,18 +118,18 @@ public class UserService {
         String normalizedEmployeeNo = normalizeNullable(request.employeeNo());
         validatePhone(normalizedPhone, null);
         validateEmployeeNo(normalizedEmployeeNo, null);
-        AppUser user = new AppUser();
+        OrgUser user = new OrgUser();
         user.setUsername(normalizeRequired(request.username(), "error.user.username.required"));
         user.setPassword(passwordEncoder.encode(request.password() == null ? "123456" : request.password()));
         applyUserFields(user, request, normalizedPhone, normalizedEmployeeNo);
-        AppUser saved = userRepository.save(user);
+        OrgUser saved = userRepository.save(user);
         saveRoles(saved.getId(), request.roleIds());
         return toView(saved);
     }
 
     @Transactional
-    public AppUserView update(Long id, UserUpsertRequest request) {
-        AppUser user = userRepository.findById(id).orElseThrow(() -> new BusinessException("error.user.notFound"));
+    public AppUserView update(String id, UserUpsertRequest request) {
+        OrgUser user = userRepository.findById(id).orElseThrow(() -> new BusinessException("error.user.notFound"));
         ensureNotAdminAccount(user);
         String normalizedPhone = normalizeRequired(request.phone(), "error.user.phone.required");
         String normalizedEmployeeNo = normalizeNullable(request.employeeNo());
@@ -145,23 +140,23 @@ public class UserService {
         if (request.password() != null && !request.password().isBlank()) {
             user.setPassword(passwordEncoder.encode(request.password()));
         }
-        AppUser saved = userRepository.save(user);
+        OrgUser saved = userRepository.save(user);
         saveRoles(saved.getId(), request.roleIds());
         return toView(saved);
     }
 
     @Transactional
-    public AppUserView changeStatus(Long id, UserStatusRequest request) {
-        AppUser user = userRepository.findById(id).orElseThrow(() -> new BusinessException("error.user.notFound"));
+    public AppUserView changeStatus(String id, UserStatusRequest request) {
+        OrgUser user = userRepository.findById(id).orElseThrow(() -> new BusinessException("error.user.notFound"));
         ensureNotAdminAccount(user);
         user.setEnabled(request.enabled());
-        AppUser saved = userRepository.save(user);
+        OrgUser saved = userRepository.save(user);
         return toView(saved);
     }
 
     @Transactional
-    public void resetPassword(Long id, ResetPasswordRequest request) {
-        AppUser user = userRepository.findById(id).orElseThrow(() -> new BusinessException("error.user.notFound"));
+    public void resetPassword(String id, ResetPasswordRequest request) {
+        OrgUser user = userRepository.findById(id).orElseThrow(() -> new BusinessException("error.user.notFound"));
         ensureNotAdminAccount(user);
         String password = request == null || request.password() == null || request.password().isBlank()
             ? "123456"
@@ -170,14 +165,14 @@ public class UserService {
         userRepository.save(user);
     }
 
-    public void delete(Long id) {
-        AppUser user = userRepository.findById(id).orElseThrow(() -> new BusinessException("error.user.notFound"));
+    public void delete(String id) {
+        OrgUser user = userRepository.findById(id).orElseThrow(() -> new BusinessException("error.user.notFound"));
         ensureNotAdminAccount(user);
         user.setDeleted(true);
         userRepository.save(user);
     }
 
-    private void applyUserFields(AppUser user, UserUpsertRequest request, String normalizedPhone, String normalizedEmployeeNo) {
+    private void applyUserFields(OrgUser user, UserUpsertRequest request, String normalizedPhone, String normalizedEmployeeNo) {
         user.setFullName(normalizeRequired(request.fullName(), "error.user.fullName.required"));
         user.setPhone(normalizedPhone);
         user.setEmployeeNo(normalizedEmployeeNo);
@@ -186,7 +181,6 @@ public class UserService {
         user.setTitle(normalizeNullable(request.title()));
         user.setEmergencyPhone(normalizeNullable(request.emergencyPhone()));
         user.setDepartmentId(request.departmentId());
-        user.setDataScope(request.dataScope());
         user.setEnabled(request.enabled());
         user.setHireDate(parseDate(request.hireDate()));
     }
@@ -202,7 +196,7 @@ public class UserService {
         }
     }
 
-    private void saveRoles(Long userId, List<Long> roleIds) {
+    private void saveRoles(String userId, List<String> roleIds) {
         userRoleRepository.deleteByUserId(userId);
         if (roleIds == null) {
             return;
@@ -215,23 +209,23 @@ public class UserService {
         });
     }
 
-    private AppUserView toView(AppUser user) {
-        Map<Long, Department> departmentMap = departmentRepository.findByDeletedFalse().stream()
+    private AppUserView toView(OrgUser user) {
+        Map<String, Department> departmentMap = departmentRepository.findByDeletedFalse().stream()
             .collect(Collectors.toMap(Department::getId, d -> d, (a, b) -> a, LinkedHashMap::new));
-        Map<Long, String> roleNamesById = roleRepository.findByDeletedFalse().stream()
+        Map<String, String> roleNamesById = roleRepository.findByDeletedFalse().stream()
             .collect(Collectors.toMap(Role::getId, Role::getName, (a, b) -> a, LinkedHashMap::new));
         return toView(user, departmentMap, roleNamesById);
     }
 
-    private AppUserView toView(AppUser user, Map<Long, Department> departmentMap, Map<Long, String> roleNamesById) {
-        List<Long> roleIds = userRoleRepository.findByUserIdAndDeletedFalse(user.getId()).stream()
+    private AppUserView toView(OrgUser user, Map<String, Department> departmentMap, Map<String, String> roleNamesById) {
+        List<String> roleIds = userRoleRepository.findByUserIdAndDeletedFalse(user.getId()).stream()
             .map(UserRole::getRoleId)
             .toList();
         return toView(user, departmentMap, roleNamesById, roleIds);
     }
 
-    private AppUserView toView(AppUser user, Map<Long, Department> departmentMap, Map<Long, String> roleNamesById,
-                               List<Long> roleIds) {
+    private AppUserView toView(OrgUser user, Map<String, Department> departmentMap, Map<String, String> roleNamesById,
+                               List<String> roleIds) {
         List<String> roleNames = roleIds.stream()
             .map(roleNamesById::get)
             .filter(Objects::nonNull)
@@ -251,7 +245,6 @@ public class UserService {
             user.getDepartmentId(),
             department == null ? null : department.getName(),
             buildDepartmentPath(user.getDepartmentId(), departmentMap),
-            user.getDataScope(),
             user.getEnabled(),
             roleIds,
             roleNames,
@@ -260,12 +253,12 @@ public class UserService {
         );
     }
 
-    private List<AppUserView> toViews(List<AppUser> users, Map<Long, Department> departmentMap, Map<Long, String> roleNamesById) {
+    private List<AppUserView> toViews(List<OrgUser> users, Map<String, Department> departmentMap, Map<String, String> roleNamesById) {
         if (users == null || users.isEmpty()) {
             return List.of();
         }
-        Set<Long> userIds = users.stream().map(AppUser::getId).collect(Collectors.toSet());
-        Map<Long, List<Long>> roleIdsByUserId = new LinkedHashMap<>();
+        Set<String> userIds = users.stream().map(OrgUser::getId).collect(Collectors.toSet());
+        Map<String, List<String>> roleIdsByUserId = new LinkedHashMap<>();
         for (UserRole mapping : userRoleRepository.findByUserIdInAndDeletedFalse(userIds)) {
             roleIdsByUserId.computeIfAbsent(mapping.getUserId(), key -> new ArrayList<>()).add(mapping.getRoleId());
         }
@@ -274,7 +267,7 @@ public class UserService {
             .toList();
     }
 
-    private String buildDepartmentPath(Long departmentId, Map<Long, Department> departmentMap) {
+    private String buildDepartmentPath(String departmentId, Map<String, Department> departmentMap) {
         if (departmentId == null) {
             return null;
         }
@@ -304,7 +297,7 @@ public class UserService {
         return String.join(" / ", names);
     }
 
-    private void validatePhone(String phone, Long id) {
+    private void validatePhone(String phone, String id) {
         boolean exists = id == null
             ? userRepository.existsByPhoneAndDeletedFalse(phone)
             : userRepository.existsByPhoneAndDeletedFalseAndIdNot(phone, id);
@@ -313,7 +306,7 @@ public class UserService {
         }
     }
 
-    private void validateEmployeeNo(String employeeNo, Long id) {
+    private void validateEmployeeNo(String employeeNo, String id) {
         if (employeeNo == null || employeeNo.isBlank()) {
             return;
         }
@@ -325,7 +318,7 @@ public class UserService {
         }
     }
 
-    private void ensureNotAdminAccount(AppUser user) {
+    private void ensureNotAdminAccount(OrgUser user) {
         if (ADMIN_USERNAME.equalsIgnoreCase(user.getUsername())) {
             throw new BusinessException("error.user.admin.modifyDenied");
         }

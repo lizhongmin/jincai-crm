@@ -8,17 +8,10 @@ import com.jincai.crm.system.dto.UserStatusRequest;
 import com.jincai.crm.system.dto.UserUpsertRequest;
 import com.jincai.crm.system.service.UserService;
 import jakarta.validation.Valid;
-import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/users")
@@ -41,8 +34,8 @@ public class UserController {
     public ApiResponse<PageResult<AppUserView>> page(@RequestParam(defaultValue = "1") int page,
                                                      @RequestParam(defaultValue = "10") int size,
                                                      @RequestParam(required = false) String keyword,
-                                                     @RequestParam(required = false) Long departmentId,
-                                                     @RequestParam(required = false) Long roleId) {
+                                                     @RequestParam(required = false) String departmentId,
+                                                     @RequestParam(required = false) String roleId) {
         return ApiResponse.ok(userService.page(page, size, keyword, departmentId, roleId));
     }
 
@@ -54,26 +47,26 @@ public class UserController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('BTN_ORG_USER_EDIT')")
-    public ApiResponse<AppUserView> update(@PathVariable Long id, @Valid @RequestBody UserUpsertRequest request) {
+    public ApiResponse<AppUserView> update(@PathVariable String id, @Valid @RequestBody UserUpsertRequest request) {
         return ApiResponse.ok(userService.update(id, request));
     }
 
     @PostMapping("/{id}/status")
     @PreAuthorize("hasAuthority('BTN_ORG_USER_STATUS')")
-    public ApiResponse<AppUserView> changeStatus(@PathVariable Long id, @Valid @RequestBody UserStatusRequest request) {
+    public ApiResponse<AppUserView> changeStatus(@PathVariable String id, @Valid @RequestBody UserStatusRequest request) {
         return ApiResponse.ok(userService.changeStatus(id, request));
     }
 
     @PostMapping("/{id}/reset-password")
     @PreAuthorize("hasAuthority('BTN_ORG_USER_RESET_PASSWORD')")
-    public ApiResponse<Void> resetPassword(@PathVariable Long id, @RequestBody(required = false) ResetPasswordRequest request) {
+    public ApiResponse<Void> resetPassword(@PathVariable String id, @RequestBody(required = false) ResetPasswordRequest request) {
         userService.resetPassword(id, request);
         return ApiResponse.ok(null);
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('BTN_ORG_USER_DELETE')")
-    public ApiResponse<Void> delete(@PathVariable Long id) {
+    public ApiResponse<Void> delete(@PathVariable String id) {
         userService.delete(id);
         return ApiResponse.ok(null);
     }

@@ -1,6 +1,7 @@
 package com.jincai.crm.system.dto;
 
 import com.jincai.crm.system.entity.Permission;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,15 +9,15 @@ import java.util.List;
  * 权限树视图（用于管理界面展示完整树结构）
  */
 public record PermissionTreeView(
-    Long id,
+    String id,
     String code,
     String name,
     String type,
     String menuPath,
-    Long parentId,
+    String parentId,
     List<PermissionTreeView> children
 ) {
-    public PermissionTreeView(Long id, String code, String name, String type, String menuPath, Long parentId) {
+    public PermissionTreeView(String id, String code, String name, String type, String menuPath, String parentId) {
         this(id, code, name, type, menuPath, parentId, new ArrayList<>());
     }
 

@@ -1,21 +1,19 @@
 package com.jincai.crm.system.entity;
 
 import com.jincai.crm.common.BaseEntity;
-import com.jincai.crm.common.DataScope;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
-import java.time.LocalDate;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.time.LocalDate;
 
 @Getter
 @Setter
 @Entity
 @Table(name = "org_user")
-public class AppUser extends BaseEntity {
+public class OrgUser extends BaseEntity {
 
     @Column(nullable = false, unique = true)
     private String username;
@@ -48,11 +46,7 @@ public class AppUser extends BaseEntity {
     private String emergencyPhone;
 
     @Column(name = "department_id")
-    private Long departmentId;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "data_scope", nullable = false)
-    private DataScope dataScope = DataScope.SELF;
+    private String departmentId;
 
     @Column(nullable = false)
     private Boolean enabled = true;

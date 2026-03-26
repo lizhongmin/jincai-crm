@@ -1,10 +1,5 @@
 package com.jincai.crm.file.entity;
 
-import com.jincai.crm.file.config.*;
-import com.jincai.crm.file.controller.*;
-import com.jincai.crm.file.repository.*;
-import com.jincai.crm.file.service.*;
-
 import com.jincai.crm.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

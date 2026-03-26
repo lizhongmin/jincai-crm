@@ -1,22 +1,14 @@
 package com.jincai.crm.product.entity;
 
-import com.jincai.crm.product.controller.*;
-import com.jincai.crm.product.dto.*;
-import com.jincai.crm.product.repository.*;
-import com.jincai.crm.product.service.*;
-
 import com.jincai.crm.common.BaseEntity;
 import com.jincai.crm.order.entity.DepositRuleType;
 import com.jincai.crm.order.entity.OrderLockPolicy;
 import com.jincai.crm.order.entity.OrderPaymentPolicy;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Table;
-import java.math.BigDecimal;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.math.BigDecimal;
 
 @Getter
 @Setter

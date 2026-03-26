@@ -4,7 +4,7 @@ import java.util.List;
 
 public record LoginResponse(
     String token,
-    Long userId,
+    String userId,
     String username,
     String fullName,
     List<String> roles

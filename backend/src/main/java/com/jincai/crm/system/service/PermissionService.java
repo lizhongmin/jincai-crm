@@ -2,19 +2,18 @@ package com.jincai.crm.system.service;
 
 import com.jincai.crm.common.BusinessException;
 import com.jincai.crm.security.LoginUser;
+import com.jincai.crm.system.dto.PermissionRequest;
 import com.jincai.crm.system.dto.PermissionTreeGroupView;
 import com.jincai.crm.system.dto.PermissionTreeView;
-import com.jincai.crm.system.dto.PermissionRequest;
 import com.jincai.crm.system.entity.Permission;
 import com.jincai.crm.system.entity.RolePermission;
 import com.jincai.crm.system.entity.UserRole;
 import com.jincai.crm.system.repository.PermissionRepository;
 import com.jincai.crm.system.repository.RolePermissionRepository;
 import com.jincai.crm.system.repository.UserRoleRepository;
+import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.stream.Collectors;
-import org.springframework.stereotype.Service;
 
 @Service
 public class PermissionService {
@@ -46,13 +45,13 @@ public class PermissionService {
                 .toList();
         }
 
-        List<Long> roleIds = userRoleRepository.findByUserIdAndDeletedFalse(user.getUserId()).stream()
+        List<String> roleIds = userRoleRepository.findByUserIdAndDeletedFalse(user.getUserId()).stream()
             .map(UserRole::getRoleId)
             .toList();
         if (roleIds.isEmpty()) {
             return Collections.emptyList();
         }
-        Set<Long> permissionIds = rolePermissionRepository.findByRoleIdInAndDeletedFalse(roleIds).stream()
+        Set<String> permissionIds = rolePermissionRepository.findByRoleIdInAndDeletedFalse(roleIds).stream()
             .map(RolePermission::getPermissionId)
             .collect(java.util.stream.Collectors.toSet());
         return permissionRepository.findByIdIn(permissionIds).stream()
@@ -65,7 +64,7 @@ public class PermissionService {
         return permissionRepository.findByDeletedFalse().stream()
             .sorted(java.util.Comparator
                 .comparing((Permission p) -> "MENU".equalsIgnoreCase(p.getType()) ? 0 : 1)
-                .thenComparing(p -> p.getParentId() == null ? Long.MIN_VALUE : p.getParentId())
+                .thenComparing(p -> p.getParentId() == null ? "0" : p.getParentId())
                 .thenComparing(Permission::getCode))
             .toList();
     }
@@ -78,12 +77,12 @@ public class PermissionService {
      */
     public List<PermissionTreeGroupView> tree() {
         List<Permission> all = permissionRepository.findByDeletedFalse();
-        Map<Long, Permission> byId = all.stream()
+        Map<String, Permission> byId = all.stream()
             .filter(p -> p.getId() != null)
             .collect(java.util.stream.Collectors.toMap(Permission::getId, p -> p));
 
         // 按 parentId 分桶（所有子节点）
-        Map<Long, List<Permission>> childrenOf = all.stream()
+        Map<String, List<Permission>> childrenOf = all.stream()
             .filter(p -> p.getParentId() != null)
             .collect(java.util.stream.Collectors.groupingBy(
                 Permission::getParentId,
@@ -97,7 +96,7 @@ public class PermissionService {
             .sorted(java.util.Comparator.comparing(Permission::getCode))
             .toList();
 
-        java.util.Set<Long> visited = new java.util.HashSet<>();
+        java.util.Set<String> visited = new java.util.HashSet<>();
         List<PermissionTreeGroupView> result = new java.util.ArrayList<>();
 
         for (Permission top : topMenus) {
@@ -167,7 +166,7 @@ public class PermissionService {
             .comparing((Permission p) -> "MENU".equalsIgnoreCase(p.getType()) ? 0 : 1)
             .thenComparing(Permission::getCode));
 
-        Map<Long, PermissionTreeView> nodeMap = new LinkedHashMap<>();
+        Map<String, PermissionTreeView> nodeMap = new LinkedHashMap<>();
         all.forEach(permission -> nodeMap.put(permission.getId(), new PermissionTreeView(permission)));
 
         List<PermissionTreeView> roots = new ArrayList<>();
@@ -175,7 +174,7 @@ public class PermissionService {
         // 第一次遍历：只把根节点或孤儿节点加入 roots（不包含实际存在父节点的节点）
         for (Permission permission : all) {
             PermissionTreeView currentNode = nodeMap.get(permission.getId());
-            Long parentId = permission.getParentId();
+            String parentId = permission.getParentId();
             if (parentId == null || !nodeMap.containsKey(parentId)) {
                 roots.add(currentNode);
             }
@@ -183,7 +182,7 @@ public class PermissionService {
 
         // 第二次遍历：挂载子节点。由于 java 的对象引用特性，这里更新 nodeMap 中的节点，roots 里的节点也会一并更新
         for (Permission permission : all) {
-            Long parentId = permission.getParentId();
+            String parentId = permission.getParentId();
             if (parentId != null) {
                 PermissionTreeView parentNode = nodeMap.get(parentId);
                 if (parentNode != null) {
@@ -223,7 +222,7 @@ public class PermissionService {
      * @param request 权限更新请求
      * @return 更新后的权限
      */
-    public Permission update(Long id, PermissionRequest request) {
+    public Permission update(String id, PermissionRequest request) {
         Permission permission = permissionRepository.findById(id)
             .orElseThrow(() -> new BusinessException("error.permission.notFound"));
         if (Boolean.TRUE.equals(permission.getDeleted())) {
@@ -250,7 +249,7 @@ public class PermissionService {
      * 删除权限
      * @param id 权限ID
      */
-    public void delete(Long id) {
+    public void delete(String id) {
         Permission permission = permissionRepository.findById(id)
             .orElseThrow(() -> new BusinessException("error.permission.notFound"));
         if (Boolean.TRUE.equals(permission.getDeleted())) {

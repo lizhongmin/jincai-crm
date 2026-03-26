@@ -1,18 +1,15 @@
 package com.jincai.crm.workflow.repository;
 
-import com.jincai.crm.workflow.controller.*;
-import com.jincai.crm.workflow.dto.*;
-import com.jincai.crm.workflow.entity.*;
-import com.jincai.crm.workflow.service.*;
+import com.jincai.crm.workflow.entity.WorkflowInstanceNode;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
-import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface WorkflowInstanceNodeRepository extends JpaRepository<WorkflowInstanceNode, Long> {
+public interface WorkflowInstanceNodeRepository extends JpaRepository<WorkflowInstanceNode, String> {
 
-    List<WorkflowInstanceNode> findByInstanceIdAndDeletedFalseOrderByStepOrderAsc(Long instanceId);
+    List<WorkflowInstanceNode> findByInstanceIdAndDeletedFalseOrderByStepOrderAsc(String instanceId);
 
-    Optional<WorkflowInstanceNode> findByInstanceIdAndStepOrderAndDeletedFalse(Long instanceId, Integer stepOrder);
+    Optional<WorkflowInstanceNode> findByInstanceIdAndStepOrderAndDeletedFalse(String instanceId, Integer stepOrder);
 }
 

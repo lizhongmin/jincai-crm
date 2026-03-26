@@ -1,9 +1,5 @@
 package com.jincai.crm.audit.entity;
 
-import com.jincai.crm.audit.controller.*;
-import com.jincai.crm.audit.repository.*;
-import com.jincai.crm.audit.service.*;
-
 import com.jincai.crm.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -21,7 +17,7 @@ public class AuditLog extends BaseEntity {
     private String entityType;
 
     @Column(name = "entity_id", nullable = false)
-    private Long entityId;
+    private String entityId;
 
     @Column(name = "field_name", nullable = false)
     private String fieldName;

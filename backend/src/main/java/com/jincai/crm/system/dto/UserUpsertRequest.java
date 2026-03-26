@@ -1,13 +1,13 @@
 package com.jincai.crm.system.dto;
 
-import com.jincai.crm.common.DataScope;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+
 import java.util.List;
 
 public record UserUpsertRequest(
-    Long id,
+    String id,
     @NotBlank String username,
     String password,
     @NotBlank String fullName,
@@ -21,10 +21,9 @@ public record UserUpsertRequest(
     String title,
     String hireDate,
     String emergencyPhone,
-    @NotNull Long departmentId,
-    @NotNull DataScope dataScope,
+    @NotNull String departmentId,
     @NotNull Boolean enabled,
-    List<Long> roleIds
+    List<String> roleIds
 ) {
 }
 

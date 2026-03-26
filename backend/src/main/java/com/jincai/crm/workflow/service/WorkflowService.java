@@ -1,9 +1,5 @@
 package com.jincai.crm.workflow.service;
 
-import com.jincai.crm.workflow.dto.*;
-import com.jincai.crm.workflow.entity.*;
-import com.jincai.crm.workflow.repository.*;
-
 import com.jincai.crm.common.BusinessException;
 import com.jincai.crm.common.I18nService;
 import com.jincai.crm.common.PageResult;
@@ -12,30 +8,37 @@ import com.jincai.crm.notification.repository.NotificationRepository;
 import com.jincai.crm.order.entity.TravelOrder;
 import com.jincai.crm.product.repository.DepartureRepository;
 import com.jincai.crm.product.repository.RouteProductRepository;
-import com.jincai.crm.system.entity.AppUser;
-import com.jincai.crm.system.repository.AppUserRepository;
-import com.jincai.crm.system.entity.Role;
-import com.jincai.crm.system.repository.RoleRepository;
-import com.jincai.crm.system.entity.UserRole;
-import com.jincai.crm.system.repository.UserRoleRepository;
 import com.jincai.crm.security.LoginUser;
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import com.jincai.crm.system.entity.OrgUser;
+import com.jincai.crm.system.entity.Role;
+import com.jincai.crm.system.entity.UserRole;
+import com.jincai.crm.system.repository.OrgUserRepository;
+import com.jincai.crm.system.repository.RoleRepository;
+import com.jincai.crm.system.repository.UserRoleRepository;
+import com.jincai.crm.workflow.dto.WorkflowContextOptionsView;
+import com.jincai.crm.workflow.dto.WorkflowNodeRequest;
+import com.jincai.crm.workflow.dto.WorkflowTemplateRequest;
+import com.jincai.crm.workflow.dto.WorkflowTemplateView;
+import com.jincai.crm.workflow.entity.WorkflowInstance;
+import com.jincai.crm.workflow.entity.WorkflowInstanceNode;
+import com.jincai.crm.workflow.entity.WorkflowTemplate;
+import com.jincai.crm.workflow.entity.WorkflowTemplateNode;
+import com.jincai.crm.workflow.repository.WorkflowInstanceNodeRepository;
+import com.jincai.crm.workflow.repository.WorkflowInstanceRepository;
+import com.jincai.crm.workflow.repository.WorkflowTemplateNodeRepository;
+import com.jincai.crm.workflow.repository.WorkflowTemplateRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class WorkflowService {
@@ -44,7 +47,7 @@ public class WorkflowService {
     private final WorkflowTemplateNodeRepository templateNodeRepository;
     private final WorkflowInstanceRepository instanceRepository;
     private final WorkflowInstanceNodeRepository instanceNodeRepository;
-    private final AppUserRepository userRepository;
+    private final OrgUserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
     private final RoleRepository roleRepository;
     private final RouteProductRepository routeRepository;
@@ -56,7 +59,7 @@ public class WorkflowService {
                            WorkflowTemplateNodeRepository templateNodeRepository,
                            WorkflowInstanceRepository instanceRepository,
                            WorkflowInstanceNodeRepository instanceNodeRepository,
-                           AppUserRepository userRepository,
+                           OrgUserRepository userRepository,
                            UserRoleRepository userRoleRepository,
                            RoleRepository roleRepository,
                            RouteProductRepository routeRepository,
@@ -140,7 +143,7 @@ public class WorkflowService {
     }
 
     @Transactional
-    public WorkflowTemplate updateTemplate(Long id, WorkflowTemplateRequest request) {
+    public WorkflowTemplate updateTemplate(String id, WorkflowTemplateRequest request) {
         WorkflowTemplate template = templateRepository.findById(id).orElseThrow(() -> new BusinessException("error.workflow.template.notFound"));
         if (Boolean.TRUE.equals(template.getDeleted())) {
             throw new BusinessException("error.workflow.template.notFound");
@@ -165,7 +168,7 @@ public class WorkflowService {
     }
 
     @Transactional
-    public void deleteTemplate(Long id) {
+    public void deleteTemplate(String id) {
         WorkflowTemplate template = templateRepository.findById(id).orElseThrow(() -> new BusinessException("error.workflow.template.notFound"));
         if (Boolean.TRUE.equals(template.getDeleted())) {
             return;
@@ -224,7 +227,7 @@ public class WorkflowService {
     }
 
     @Transactional
-    public boolean approve(Long orderId, LoginUser currentUser, String comment) {
+    public boolean approve(String orderId, LoginUser currentUser, String comment) {
         WorkflowInstance instance = instanceRepository.findByOrderIdAndDeletedFalse(orderId)
             .orElseThrow(() -> new BusinessException("error.workflow.instance.notFound"));
         if (!"RUNNING".equals(instance.getStatus())) {
@@ -256,7 +259,7 @@ public class WorkflowService {
     }
 
     @Transactional
-    public void reject(Long orderId, LoginUser currentUser, String comment) {
+    public void reject(String orderId, LoginUser currentUser, String comment) {
         WorkflowInstance instance = instanceRepository.findByOrderIdAndDeletedFalse(orderId)
             .orElseThrow(() -> new BusinessException("error.workflow.instance.notFound"));
         if (!"RUNNING".equals(instance.getStatus())) {
@@ -274,7 +277,7 @@ public class WorkflowService {
     }
 
     @Transactional
-    public void withdraw(Long orderId, LoginUser currentUser, String comment) {
+    public void withdraw(String orderId, LoginUser currentUser, String comment) {
         WorkflowInstance instance = instanceRepository.findByOrderIdAndDeletedFalse(orderId)
             .orElseThrow(() -> new BusinessException("error.workflow.instance.notFound"));
         if (!"RUNNING".equals(instance.getStatus())) {
@@ -294,7 +297,7 @@ public class WorkflowService {
     }
 
     @Transactional
-    public void transfer(Long orderId, LoginUser currentUser, String targetRoleCode, String comment) {
+    public void transfer(String orderId, LoginUser currentUser, String targetRoleCode, String comment) {
         if (targetRoleCode == null || targetRoleCode.isBlank()) {
             throw new BusinessException("error.workflow.transfer.targetRole.required");
         }
@@ -315,7 +318,7 @@ public class WorkflowService {
         instanceNodeRepository.save(node);
     }
 
-    private void saveTemplateNodes(Long templateId, List<WorkflowNodeRequest> nodes) {
+    private void saveTemplateNodes(String templateId, List<WorkflowNodeRequest> nodes) {
         if (nodes == null || nodes.isEmpty()) {
             throw new BusinessException("error.workflow.template.nodeRequired");
         }
@@ -361,7 +364,7 @@ public class WorkflowService {
         return score;
     }
 
-    private void closeActiveInstance(Long orderId, String reason) {
+    private void closeActiveInstance(String orderId, String reason) {
         instanceRepository.findByOrderIdAndDeletedFalse(orderId).ifPresent(instance -> {
             if (!"APPROVED".equalsIgnoreCase(instance.getStatus())
                 && !"REJECTED".equalsIgnoreCase(instance.getStatus())
@@ -380,14 +383,14 @@ public class WorkflowService {
         });
     }
 
-    private void sendNodeNotification(Long instanceId, Integer step, String orderNo) {
+    private void sendNodeNotification(String instanceId, Integer step, String orderNo) {
         WorkflowInstanceNode node = instanceNodeRepository.findByInstanceIdAndStepOrderAndDeletedFalse(instanceId, step)
             .orElseThrow(() -> new BusinessException("error.workflow.node.pendingNotFound"));
-        List<AppUser> users = userRepository.findByDeletedFalse();
+        List<OrgUser> users = userRepository.findByDeletedFalse();
         List<UserRole> userRoles = new ArrayList<>();
         users.forEach(user -> userRoles.addAll(userRoleRepository.findByUserIdAndDeletedFalse(user.getId())));
-        Set<Long> roleIds = userRoles.stream().map(UserRole::getRoleId).collect(Collectors.toSet());
-        Map<Long, Role> roleMap = roleRepository.findAllById(roleIds).stream().collect(Collectors.toMap(Role::getId, Function.identity()));
+        Set<String> roleIds = userRoles.stream().map(UserRole::getRoleId).collect(Collectors.toSet());
+        Map<String, Role> roleMap = roleRepository.findAllById(roleIds).stream().collect(Collectors.toMap(Role::getId, Function.identity()));
         userRoles.stream()
             .filter(ur -> {
                 Role role = roleMap.get(ur.getRoleId());

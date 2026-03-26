@@ -1,25 +1,23 @@
 package com.jincai.crm.order.repository;
 
-import com.jincai.crm.order.controller.*;
-import com.jincai.crm.order.dto.*;
-import com.jincai.crm.order.entity.*;
-import com.jincai.crm.order.service.*;
+import com.jincai.crm.order.entity.OrderStatus;
+import com.jincai.crm.order.entity.TravelOrder;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
-public interface TravelOrderRepository extends JpaRepository<TravelOrder, Long>, JpaSpecificationExecutor<TravelOrder> {
+public interface TravelOrderRepository extends JpaRepository<TravelOrder, String>, JpaSpecificationExecutor<TravelOrder> {
 
     List<TravelOrder> findByDeletedFalse();
 
-    List<TravelOrder> findBySalesUserIdAndDeletedFalse(Long salesUserId);
+    List<TravelOrder> findBySalesUserIdAndDeletedFalse(String salesUserId);
 
-    List<TravelOrder> findBySalesDeptIdAndDeletedFalse(Long salesDeptId);
+    List<TravelOrder> findBySalesDeptIdAndDeletedFalse(String salesDeptId);
 
-    List<TravelOrder> findBySalesDeptIdInAndDeletedFalse(Collection<Long> salesDeptIds);
+    List<TravelOrder> findBySalesDeptIdInAndDeletedFalse(Collection<String> salesDeptIds);
 
     List<TravelOrder> findByStatusInAndDeletedFalse(Collection<OrderStatus> statuses);
 

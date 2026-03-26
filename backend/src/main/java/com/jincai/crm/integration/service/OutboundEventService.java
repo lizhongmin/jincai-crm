@@ -1,10 +1,9 @@
 package com.jincai.crm.integration.service;
 
-import com.jincai.crm.integration.entity.*;
-import com.jincai.crm.integration.repository.*;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jincai.crm.integration.entity.OutboundEvent;
+import com.jincai.crm.integration.repository.OutboundEventRepository;
 import org.springframework.stereotype.Service;
 
 @Service

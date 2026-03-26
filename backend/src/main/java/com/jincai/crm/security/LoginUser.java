@@ -1,19 +1,20 @@
 package com.jincai.crm.security;
 
 import com.jincai.crm.common.DataScope;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+
 @Getter
 public class LoginUser implements UserDetails {
 
-    private final Long userId;
-    private final Long departmentId;
+    private final String userId;
+    private final String departmentId;
     private final DataScope dataScope;
     private final String username;
     private final String password;
@@ -21,12 +22,12 @@ public class LoginUser implements UserDetails {
     private final List<String> roleCodes;
     private final List<String> permissionCodes;
 
-    public LoginUser(Long userId, Long departmentId, DataScope dataScope, String username, String password,
+    public LoginUser(String userId, String departmentId, DataScope dataScope, String username, String password,
                      boolean enabled, List<String> roleCodes) {
         this(userId, departmentId, dataScope, username, password, enabled, roleCodes, List.of());
     }
 
-    public LoginUser(Long userId, Long departmentId, DataScope dataScope, String username, String password,
+    public LoginUser(String userId, String departmentId, DataScope dataScope, String username, String password,
                      boolean enabled, List<String> roleCodes, List<String> permissionCodes) {
         this.userId = userId;
         this.departmentId = departmentId;

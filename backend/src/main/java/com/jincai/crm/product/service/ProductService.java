@@ -1,16 +1,25 @@
 package com.jincai.crm.product.service;
 
-import com.jincai.crm.product.controller.*;
-import com.jincai.crm.product.dto.*;
-import com.jincai.crm.product.entity.*;
-import com.jincai.crm.product.repository.*;
-
 import com.jincai.crm.common.BusinessException;
 import com.jincai.crm.common.PageResult;
 import com.jincai.crm.order.entity.DepositRuleType;
 import com.jincai.crm.order.entity.OrderLockPolicy;
 import com.jincai.crm.order.entity.OrderPaymentPolicy;
+import com.jincai.crm.product.dto.*;
+import com.jincai.crm.product.entity.Departure;
+import com.jincai.crm.product.entity.DeparturePrice;
+import com.jincai.crm.product.entity.RouteProduct;
+import com.jincai.crm.product.repository.DeparturePriceRepository;
+import com.jincai.crm.product.repository.DepartureRepository;
+import com.jincai.crm.product.repository.RouteProductRepository;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -20,12 +29,6 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ProductService {
@@ -89,27 +92,27 @@ public class ProductService {
     }
 
     @Transactional
-    public RouteProduct updateRoute(Long id, @Valid RouteRequest request) {
+    public RouteProduct updateRoute(String id, @Valid RouteRequest request) {
         RouteProduct route = routeRepository.findById(id).orElseThrow(() -> new BusinessException("error.route.notFound"));
         applyRoute(route, request);
         return routeRepository.save(route);
     }
 
     @Transactional
-    public void deleteRoute(Long id) {
+    public void deleteRoute(String id) {
         RouteProduct route = routeRepository.findById(id).orElseThrow(() -> new BusinessException("error.route.notFound"));
         route.setDeleted(true);
         routeRepository.save(route);
     }
 
-    public List<Departure> departures(Long routeId) {
+    public List<Departure> departures(String routeId) {
         if (routeId != null) {
             return departureRepository.findByRouteIdAndDeletedFalse(routeId);
         }
         return departureRepository.findByDeletedFalse();
     }
 
-    public PageResult<Departure> pageDepartures(int page, int size, Long routeId, String keyword) {
+    public PageResult<Departure> pageDepartures(int page, int size, String routeId, String keyword) {
         int normalizedPage = normalizePage(page);
         int normalizedSize = normalizeSize(size);
         String normalizedKeyword = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
@@ -149,7 +152,7 @@ public class ProductService {
     }
 
     @Transactional
-    public Departure updateDeparture(Long id, @Valid DepartureRequest request) {
+    public Departure updateDeparture(String id, @Valid DepartureRequest request) {
         routeRepository.findById(request.routeId()).orElseThrow(() -> new BusinessException("error.route.notFound"));
         Departure departure = departureRepository.findById(id).orElseThrow(() -> new BusinessException("error.departure.notFound"));
         applyDeparture(departure, request);
@@ -157,31 +160,31 @@ public class ProductService {
     }
 
     @Transactional
-    public void deleteDeparture(Long id) {
+    public void deleteDeparture(String id) {
         Departure departure = departureRepository.findById(id).orElseThrow(() -> new BusinessException("error.departure.notFound"));
         departure.setDeleted(true);
         departureRepository.save(departure);
     }
 
-    public List<DeparturePrice> prices(Long departureId) {
+    public List<DeparturePrice> prices(String departureId) {
         return priceRepository.findByDepartureIdAndDeletedFalse(departureId);
     }
 
-    public OrderPolicyView routePolicy(Long routeId) {
+    public OrderPolicyView routePolicy(String routeId) {
         RouteProduct route = routeRepository.findById(routeId).orElseThrow(() -> new BusinessException("error.route.notFound"));
         normalizeRoutePolicyDefaults(route);
         return toOrderPolicyView(route);
     }
 
     @Transactional
-    public OrderPolicyView updateRoutePolicy(Long routeId, @Valid OrderPolicyRequest request) {
+    public OrderPolicyView updateRoutePolicy(String routeId, @Valid OrderPolicyRequest request) {
         RouteProduct route = routeRepository.findById(routeId).orElseThrow(() -> new BusinessException("error.route.notFound"));
         applyRoutePolicy(route, request);
         RouteProduct saved = routeRepository.save(route);
         return toOrderPolicyView(saved);
     }
 
-    public DepartureOrderPolicyView departurePolicy(Long departureId) {
+    public DepartureOrderPolicyView departurePolicy(String departureId) {
         Departure departure = departureRepository.findById(departureId)
             .orElseThrow(() -> new BusinessException("error.departure.notFound"));
         RouteProduct route = routeRepository.findById(departure.getRouteId())
@@ -203,7 +206,7 @@ public class ProductService {
     }
 
     @Transactional
-    public DepartureOrderPolicyView updateDeparturePolicy(Long departureId, @Valid OrderPolicyRequest request) {
+    public DepartureOrderPolicyView updateDeparturePolicy(String departureId, @Valid OrderPolicyRequest request) {
         Departure departure = departureRepository.findById(departureId)
             .orElseThrow(() -> new BusinessException("error.departure.notFound"));
         RouteProduct route = routeRepository.findById(departure.getRouteId())
@@ -237,7 +240,7 @@ public class ProductService {
     }
 
     @Transactional
-    public DeparturePrice addPrice(Long departureId, @Valid DeparturePriceRequest request) {
+    public DeparturePrice addPrice(String departureId, @Valid DeparturePriceRequest request) {
         departureRepository.findById(departureId).orElseThrow(() -> new BusinessException("error.departure.notFound"));
         DeparturePrice price = new DeparturePrice();
         price.setDepartureId(departureId);
@@ -246,7 +249,7 @@ public class ProductService {
     }
 
     @Transactional
-    public DeparturePrice updatePrice(Long departureId, Long priceId, @Valid DeparturePriceRequest request) {
+    public DeparturePrice updatePrice(String departureId, String priceId, @Valid DeparturePriceRequest request) {
         departureRepository.findById(departureId).orElseThrow(() -> new BusinessException("error.departure.notFound"));
         DeparturePrice price = priceRepository.findById(priceId).orElseThrow(() -> new BusinessException("error.price.notFound"));
         applyPrice(price, request);
@@ -254,7 +257,7 @@ public class ProductService {
     }
 
     @Transactional
-    public void deletePrice(Long departureId, Long priceId) {
+    public void deletePrice(String departureId, String priceId) {
         departureRepository.findById(departureId).orElseThrow(() -> new BusinessException("error.departure.notFound"));
         DeparturePrice price = priceRepository.findById(priceId).orElseThrow(() -> new BusinessException("error.price.notFound"));
         price.setDeleted(true);

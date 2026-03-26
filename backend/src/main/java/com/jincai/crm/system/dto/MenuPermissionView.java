@@ -7,7 +7,7 @@ public record MenuPermissionView(
     String name,
     String type,
     String menuPath,
-    Long parentId
+    String parentId
 ) {
     public static MenuPermissionView from(Permission p) {
         return new MenuPermissionView(

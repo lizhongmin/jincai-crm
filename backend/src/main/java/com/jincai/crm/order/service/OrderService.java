@@ -1,45 +1,26 @@
 package com.jincai.crm.order.service;
 
-import com.jincai.crm.order.controller.*;
+import com.jincai.crm.audit.service.AuditLogService;
+import com.jincai.crm.common.*;
+import com.jincai.crm.customer.entity.Customer;
+import com.jincai.crm.customer.entity.Traveler;
+import com.jincai.crm.customer.repository.CustomerRepository;
+import com.jincai.crm.customer.repository.TravelerRepository;
 import com.jincai.crm.order.dto.*;
 import com.jincai.crm.order.entity.*;
-import com.jincai.crm.order.repository.*;
-
-import com.jincai.crm.audit.service.AuditLogService;
-import com.jincai.crm.common.BusinessException;
-import com.jincai.crm.common.DataScope;
-import com.jincai.crm.common.DataScopeResolver;
-import com.jincai.crm.common.I18nService;
-import com.jincai.crm.common.PageResult;
-import com.jincai.crm.customer.entity.Customer;
-import com.jincai.crm.customer.repository.CustomerRepository;
-import com.jincai.crm.customer.entity.Traveler;
-import com.jincai.crm.customer.repository.TravelerRepository;
+import com.jincai.crm.order.repository.OrderPriceItemRepository;
+import com.jincai.crm.order.repository.OrderStatusLogRepository;
+import com.jincai.crm.order.repository.OrderTravelerSnapshotRepository;
+import com.jincai.crm.order.repository.TravelOrderRepository;
 import com.jincai.crm.product.entity.Departure;
 import com.jincai.crm.product.entity.DeparturePrice;
+import com.jincai.crm.product.entity.RouteProduct;
 import com.jincai.crm.product.repository.DeparturePriceRepository;
 import com.jincai.crm.product.repository.DepartureRepository;
-import com.jincai.crm.product.entity.RouteProduct;
 import com.jincai.crm.product.repository.RouteProductRepository;
 import com.jincai.crm.security.LoginUser;
 import com.jincai.crm.workflow.service.WorkflowService;
 import jakarta.servlet.http.HttpServletRequest;
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.LocalDateTime;
-import java.time.Period;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -51,6 +32,14 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDateTime;
+import java.time.Period;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 @Service
 public class OrderService {
@@ -106,7 +95,7 @@ public class OrderService {
         if (user.getDataScope() == DataScope.DEPARTMENT) {
             return orderRepository.findBySalesDeptIdAndDeletedFalse(user.getDepartmentId());
         }
-        Set<Long> departmentIds = dataScopeResolver.resolveDepartmentIds(user);
+        Set<String> departmentIds = dataScopeResolver.resolveDepartmentIds(user);
         if (departmentIds.isEmpty()) {
             return List.of();
         }
@@ -139,7 +128,7 @@ public class OrderService {
         );
     }
 
-    public OrderDetailView detail(Long id) {
+    public OrderDetailView detail(String id) {
         TravelOrder order = orderRepository.findById(id).orElseThrow(() -> new BusinessException("error.order.notFound"));
         return new OrderDetailView(
             order,
@@ -148,7 +137,7 @@ public class OrderService {
         );
     }
 
-    public List<OrderStatusLog> logs(Long orderId) {
+    public List<OrderStatusLog> logs(String orderId) {
         return logRepository.findByOrderIdAndDeletedFalseOrderByCreatedAtAsc(orderId);
     }
 
@@ -190,7 +179,7 @@ public class OrderService {
     }
 
     @Transactional
-    public TravelOrder update(Long id, OrderRequest request, HttpServletRequest httpServletRequest) {
+    public TravelOrder update(String id, OrderRequest request, HttpServletRequest httpServletRequest) {
         TravelOrder order = orderRepository.findById(id).orElseThrow(() -> new BusinessException("error.order.notFound"));
         validateEditable(order);
         assertCnyCurrency(request.currency());
@@ -219,7 +208,7 @@ public class OrderService {
     }
 
     @Transactional
-    public void delete(Long id) {
+    public void delete(String id) {
         TravelOrder order = orderRepository.findById(id).orElseThrow(() -> new BusinessException("error.order.notFound"));
         validateEditable(order);
         order.setDeleted(true);
@@ -227,7 +216,7 @@ public class OrderService {
         markPricingDeleted(id);
     }
 
-    public List<Traveler> customerTravelers(Long customerId, LoginUser user) {
+    public List<Traveler> customerTravelers(String customerId, LoginUser user) {
         if (customerId == null) {
             return List.of();
         }
@@ -238,13 +227,13 @@ public class OrderService {
         return travelerRepository.findByCustomerIdAndDeletedFalse(customerId);
     }
 
-    public List<DeparturePrice> departurePrices(Long departureId) {
+    public List<DeparturePrice> departurePrices(String departureId) {
         departureRepository.findById(departureId).orElseThrow(() -> new BusinessException("error.departure.notFound"));
         return priceRepository.findByDepartureIdAndDeletedFalse(departureId);
     }
 
     @Transactional
-    public TravelOrder action(Long id, OrderActionRequest request, LoginUser user) {
+    public TravelOrder action(String id, OrderActionRequest request, LoginUser user) {
         TravelOrder order = orderRepository.findById(id).orElseThrow(() -> new BusinessException("error.order.notFound"));
         OrderStatus fromStatus = order.getStatus();
 
@@ -307,7 +296,7 @@ public class OrderService {
     }
 
     @Transactional
-    public TravelOrder submit(Long id) {
+    public TravelOrder submit(String id) {
         TravelOrder order = orderRepository.findById(id).orElseThrow(() -> new BusinessException("error.order.notFound"));
         OrderStatus oldStatus = order.getStatus();
         submitInternal(order, false);
@@ -317,7 +306,7 @@ public class OrderService {
     }
 
     @Transactional
-    public TravelOrder approve(Long id, LoginUser user, String comment) {
+    public TravelOrder approve(String id, LoginUser user, String comment) {
         TravelOrder order = orderRepository.findById(id).orElseThrow(() -> new BusinessException("error.order.notFound"));
         OrderStatus old = order.getStatus();
         approveInternal(order, user, comment);
@@ -327,7 +316,7 @@ public class OrderService {
     }
 
     @Transactional
-    public TravelOrder reject(Long id, LoginUser user, String comment) {
+    public TravelOrder reject(String id, LoginUser user, String comment) {
         TravelOrder order = orderRepository.findById(id).orElseThrow(() -> new BusinessException("error.order.notFound"));
         OrderStatus old = order.getStatus();
         rejectInternal(order, user, comment);
@@ -348,9 +337,9 @@ public class OrderService {
                     continue;
                 }
                 try {
-                    Long customerId = Long.parseLong(formatter.formatCellValue(row.getCell(0)));
-                    Long routeId = Long.parseLong(formatter.formatCellValue(row.getCell(1)));
-                    Long departureId = Long.parseLong(formatter.formatCellValue(row.getCell(2)));
+                    String customerId = formatter.formatCellValue(row.getCell(0));
+                    String routeId = formatter.formatCellValue(row.getCell(1));
+                    String departureId = formatter.formatCellValue(row.getCell(2));
                     String orderType = formatter.formatCellValue(row.getCell(3));
                     String productCategory = formatter.formatCellValue(row.getCell(4));
                     int travelerCount = Integer.parseInt(formatter.formatCellValue(row.getCell(5)));
@@ -375,7 +364,7 @@ public class OrderService {
             return 0;
         }
 
-        LoginUser systemOperator = new LoginUser(0L, 0L, DataScope.ALL, "system", "N/A", true, List.of("ADMIN"));
+        LoginUser systemOperator = new LoginUser("1", "1", DataScope.ALL, "system", "N/A", true, List.of("ADMIN"));
         LocalDateTime now = LocalDateTime.now();
         int canceledCount = 0;
         for (TravelOrder order : candidates) {
@@ -563,7 +552,7 @@ public class OrderService {
         throw new BusinessException("common.auth.forbidden");
     }
 
-    private OrderPolicyResolved resolvePolicy(Long routeId, Long departureId) {
+    private OrderPolicyResolved resolvePolicy(String routeId, String departureId) {
         RouteProduct route = routeRepository.findById(routeId)
             .orElseThrow(() -> new BusinessException("error.route.notFound"));
         Departure departure = departureRepository.findById(departureId)
@@ -714,13 +703,13 @@ public class OrderService {
             throw new BusinessException("error.order.priceSelections.required");
         }
 
-        Map<Long, OrderTravelerSnapshot> travelerSnapshots = new LinkedHashMap<>();
+        Map<String, OrderTravelerSnapshot> travelerSnapshots = new LinkedHashMap<>();
         List<OrderPriceItem> priceItems = new ArrayList<>();
         BigDecimal totalAmount = BigDecimal.ZERO;
         String currency = null;
 
         for (OrderPriceSelectionRequest selection : request.priceSelections()) {
-            Long travelerId = selection.travelerId();
+            String travelerId = selection.travelerId();
             String travelerName = null;
             Traveler traveler = null;
             if (travelerId != null) {
@@ -799,7 +788,7 @@ public class OrderService {
     }
 
     private Specification<TravelOrder> buildOrderSpec(LoginUser user, String keyword, String status, Long customerId) {
-        Set<Long> scopedDepartmentIds = Set.of();
+        Set<String> scopedDepartmentIds = Set.of();
         if (user.getDataScope() == DataScope.DEPARTMENT_TREE) {
             scopedDepartmentIds = dataScopeResolver.resolveDepartmentIds(user);
             if (scopedDepartmentIds.isEmpty()) {
@@ -821,8 +810,8 @@ public class OrderService {
             }
         }
 
-        Set<Long> matchedCustomerIds = Set.of();
-        Set<Long> matchedRouteIds = Set.of();
+        Set<String> matchedCustomerIds = Set.of();
+        Set<String> matchedRouteIds = Set.of();
         if (!normalizedKeyword.isBlank()) {
             matchedCustomerIds = customerRepository.findByDeletedFalse().stream()
                 .filter(item -> containsIgnoreCase(item.getName(), normalizedKeyword)
@@ -836,9 +825,9 @@ public class OrderService {
                 .collect(java.util.stream.Collectors.toCollection(HashSet::new));
         }
 
-        final Set<Long> finalScopedDepartmentIds = scopedDepartmentIds;
-        final Set<Long> finalMatchedCustomerIds = matchedCustomerIds;
-        final Set<Long> finalMatchedRouteIds = matchedRouteIds;
+        final Set<String> finalScopedDepartmentIds = scopedDepartmentIds;
+        final Set<String> finalMatchedCustomerIds = matchedCustomerIds;
+        final Set<String> finalMatchedRouteIds = matchedRouteIds;
         final String finalKeyword = normalizedKeyword;
         final OrderStatus finalStatus = statusEnum;
         return (root, query, cb) -> {
@@ -893,7 +882,7 @@ public class OrderService {
         if (user.getDataScope() == DataScope.DEPARTMENT) {
             return customerRepository.findByOwnerDeptIdAndDeletedFalse(user.getDepartmentId());
         }
-        Set<Long> departmentIds = dataScopeResolver.resolveDepartmentIds(user);
+        Set<String> departmentIds = dataScopeResolver.resolveDepartmentIds(user);
         if (departmentIds.isEmpty()) {
             return List.of();
         }
@@ -984,7 +973,7 @@ public class OrderService {
         }
     }
 
-    private void persistPricing(Long orderId, PricingCalculation calculation) {
+    private void persistPricing(String orderId, PricingCalculation calculation) {
         if (calculation == null) {
             return;
         }
@@ -998,12 +987,12 @@ public class OrderService {
         }
     }
 
-    private void replacePricing(Long orderId, PricingCalculation calculation) {
+    private void replacePricing(String orderId, PricingCalculation calculation) {
         markPricingDeleted(orderId);
         persistPricing(orderId, calculation);
     }
 
-    private void markPricingDeleted(Long orderId) {
+    private void markPricingDeleted(String orderId) {
         for (OrderTravelerSnapshot snapshot : travelerSnapshotRepository.findByOrderIdAndDeletedFalse(orderId)) {
             snapshot.setDeleted(true);
             travelerSnapshotRepository.save(snapshot);
@@ -1014,7 +1003,7 @@ public class OrderService {
         }
     }
 
-    private void addStatusLog(Long orderId, String fromStatus, String toStatus, String remark) {
+    private void addStatusLog(String orderId, String fromStatus, String toStatus, String remark) {
         OrderStatusLog log = new OrderStatusLog();
         log.setOrderId(orderId);
         log.setFromStatus(fromStatus == null ? "-" : fromStatus);

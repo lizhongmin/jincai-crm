@@ -1,29 +1,23 @@
 package com.jincai.crm.finance.service;
 
-import com.jincai.crm.finance.controller.*;
-import com.jincai.crm.finance.dto.*;
-import com.jincai.crm.finance.entity.*;
-import com.jincai.crm.finance.repository.*;
-
 import com.jincai.crm.common.BusinessException;
 import com.jincai.crm.common.DataScope;
 import com.jincai.crm.common.DataScopeResolver;
-import com.jincai.crm.order.entity.InventoryStatus;
-import com.jincai.crm.order.entity.OrderLockPolicy;
-import com.jincai.crm.order.entity.OrderStatus;
-import com.jincai.crm.order.entity.PaymentStatus;
-import com.jincai.crm.order.entity.SettlementStatus;
-import com.jincai.crm.order.entity.TravelOrder;
+import com.jincai.crm.finance.dto.*;
+import com.jincai.crm.finance.entity.*;
+import com.jincai.crm.finance.repository.*;
+import com.jincai.crm.order.entity.*;
 import com.jincai.crm.order.repository.TravelOrderRepository;
 import com.jincai.crm.product.entity.Departure;
 import com.jincai.crm.product.repository.DepartureRepository;
 import com.jincai.crm.security.LoginUser;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 import java.util.Set;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class FinanceService {
@@ -55,7 +49,7 @@ public class FinanceService {
     }
 
     @Transactional
-    public Receivable createReceivable(Long orderId, ReceivableRequest request) {
+    public Receivable createReceivable(String orderId, ReceivableRequest request) {
         TravelOrder order = loadApprovedOrder(orderId);
         BigDecimal amount = normalizeAmount(request.amount());
         requirePositive(amount, "error.finance.receivable.amountPositive");
@@ -70,7 +64,7 @@ public class FinanceService {
     }
 
     @Transactional
-    public Receivable updateReceivable(Long receivableId, ReceivableRequest request) {
+    public Receivable updateReceivable(String receivableId, ReceivableRequest request) {
         Receivable receivable = receivableRepository.findById(receivableId)
             .orElseThrow(() -> new BusinessException("error.finance.receivable.notFound"));
         ensureReceivableEditable(receivable);
@@ -85,7 +79,7 @@ public class FinanceService {
     }
 
     @Transactional
-    public void deleteReceivable(Long receivableId) {
+    public void deleteReceivable(String receivableId) {
         Receivable receivable = receivableRepository.findById(receivableId)
             .orElseThrow(() -> new BusinessException("error.finance.receivable.notFound"));
         ensureReceivableEditable(receivable);
@@ -126,7 +120,7 @@ public class FinanceService {
     }
 
     @Transactional
-    public Refund updateRefund(Long refundId, RefundRequest request) {
+    public Refund updateRefund(String refundId, RefundRequest request) {
         Refund refund = refundRepository.findById(refundId).orElseThrow(() -> new BusinessException("error.finance.refund.notFound"));
         ensureRefundEditable(refund);
         BigDecimal amount = normalizeAmount(request.amount());
@@ -137,7 +131,7 @@ public class FinanceService {
     }
 
     @Transactional
-    public void deleteRefund(Long refundId) {
+    public void deleteRefund(String refundId) {
         Refund refund = refundRepository.findById(refundId).orElseThrow(() -> new BusinessException("error.finance.refund.notFound"));
         ensureRefundEditable(refund);
         refund.setDeleted(true);
@@ -160,7 +154,7 @@ public class FinanceService {
     }
 
     @Transactional
-    public Payable updatePayable(Long payableId, PayableRequest request) {
+    public Payable updatePayable(String payableId, PayableRequest request) {
         Payable payable = payableRepository.findById(payableId)
             .orElseThrow(() -> new BusinessException("error.finance.payable.notFound"));
         ensurePayableEditable(payable);
@@ -175,7 +169,7 @@ public class FinanceService {
     }
 
     @Transactional
-    public void deletePayable(Long payableId) {
+    public void deletePayable(String payableId) {
         Payable payable = payableRepository.findById(payableId)
             .orElseThrow(() -> new BusinessException("error.finance.payable.notFound"));
         ensurePayableEditable(payable);
@@ -203,7 +197,7 @@ public class FinanceService {
     }
 
     @Transactional
-    public FinanceReview review(Long targetId, FinanceReviewRequest request) {
+    public FinanceReview review(String targetId, FinanceReviewRequest request) {
         String targetType = request.targetType().toUpperCase();
         FinanceReview review = reviewRepository.findByTargetTypeAndTargetIdAndDeletedFalse(targetType, targetId)
             .orElseGet(FinanceReview::new);
@@ -216,23 +210,23 @@ public class FinanceService {
         return saved;
     }
 
-    public List<Receivable> receivablesByOrder(Long orderId) {
+    public List<Receivable> receivablesByOrder(String orderId) {
         return receivableRepository.findByOrderIdAndDeletedFalse(orderId);
     }
 
-    public List<Payable> payablesByOrder(Long orderId) {
+    public List<Payable> payablesByOrder(String orderId) {
         return payableRepository.findByOrderIdAndDeletedFalse(orderId);
     }
 
-    public List<Refund> refundsByOrder(Long orderId) {
+    public List<Refund> refundsByOrder(String orderId) {
         return refundRepository.findByOrderIdAndDeletedFalse(orderId);
     }
 
-    public List<Receipt> receiptsByReceivable(Long receivableId) {
+    public List<Receipt> receiptsByReceivable(String receivableId) {
         return receiptRepository.findByReceivableIdAndDeletedFalse(receivableId);
     }
 
-    public List<Payment> paymentsByPayable(Long payableId) {
+    public List<Payment> paymentsByPayable(String payableId) {
         return paymentRepository.findByPayableIdAndDeletedFalse(payableId);
     }
 
@@ -250,7 +244,7 @@ public class FinanceService {
             .toList();
     }
 
-    private void syncFinanceObjectStatus(String targetType, Long targetId, boolean approved) {
+    private void syncFinanceObjectStatus(String targetType, String targetId, boolean approved) {
         if ("RECEIPT".equals(targetType)) {
             Receipt receipt = receiptRepository.findById(targetId).orElseThrow(() -> new BusinessException("error.finance.receipt.notFound"));
             receipt.setStatus(approved ? "APPROVED" : "REJECTED");
@@ -301,7 +295,7 @@ public class FinanceService {
         }
     }
 
-    private TravelOrder loadApprovedOrder(Long orderId) {
+    private TravelOrder loadApprovedOrder(String orderId) {
         TravelOrder order = orderRepository.findById(orderId).orElseThrow(() -> new BusinessException("error.order.notFound"));
         if (!isFinanceOperable(order.getStatus())) {
             throw new BusinessException("error.finance.order.mustBeApproved");
@@ -330,14 +324,14 @@ public class FinanceService {
         if (user.getDataScope() == DataScope.DEPARTMENT) {
             return orderRepository.findBySalesDeptIdAndDeletedFalse(user.getDepartmentId());
         }
-        Set<Long> departmentIds = dataScopeResolver.resolveDepartmentIds(user);
+        Set<String> departmentIds = dataScopeResolver.resolveDepartmentIds(user);
         if (departmentIds.isEmpty()) {
             return List.of();
         }
         return orderRepository.findBySalesDeptIdInAndDeletedFalse(departmentIds);
     }
 
-    private void refreshOrderFinanceState(Long orderId, boolean approvedRefund) {
+    private void refreshOrderFinanceState(String orderId, boolean approvedRefund) {
         TravelOrder order = orderRepository.findById(orderId)
             .orElseThrow(() -> new BusinessException("error.order.notFound"));
         List<Receivable> receivables = receivableRepository.findByOrderIdAndDeletedFalse(orderId);

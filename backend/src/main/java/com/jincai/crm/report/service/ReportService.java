@@ -1,20 +1,18 @@
 package com.jincai.crm.report.service;
 
-import com.jincai.crm.report.controller.*;
-
 import com.jincai.crm.finance.entity.Payable;
-import com.jincai.crm.finance.repository.PayableRepository;
-import com.jincai.crm.finance.entity.Payment;
-import com.jincai.crm.finance.repository.PaymentRepository;
 import com.jincai.crm.finance.entity.Receivable;
-import com.jincai.crm.finance.repository.ReceivableRepository;
-import com.jincai.crm.finance.entity.Receipt;
+import com.jincai.crm.finance.repository.PayableRepository;
+import com.jincai.crm.finance.repository.PaymentRepository;
 import com.jincai.crm.finance.repository.ReceiptRepository;
+import com.jincai.crm.finance.repository.ReceivableRepository;
 import com.jincai.crm.order.entity.OrderStatus;
 import com.jincai.crm.order.entity.TravelOrder;
 import com.jincai.crm.order.repository.TravelOrderRepository;
 import com.jincai.crm.product.entity.RouteProduct;
 import com.jincai.crm.product.repository.RouteProductRepository;
+import org.springframework.stereotype.Service;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
@@ -22,7 +20,6 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.springframework.stereotype.Service;
 
 @Service
 public class ReportService {
@@ -100,7 +97,7 @@ public class ReportService {
 
     public List<Map<String, Object>> profit() {
         List<TravelOrder> orders = orderRepository.findByDeletedFalse();
-        Map<Long, String> routeNameMap = routeRepository.findByDeletedFalse().stream()
+        Map<String, String> routeNameMap = routeRepository.findByDeletedFalse().stream()
             .collect(java.util.stream.Collectors.toMap(RouteProduct::getId, RouteProduct::getName));
 
         return orders.stream()
@@ -108,7 +105,7 @@ public class ReportService {
             .entrySet()
             .stream()
             .map(entry -> {
-                Long routeId = entry.getKey();
+                String routeId = entry.getKey();
                 List<TravelOrder> routeOrders = entry.getValue();
 
                 BigDecimal income = routeOrders.stream()

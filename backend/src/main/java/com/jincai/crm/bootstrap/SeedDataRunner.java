@@ -1,25 +1,15 @@
 package com.jincai.crm.bootstrap;
 
-import com.jincai.crm.common.DataScope;
-import com.jincai.crm.system.entity.AppUser;
-import com.jincai.crm.system.entity.Department;
-import com.jincai.crm.system.entity.Permission;
-import com.jincai.crm.system.entity.Role;
-import com.jincai.crm.system.entity.RolePermission;
-import com.jincai.crm.system.entity.UserRole;
-import com.jincai.crm.system.repository.AppUserRepository;
-import com.jincai.crm.system.repository.DepartmentRepository;
-import com.jincai.crm.system.repository.PermissionRepository;
-import com.jincai.crm.system.repository.RolePermissionRepository;
-import com.jincai.crm.system.repository.RoleRepository;
-import com.jincai.crm.system.repository.UserRoleRepository;
+import com.jincai.crm.system.entity.*;
+import com.jincai.crm.system.repository.*;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Component;
 
 @Component
 public class SeedDataRunner implements CommandLineRunner {
@@ -27,13 +17,13 @@ public class SeedDataRunner implements CommandLineRunner {
     private final DepartmentRepository departmentRepository;
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
-    private final AppUserRepository userRepository;
+    private final OrgUserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
     private final RolePermissionRepository rolePermissionRepository;
     private final PasswordEncoder passwordEncoder;
 
     public SeedDataRunner(DepartmentRepository departmentRepository, RoleRepository roleRepository,
-                          PermissionRepository permissionRepository, AppUserRepository userRepository,
+                          PermissionRepository permissionRepository, OrgUserRepository userRepository,
                           UserRoleRepository userRoleRepository, RolePermissionRepository rolePermissionRepository,
                           PasswordEncoder passwordEncoder) {
         this.departmentRepository = departmentRepository;
@@ -272,14 +262,13 @@ public class SeedDataRunner implements CommandLineRunner {
                 || p.getCode().startsWith("MENU_PROFILE"))
             .toList());
 
-        AppUser admin = userRepository.findByUsernameAndDeletedFalse("admin").orElseGet(() -> {
-            AppUser user = new AppUser();
+        OrgUser admin = userRepository.findByUsernameAndDeletedFalse("admin").orElseGet(() -> {
+            OrgUser user = new OrgUser();
             user.setUsername("admin");
             user.setPassword(passwordEncoder.encode("Admin@123"));
             user.setFullName("系统管理员");
             user.setPhone("13800000000");
             user.setDepartmentId(headOffice.getId());
-            user.setDataScope(DataScope.ALL);
             user.setEnabled(true);
             return userRepository.save(user);
         });
@@ -352,7 +341,7 @@ public class SeedDataRunner implements CommandLineRunner {
         return department;
     }
 
-    private Permission ensurePermission(String code, String name, String type, String menuPath, Long parentId) {
+    private Permission ensurePermission(String code, String name, String type, String menuPath, String parentId) {
         Permission permission = permissionRepository.findByCodeAndDeletedFalse(code).orElseGet(() -> {
             Permission p = new Permission();
             p.setCode(code);
@@ -383,7 +372,7 @@ public class SeedDataRunner implements CommandLineRunner {
 
     private void bindRolePermissions(Role role, List<Permission> permissions) {
         List<RolePermission> existing = rolePermissionRepository.findByRoleIdAndDeletedFalse(role.getId());
-        Set<Long> existingPermissionIds = existing.stream()
+        Set<String> existingPermissionIds = existing.stream()
             .map(RolePermission::getPermissionId)
             .collect(Collectors.toSet());
         permissions.forEach(permission -> {

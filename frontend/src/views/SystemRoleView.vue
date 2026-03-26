@@ -142,6 +142,14 @@
         <a-form-item label="角色名称" required>
           <a-input v-model:value="roleForm.name" placeholder="如：销售经理" :disabled="isAdminRole(roleForm)" />
         </a-form-item>
+        <a-form-item label="数据权限范围" required>
+          <a-select v-model:value="roleForm.dataScope" placeholder="请选择数据权限范围" :disabled="isAdminRole(roleForm)">
+            <a-select-option value="SELF">仅本人</a-select-option>
+            <a-select-option value="DEPARTMENT">本部门</a-select-option>
+            <a-select-option value="DEPARTMENT_TREE">本部门及子部门</a-select-option>
+            <a-select-option value="ALL">全部数据</a-select-option>
+          </a-select>
+        </a-form-item>
         <a-form-item label="描述">
           <a-input v-model:value="roleForm.description" :disabled="isAdminRole(roleForm)" />
         </a-form-item>
@@ -176,7 +184,7 @@ const selectedRoleId = ref<number>();
 const grantPermissionIds = ref<number[]>([]);
 const grantOriginalPermissionIds = ref<number[]>([]);
 
-const roleForm = reactive({ id: undefined as number | undefined, code: '', name: '', description: '' });
+const roleForm = reactive({ id: undefined as number | undefined, code: '', name: '', dataScope: 'SELF', description: '' });
 
 const dataScopeLabels: Record<string, string> = {
   SELF: '仅本人',
@@ -326,12 +334,13 @@ const openRole = (record?: any) => {
   roleForm.id = record?.id;
   roleForm.code = record?.code || '';
   roleForm.name = record?.name || '';
+  roleForm.dataScope = record?.dataScope || 'SELF';
   roleForm.description = record?.description || '';
   roleModal.value = true;
 };
 
 const saveRole = async () => {
-  if (!roleForm.code.trim() || !roleForm.name.trim()) {
+  if (!roleForm.code.trim() || !roleForm.name.trim() || !roleForm.dataScope) {
     return;
   }
   savingRole.value = true;
@@ -339,6 +348,7 @@ const saveRole = async () => {
     const payload = {
       code: roleForm.code,
       name: roleForm.name,
+      dataScope: roleForm.dataScope,
       description: roleForm.description
     };
 

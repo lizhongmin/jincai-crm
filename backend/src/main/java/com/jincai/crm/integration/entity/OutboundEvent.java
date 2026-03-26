@@ -1,8 +1,5 @@
 package com.jincai.crm.integration.entity;
 
-import com.jincai.crm.integration.repository.*;
-import com.jincai.crm.integration.service.*;
-
 import com.jincai.crm.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

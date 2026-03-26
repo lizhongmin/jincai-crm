@@ -1,40 +1,40 @@
 package com.jincai.crm.auth.service;
 
 import com.jincai.crm.auth.dto.*;
-
 import com.jincai.crm.common.BusinessException;
-import com.jincai.crm.system.entity.AppUser;
-import com.jincai.crm.system.repository.AppUserRepository;
-import com.jincai.crm.system.service.LoginSecurityPolicyService;
-import com.jincai.crm.system.entity.UserRole;
-import com.jincai.crm.system.repository.UserRoleRepository;
 import com.jincai.crm.security.JwtService;
 import com.jincai.crm.security.LoginUser;
 import com.jincai.crm.security.SecurityUtils;
-import java.util.List;
-import java.util.Map;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.authentication.DisabledException;
+import com.jincai.crm.system.entity.OrgUser;
+import com.jincai.crm.system.entity.UserRole;
+import com.jincai.crm.system.repository.OrgUserRepository;
+import com.jincai.crm.system.repository.UserRoleRepository;
+import com.jincai.crm.system.service.LoginSecurityPolicyService;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class AuthService {
 
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
-    private final AppUserRepository userRepository;
+    private final OrgUserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
     private final LoginSecurityService loginSecurityService;
     private final LoginSecurityPolicyService loginSecurityPolicyService;
     private final PasswordEncoder passwordEncoder;
 
     public AuthService(AuthenticationManager authenticationManager, JwtService jwtService,
-                       AppUserRepository userRepository, UserRoleRepository userRoleRepository,
+                       OrgUserRepository userRepository, UserRoleRepository userRoleRepository,
                        LoginSecurityService loginSecurityService, LoginSecurityPolicyService loginSecurityPolicyService,
                        PasswordEncoder passwordEncoder) {
         this.authenticationManager = authenticationManager;
@@ -53,11 +53,11 @@ public class AuthService {
             Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.username(), request.password()));
             LoginUser user = (LoginUser) authentication.getPrincipal();
-            AppUser appUser = userRepository.findById(user.getUserId())
+            OrgUser orgUser = userRepository.findById(user.getUserId())
                 .orElseThrow(() -> new BusinessException("error.user.notFound"));
             loginSecurityService.onLoginSuccess(normalizedUsername);
             String token = jwtService.generateToken(user.getUsername());
-            return new LoginResponse(token, appUser.getId(), appUser.getUsername(), appUser.getFullName(), user.getRoleCodes());
+            return new LoginResponse(token, orgUser.getId(), orgUser.getUsername(), orgUser.getFullName(), user.getRoleCodes());
         } catch (DisabledException ex) {
             throw ex;
         } catch (AuthenticationException ex) {
@@ -75,7 +75,7 @@ public class AuthService {
         if (user == null) {
             throw new BusinessException("error.auth.unauthenticated");
         }
-        List<Long> roleIds = userRoleRepository.findByUserIdAndDeletedFalse(user.getUserId()).stream()
+        List<String> roleIds = userRoleRepository.findByUserIdAndDeletedFalse(user.getUserId()).stream()
             .map(UserRole::getRoleId)
             .toList();
         return Map.of(
@@ -105,7 +105,7 @@ public class AuthService {
         if (!request.newPassword().equals(request.confirmPassword())) {
             throw new BusinessException("error.auth.password.confirmMismatch");
         }
-        AppUser user = userRepository.findById(loginUser.getUserId())
+        OrgUser user = userRepository.findById(loginUser.getUserId())
             .orElseThrow(() -> new BusinessException("error.user.notFound"));
         if (!passwordEncoder.matches(request.oldPassword(), user.getPassword())) {
             throw new BusinessException("error.auth.password.oldMismatch");

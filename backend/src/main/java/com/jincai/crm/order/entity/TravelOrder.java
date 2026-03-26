@@ -1,20 +1,12 @@
 package com.jincai.crm.order.entity;
 
-import com.jincai.crm.order.controller.*;
-import com.jincai.crm.order.dto.*;
-import com.jincai.crm.order.repository.*;
-import com.jincai.crm.order.service.*;
-
 import com.jincai.crm.common.BaseEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Table;
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -26,13 +18,13 @@ public class TravelOrder extends BaseEntity {
     private String orderNo;
 
     @Column(name = "customer_id", nullable = false)
-    private Long customerId;
+    private String customerId;
 
     @Column(name = "route_id", nullable = false)
-    private Long routeId;
+    private String routeId;
 
     @Column(name = "departure_id", nullable = false)
-    private Long departureId;
+    private String departureId;
 
     @Column(name = "order_type", nullable = false)
     private String orderType;
@@ -41,10 +33,10 @@ public class TravelOrder extends BaseEntity {
     private String productCategory;
 
     @Column(name = "sales_user_id", nullable = false)
-    private Long salesUserId;
+    private String salesUserId;
 
     @Column(name = "sales_dept_id", nullable = false)
-    private Long salesDeptId;
+    private String salesDeptId;
 
     @Column(name = "traveler_count", nullable = false)
     private Integer travelerCount;

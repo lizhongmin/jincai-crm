@@ -1,16 +1,14 @@
 package com.jincai.crm.order.dto;
 
-import com.jincai.crm.order.controller.*;
-import com.jincai.crm.order.entity.*;
-import com.jincai.crm.order.repository.*;
-import com.jincai.crm.order.service.*;
+import com.jincai.crm.order.entity.OrderPriceItem;
+import com.jincai.crm.order.entity.OrderTravelerSnapshot;
 
 import java.math.BigDecimal;
 import java.util.List;
 
 public record OrderQuoteView(
-    Long routeId,
-    Long departureId,
+    String routeId,
+    String departureId,
     Integer travelerCount,
     BigDecimal totalAmount,
     String currency,

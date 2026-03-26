@@ -3,10 +3,10 @@ package com.jincai.crm.finance.dto;
 import java.math.BigDecimal;
 
 public record FinanceOrderOptionView(
-    Long id,
+    String id,
     String orderNo,
     String status,
-    Long customerId,
+    String customerId,
     BigDecimal totalAmount,
     String currency
 ) {

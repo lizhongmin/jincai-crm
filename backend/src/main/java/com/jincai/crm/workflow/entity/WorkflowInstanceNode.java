@@ -1,10 +1,5 @@
 package com.jincai.crm.workflow.entity;
 
-import com.jincai.crm.workflow.controller.*;
-import com.jincai.crm.workflow.dto.*;
-import com.jincai.crm.workflow.repository.*;
-import com.jincai.crm.workflow.service.*;
-
 import com.jincai.crm.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -19,7 +14,7 @@ import lombok.Setter;
 public class WorkflowInstanceNode extends BaseEntity {
 
     @Column(name = "instance_id", nullable = false)
-    private Long instanceId;
+    private String instanceId;
 
     @Column(name = "step_order", nullable = false)
     private Integer stepOrder;

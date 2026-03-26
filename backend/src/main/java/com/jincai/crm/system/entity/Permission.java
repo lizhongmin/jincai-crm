@@ -26,6 +26,6 @@ public class Permission extends BaseEntity {
     private String menuPath;
 
     @Column(name = "parent_id")
-    private Long parentId;
+    private String parentId;
 }
 

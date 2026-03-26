@@ -10,15 +10,16 @@ import com.jincai.crm.system.entity.RolePermission;
 import com.jincai.crm.system.repository.PermissionRepository;
 import com.jincai.crm.system.repository.RolePermissionRepository;
 import com.jincai.crm.system.repository.RoleRepository;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 @Service
 public class RoleService {
@@ -68,7 +69,7 @@ public class RoleService {
         return new PageResult<>(result.getContent(), result.getTotalElements(), normalizedPage, normalizedSize);
     }
 
-    public Set<Long> permissionIds(Long id) {
+    public Set<String> permissionIds(String id) {
         Role role = roleRepository.findById(id).orElseThrow(() -> new BusinessException("error.role.notFound"));
         if (Boolean.TRUE.equals(role.getDeleted())) {
             throw new BusinessException("error.role.notFound");
@@ -91,19 +92,21 @@ public class RoleService {
         role.setCode(request.code());
         role.setName(request.name());
         role.setDescription(request.description());
+        role.setDataScope(request.dataScope());
         return roleRepository.save(role);
     }
 
-    public Role update(Long id, RoleRequest request) {
+    public Role update(String id, RoleRequest request) {
         Role role = roleRepository.findById(id).orElseThrow(() -> new BusinessException("error.role.notFound"));
         ensureNotAdminRole(role);
         role.setCode(request.code());
         role.setName(request.name());
         role.setDescription(request.description());
+        role.setDataScope(request.dataScope());
         return roleRepository.save(role);
     }
 
-    public void delete(Long id) {
+    public void delete(String id) {
         Role role = roleRepository.findById(id).orElseThrow(() -> new BusinessException("error.role.notFound"));
         ensureNotAdminRole(role);
         role.setDeleted(true);
@@ -111,7 +114,7 @@ public class RoleService {
     }
 
     @Transactional
-    public void grant(Long id, RoleGrantRequest request) {
+    public void grant(String id, RoleGrantRequest request) {
         Role role = roleRepository.findById(id).orElseThrow(() -> new BusinessException("error.role.notFound"));
         if (Boolean.TRUE.equals(role.getDeleted())) {
             throw new BusinessException("error.role.notFound");

@@ -1,9 +1,5 @@
 package com.jincai.crm.notification.entity;
 
-import com.jincai.crm.notification.controller.*;
-import com.jincai.crm.notification.repository.*;
-import com.jincai.crm.notification.service.*;
-
 import com.jincai.crm.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -18,7 +14,7 @@ import lombok.Setter;
 public class Notification extends BaseEntity {
 
     @Column(name = "user_id", nullable = false)
-    private Long userId;
+    private String userId;
 
     @Column(nullable = false, length = 2000)
     private String content;

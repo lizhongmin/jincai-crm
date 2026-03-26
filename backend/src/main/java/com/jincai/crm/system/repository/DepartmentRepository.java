@@ -1,13 +1,13 @@
 package com.jincai.crm.system.repository;
 
 import com.jincai.crm.system.entity.Department;
-
-import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface DepartmentRepository extends JpaRepository<Department, Long> {
+import java.util.List;
 
-    List<Department> findByParentIdAndDeletedFalse(Long parentId);
+public interface DepartmentRepository extends JpaRepository<Department, String> {
+
+    List<Department> findByParentIdAndDeletedFalse(String parentId);
 
     List<Department> findByDeletedFalse();
 

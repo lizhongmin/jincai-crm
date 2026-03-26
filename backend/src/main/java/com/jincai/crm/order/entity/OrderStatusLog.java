@@ -1,10 +1,5 @@
 package com.jincai.crm.order.entity;
 
-import com.jincai.crm.order.controller.*;
-import com.jincai.crm.order.dto.*;
-import com.jincai.crm.order.repository.*;
-import com.jincai.crm.order.service.*;
-
 import com.jincai.crm.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -19,7 +14,7 @@ import lombok.Setter;
 public class OrderStatusLog extends BaseEntity {
 
     @Column(name = "order_id", nullable = false)
-    private Long orderId;
+    private String orderId;
 
     @Column(name = "from_status", nullable = false)
     private String fromStatus;

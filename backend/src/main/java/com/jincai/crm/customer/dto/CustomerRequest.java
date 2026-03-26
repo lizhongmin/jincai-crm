@@ -16,8 +16,8 @@ public record CustomerRequest(
     String city,
     String tags,
     String remark,
-    Long ownerUserId,
-    Long ownerDeptId
+    String ownerUserId,
+    String ownerDeptId
 ) {
 }
 

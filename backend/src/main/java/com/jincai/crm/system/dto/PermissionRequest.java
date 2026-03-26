@@ -7,5 +7,5 @@ public record PermissionRequest(
     @NotBlank String name,
     @NotBlank String type,   // MENU | BUTTON
     String menuPath,
-    Long parentId
+    String parentId
 ) {}

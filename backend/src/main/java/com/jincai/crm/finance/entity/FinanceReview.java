@@ -1,10 +1,5 @@
 package com.jincai.crm.finance.entity;
 
-import com.jincai.crm.finance.controller.*;
-import com.jincai.crm.finance.dto.*;
-import com.jincai.crm.finance.repository.*;
-import com.jincai.crm.finance.service.*;
-
 import com.jincai.crm.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -22,7 +17,7 @@ public class FinanceReview extends BaseEntity {
     private String targetType;
 
     @Column(name = "target_id", nullable = false)
-    private Long targetId;
+    private String targetId;
 
     @Column(nullable = false)
     private String status;

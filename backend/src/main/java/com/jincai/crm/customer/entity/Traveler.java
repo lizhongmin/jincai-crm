@@ -1,17 +1,13 @@
 package com.jincai.crm.customer.entity;
 
 import com.jincai.crm.common.BaseEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.OrderBy;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.Getter;
-import lombok.Setter;
 
 @Getter
 @Setter
@@ -20,7 +16,7 @@ import lombok.Setter;
 public class Traveler extends BaseEntity {
 
     @Column(name = "customer_id", nullable = false)
-    private Long customerId;
+    private String customerId;
 
     @Column(nullable = false)
     private String name;

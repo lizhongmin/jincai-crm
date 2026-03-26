@@ -1,17 +1,13 @@
 package com.jincai.crm.workflow.entity;
 
-import com.jincai.crm.workflow.controller.*;
-import com.jincai.crm.workflow.dto.*;
-import com.jincai.crm.workflow.repository.*;
-import com.jincai.crm.workflow.service.*;
-
 import com.jincai.crm.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
-import java.math.BigDecimal;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.math.BigDecimal;
 
 @Getter
 @Setter
@@ -29,10 +25,10 @@ public class WorkflowTemplate extends BaseEntity {
     private String productCategory;
 
     @Column(name = "route_id")
-    private Long routeId;
+    private String routeId;
 
     @Column(name = "departure_id")
-    private Long departureId;
+    private String departureId;
 
     @Column(name = "min_amount", precision = 18, scale = 2)
     private BigDecimal minAmount;

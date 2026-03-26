@@ -4,19 +4,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 public record DepartmentTreeView(
-    Long id,
+    String id,
     String name,
-    Long parentId,
+    String parentId,
     String parentName,
     String treePath,
-    Long leaderUserId,
+    String leaderUserId,
     String leaderName,
     Boolean hasUsers,
     Boolean hasChildren,
     List<DepartmentTreeView> children
 ) {
-    public DepartmentTreeView(Long id, String name, Long parentId, String parentName, String treePath,
-                              Long leaderUserId, String leaderName, Boolean hasUsers, Boolean hasChildren) {
+    public DepartmentTreeView(String id, String name, String parentId, String parentName, String treePath,
+                              String leaderUserId, String leaderName, Boolean hasUsers, Boolean hasChildren) {
         this(id, name, parentId, parentName, treePath, leaderUserId, leaderName, hasUsers, hasChildren, new ArrayList<>());
     }
 }

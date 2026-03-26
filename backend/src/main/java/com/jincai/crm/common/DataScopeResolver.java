@@ -1,16 +1,11 @@
 package com.jincai.crm.common;
 
+import com.jincai.crm.security.LoginUser;
 import com.jincai.crm.system.entity.Department;
 import com.jincai.crm.system.repository.DepartmentRepository;
-import com.jincai.crm.security.LoginUser;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import org.springframework.stereotype.Component;
+
+import java.util.*;
 
 @Component
 public class DataScopeResolver {
@@ -21,7 +16,7 @@ public class DataScopeResolver {
         this.departmentRepository = departmentRepository;
     }
 
-    public Set<Long> resolveDepartmentIds(LoginUser user) {
+    public Set<String> resolveDepartmentIds(LoginUser user) {
         if (user == null || user.getDepartmentId() == null) {
             return Set.of();
         }
@@ -30,19 +25,19 @@ public class DataScopeResolver {
         }
         if (user.getDataScope() == DataScope.DEPARTMENT_TREE) {
             List<Department> departments = departmentRepository.findByDeletedFalse();
-            Map<Long, List<Long>> childrenMap = new HashMap<>();
+            Map<String, List<String>> childrenMap = new HashMap<>();
             for (Department department : departments) {
                 childrenMap.computeIfAbsent(department.getParentId(), k -> new ArrayList<>()).add(department.getId());
             }
-            Set<Long> ids = new HashSet<>();
-            ArrayDeque<Long> queue = new ArrayDeque<>();
+            Set<String> ids = new HashSet<>();
+            ArrayDeque<String> queue = new ArrayDeque<>();
             queue.add(user.getDepartmentId());
             while (!queue.isEmpty()) {
-                Long current = queue.poll();
+                String current = queue.poll();
                 if (!ids.add(current)) {
                     continue;
                 }
-                for (Long childId : childrenMap.getOrDefault(current, List.of())) {
+                for (String childId : childrenMap.getOrDefault(current, List.of())) {
                     queue.add(childId);
                 }
             }

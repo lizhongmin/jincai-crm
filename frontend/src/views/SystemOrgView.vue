@@ -159,16 +159,41 @@
         <a-form-item v-if="!userForm.id" label="登录账号" required>
           <a-input v-model:value="userForm.username" placeholder="请输入登录账号" />
         </a-form-item>
-        <a-form-item label="所属部门">
+        <a-form-item label="所属部门" required>
           <a-tree-select
             v-model:value="userForm.departmentId"
-            :tree-data="departmentOptions"
+            :tree-data="departmentTree"
             placeholder="请选择所属部门"
             :dropdown-style="{ maxHeight: '400px', overflow: 'auto' }"
             :field-names="{ children: 'children', label: 'name', value: 'id' }"
             tree-default-expand-all
             allow-clear
           />
+        </a-form-item>
+        <a-form-item label="工号">
+          <a-input v-model:value="userForm.employeeNo" placeholder="请输入工号" />
+        </a-form-item>
+        <a-form-item label="邮箱">
+          <a-input v-model:value="userForm.email" placeholder="请输入邮箱" />
+        </a-form-item>
+        <a-form-item label="性别">
+          <a-select v-model:value="userForm.gender" placeholder="请选择性别">
+            <a-select-option value="MALE">男</a-select-option>
+            <a-select-option value="FEMALE">女</a-select-option>
+            <a-select-option value="UNKNOWN">未知</a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item label="职务">
+          <a-input v-model:value="userForm.title" placeholder="请输入职务" />
+        </a-form-item>
+        <a-form-item label="入职日期">
+          <a-date-picker v-model:value="userForm.hireDate" value-format="YYYY-MM-DD" style="width: 100%" />
+        </a-form-item>
+        <a-form-item label="紧急联系电话">
+          <a-input v-model:value="userForm.emergencyPhone" placeholder="请输入紧急联系电话" />
+        </a-form-item>
+        <a-form-item label="账号状态" required>
+          <a-switch v-model:checked="userForm.enabled" />
         </a-form-item>
         <a-form-item label="分配角色">
           <a-select
@@ -241,6 +266,13 @@ const userForm = reactive({
   username: '',
   fullName: '',
   phone: '',
+  employeeNo: '',
+  email: '',
+  gender: 'UNKNOWN',
+  title: '',
+  hireDate: undefined as string | undefined,
+  emergencyPhone: '',
+  enabled: true,
   departmentId: undefined as number | undefined,
   roleIds: [] as number[],
   dataScope: 'SELF'
@@ -419,21 +451,37 @@ const openUser = (record?: any) => {
   userForm.username = record?.username || '';
   userForm.fullName = record?.fullName || '';
   userForm.phone = record?.phone || '';
-  userForm.departmentId = record?.departmentId;
+  userForm.employeeNo = record?.employeeNo || '';
+  userForm.email = record?.email || '';
+  userForm.gender = record?.gender || 'UNKNOWN';
+  userForm.title = record?.title || '';
+  userForm.hireDate = record?.hireDate;
+  userForm.emergencyPhone = record?.emergencyPhone || '';
+  userForm.enabled = record ? record.enabled : true;
+  userForm.departmentId = record?.departmentId || selectedDepartmentId.value;
   userForm.roleIds = (record?.roles || []).map((r: any) => r.id);
   userForm.dataScope = record?.dataScope || 'SELF';
   userModal.value = true;
 };
 
 const saveUser = async () => {
-  if (!userForm.fullName.trim() || !userForm.phone.trim() || (!userForm.id && !userForm.username.trim())) {
+  if (!userForm.fullName.trim() || !userForm.phone.trim() || (!userForm.id && !userForm.username.trim()) || !userForm.departmentId) {
+    notifyError('请填写必填项（姓名、手机号、账号、所属部门）');
     return;
   }
 
   try {
     const payload: any = {
+      username: userForm.username,
       fullName: userForm.fullName,
       phone: userForm.phone,
+      employeeNo: userForm.employeeNo,
+      email: userForm.email,
+      gender: userForm.gender,
+      title: userForm.title,
+      hireDate: userForm.hireDate,
+      emergencyPhone: userForm.emergencyPhone,
+      enabled: userForm.enabled,
       departmentId: userForm.departmentId,
       roleIds: userForm.roleIds,
       dataScope: userForm.dataScope
@@ -443,7 +491,6 @@ const saveUser = async () => {
       await orgApi.updateUser(userForm.id, payload);
       notifySuccess('用户更新成功');
     } else {
-      payload.username = userForm.username;
       await orgApi.createUser(payload);
       notifySuccess('用户创建成功');
     }

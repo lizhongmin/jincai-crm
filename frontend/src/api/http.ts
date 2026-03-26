@@ -24,9 +24,10 @@ http.interceptors.response.use(
       if (location.pathname !== '/login') {
         location.href = '/login';
       }
-    } else {
-      notifyError(error);
     }
+    // We don't call notifyError(error) globally here because
+    // it's typically handled in the specific catch blocks of API calls.
+    // This prevents duplicate error messages.
     return Promise.reject(error);
   }
 );

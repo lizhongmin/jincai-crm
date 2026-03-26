@@ -7,18 +7,11 @@ import com.jincai.crm.system.dto.RoleRequest;
 import com.jincai.crm.system.entity.Role;
 import com.jincai.crm.system.service.RoleService;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 import java.util.Set;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/roles")
@@ -46,7 +39,7 @@ public class RoleController {
 
     @GetMapping("/{id}/permissions")
     @PreAuthorize("hasAuthority('MENU_ORG')")
-    public ApiResponse<Set<Long>> permissionIds(@PathVariable Long id) {
+    public ApiResponse<Set<String>> permissionIds(@PathVariable String id) {
         return ApiResponse.ok(roleService.permissionIds(id));
     }
 
@@ -58,20 +51,20 @@ public class RoleController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('BTN_ORG_ROLE_EDIT')")
-    public ApiResponse<Role> update(@PathVariable Long id, @Valid @RequestBody RoleRequest request) {
+    public ApiResponse<Role> update(@PathVariable String id, @Valid @RequestBody RoleRequest request) {
         return ApiResponse.ok(roleService.update(id, request));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('BTN_ORG_ROLE_DELETE')")
-    public ApiResponse<Void> delete(@PathVariable Long id) {
+    public ApiResponse<Void> delete(@PathVariable String id) {
         roleService.delete(id);
         return ApiResponse.ok(null);
     }
 
     @PostMapping("/{id}/grant")
     @PreAuthorize("hasAuthority('BTN_ORG_ROLE_GRANT')")
-    public ApiResponse<Void> grant(@PathVariable Long id, @Valid @RequestBody RoleGrantRequest request) {
+    public ApiResponse<Void> grant(@PathVariable String id, @Valid @RequestBody RoleGrantRequest request) {
         roleService.grant(id, request);
         return ApiResponse.ok(null);
     }

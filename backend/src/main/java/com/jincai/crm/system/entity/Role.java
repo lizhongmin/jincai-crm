@@ -1,9 +1,8 @@
 package com.jincai.crm.system.entity;
 
 import com.jincai.crm.common.BaseEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import com.jincai.crm.common.DataScope;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -21,5 +20,9 @@ public class Role extends BaseEntity {
 
     @Column(length = 500)
     private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "data_scope", nullable = false)
+    private DataScope dataScope = DataScope.SELF;
 }
 

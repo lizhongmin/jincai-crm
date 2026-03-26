@@ -1,14 +1,13 @@
 package com.jincai.crm.notification.service;
 
-import com.jincai.crm.notification.controller.*;
-import com.jincai.crm.notification.entity.*;
-import com.jincai.crm.notification.repository.*;
-
 import com.jincai.crm.common.BusinessException;
+import com.jincai.crm.notification.entity.Notification;
+import com.jincai.crm.notification.repository.NotificationRepository;
 import com.jincai.crm.security.SecurityUtils;
-import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 public class NotificationService {
@@ -20,7 +19,7 @@ public class NotificationService {
     }
 
     public List<Notification> listCurrentUserNotifications() {
-        Long userId = SecurityUtils.currentUserId();
+        String userId = SecurityUtils.currentUserId();
         if (userId == null) {
             return List.of();
         }
@@ -28,7 +27,7 @@ public class NotificationService {
     }
 
     @Transactional
-    public void markRead(Long id) {
+    public void markRead(String id) {
         Notification notification = repository.findById(id)
             .orElseThrow(() -> new BusinessException("error.notification.notFound"));
         notification.setReadFlag(true);

@@ -1,18 +1,18 @@
 package com.jincai.crm.system.repository;
 
 import com.jincai.crm.system.entity.RolePermission;
-
-import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface RolePermissionRepository extends JpaRepository<RolePermission, Long> {
+import java.util.List;
 
-    List<RolePermission> findByRoleIdInAndDeletedFalse(List<Long> roleIds);
+public interface RolePermissionRepository extends JpaRepository<RolePermission, String> {
 
-    List<RolePermission> findByRoleIdAndDeletedFalse(Long roleId);
+    List<RolePermission> findByRoleIdInAndDeletedFalse(List<String> roleIds);
 
-    void deleteByRoleId(Long roleId);
+    List<RolePermission> findByRoleIdAndDeletedFalse(String roleId);
 
-    boolean existsByPermissionIdAndDeletedFalse(Long permissionId);
+    void deleteByRoleId(String roleId);
+
+    boolean existsByPermissionIdAndDeletedFalse(String permissionId);
 }
 

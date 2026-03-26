@@ -1,24 +1,17 @@
 package com.jincai.crm.workflow.controller;
 
-import com.jincai.crm.workflow.dto.*;
-import com.jincai.crm.workflow.entity.*;
-import com.jincai.crm.workflow.repository.*;
-import com.jincai.crm.workflow.service.*;
-
 import com.jincai.crm.common.ApiResponse;
 import com.jincai.crm.common.PageResult;
+import com.jincai.crm.workflow.dto.WorkflowContextOptionsView;
+import com.jincai.crm.workflow.dto.WorkflowTemplateRequest;
+import com.jincai.crm.workflow.dto.WorkflowTemplateView;
+import com.jincai.crm.workflow.entity.WorkflowTemplate;
+import com.jincai.crm.workflow.service.WorkflowService;
 import jakarta.validation.Valid;
-import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/workflow/templates")
@@ -60,13 +53,13 @@ public class WorkflowTemplateController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('BTN_WORKFLOW_EDIT')")
-    public ApiResponse<WorkflowTemplate> update(@PathVariable Long id, @Valid @RequestBody WorkflowTemplateRequest request) {
+    public ApiResponse<WorkflowTemplate> update(@PathVariable String id, @Valid @RequestBody WorkflowTemplateRequest request) {
         return ApiResponse.ok(workflowService.updateTemplate(id, request));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('BTN_WORKFLOW_EDIT')")
-    public ApiResponse<Void> delete(@PathVariable Long id) {
+    public ApiResponse<Void> delete(@PathVariable String id) {
         workflowService.deleteTemplate(id);
         return ApiResponse.ok(null);
     }

@@ -16,9 +16,16 @@ public final class SecurityUtils {
         return loginUser;
     }
 
-    public static Long currentUserId() {
+    public static String currentUserId() {
         LoginUser user = currentUser();
-        return user == null ? null : user.getUserId();
+        if (user == null || user.getUserId() == null) {
+            return null;
+        }
+        try {
+            return user.getUserId();
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 }
 

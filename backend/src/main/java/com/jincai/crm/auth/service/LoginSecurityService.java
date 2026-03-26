@@ -5,9 +5,11 @@ import com.jincai.crm.auth.dto.LoginStateResponse;
 import com.jincai.crm.common.BusinessException;
 import com.jincai.crm.system.entity.LoginSecurityPolicy;
 import com.jincai.crm.system.service.LoginSecurityPolicyService;
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.Graphics2D;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Service;
+
+import javax.imageio.ImageIO;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -15,9 +17,6 @@ import java.time.Duration;
 import java.util.Base64;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
-import javax.imageio.ImageIO;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.stereotype.Service;
 
 @Service
 public class LoginSecurityService {

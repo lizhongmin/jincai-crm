@@ -1,12 +1,11 @@
 package com.jincai.crm.audit.service;
 
-import com.jincai.crm.audit.controller.*;
-import com.jincai.crm.audit.entity.*;
-import com.jincai.crm.audit.repository.*;
+import com.jincai.crm.audit.entity.AuditLog;
+import com.jincai.crm.audit.repository.AuditLogRepository;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
-import org.springframework.stereotype.Service;
 
 @Service
 public class AuditLogService {
@@ -17,11 +16,11 @@ public class AuditLogService {
         this.repository = repository;
     }
 
-    public List<AuditLog> list(String entityType, Long entityId) {
+    public List<AuditLog> list(String entityType, String entityId) {
         return repository.findByEntityTypeAndEntityIdAndDeletedFalseOrderByCreatedAtDesc(entityType, entityId);
     }
 
-    public void logDiff(String entityType, Long entityId, Map<String, Object> before, Map<String, Object> after, String sourceIp) {
+    public void logDiff(String entityType, String entityId, Map<String, Object> before, Map<String, Object> after, String sourceIp) {
         for (Map.Entry<String, Object> entry : after.entrySet()) {
             String key = entry.getKey();
             String beforeValue = value(before.get(key));

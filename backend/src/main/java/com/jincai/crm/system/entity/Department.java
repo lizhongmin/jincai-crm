@@ -17,12 +17,12 @@ public class Department extends BaseEntity {
     private String name;
 
     @Column(name = "parent_id")
-    private Long parentId;
+    private String parentId;
 
     @Column(name = "tree_path")
     private String treePath;
 
     @Column(name = "leader_user_id")
-    private Long leaderUserId;
+    private String leaderUserId;
 }
 

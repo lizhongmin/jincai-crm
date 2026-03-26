@@ -1,32 +1,17 @@
 package com.jincai.crm.customer.service;
 
+import com.jincai.crm.common.*;
 import com.jincai.crm.customer.dto.*;
-import com.jincai.crm.customer.entity.*;
-import com.jincai.crm.customer.repository.*;
-
-import com.jincai.crm.common.BusinessException;
-import com.jincai.crm.common.DataScope;
-import com.jincai.crm.common.DataScopeResolver;
-import com.jincai.crm.common.I18nService;
-import com.jincai.crm.common.PageResult;
+import com.jincai.crm.customer.entity.Customer;
+import com.jincai.crm.customer.entity.Traveler;
+import com.jincai.crm.customer.entity.TravelerDocument;
+import com.jincai.crm.customer.repository.CustomerRepository;
+import com.jincai.crm.customer.repository.TravelerRepository;
 import com.jincai.crm.security.LoginUser;
 import com.jincai.crm.system.entity.Department;
-import com.jincai.crm.system.entity.AppUser;
+import com.jincai.crm.system.entity.OrgUser;
 import com.jincai.crm.system.repository.DepartmentRepository;
-import com.jincai.crm.system.repository.AppUserRepository;
-import java.io.IOException;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
+import com.jincai.crm.system.repository.OrgUserRepository;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -38,18 +23,25 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.*;
+import java.util.stream.Collectors;
+
 @Service
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
     private final TravelerRepository travelerRepository;
     private final DataScopeResolver dataScopeResolver;
-    private final AppUserRepository userRepository;
+    private final OrgUserRepository userRepository;
     private final DepartmentRepository departmentRepository;
     private final I18nService i18nService;
 
     public CustomerService(CustomerRepository customerRepository, TravelerRepository travelerRepository,
-                           DataScopeResolver dataScopeResolver, AppUserRepository userRepository,
+                           DataScopeResolver dataScopeResolver, OrgUserRepository userRepository,
                            DepartmentRepository departmentRepository, I18nService i18nService) {
         this.customerRepository = customerRepository;
         this.travelerRepository = travelerRepository;
@@ -71,7 +63,7 @@ public class CustomerService {
         } else if (user.getDataScope() == DataScope.DEPARTMENT) {
             customers = customerRepository.findByOwnerDeptIdAndDeletedFalse(user.getDepartmentId());
         } else {
-            Set<Long> departmentIds = dataScopeResolver.resolveDepartmentIds(user);
+            Set<String> departmentIds = dataScopeResolver.resolveDepartmentIds(user);
             if (departmentIds.isEmpty()) {
                 return List.of();
             }
@@ -126,7 +118,7 @@ public class CustomerService {
         return toView(savedCustomer);
     }
 
-    public CustomerView update(Long id, CustomerRequest request, LoginUser user) {
+    public CustomerView update(String id, CustomerRequest request, LoginUser user) {
         Customer customer = customerRepository.findById(id).orElseThrow(() -> new BusinessException("error.customer.notFound"));
         if (customerRepository.existsByPhoneAndIdNotAndDeletedFalse(request.phone(), id)) {
             throw new BusinessException("error.customer.phoneExists");
@@ -159,11 +151,11 @@ public class CustomerService {
     }
 
     public List<CustomerOwnerOptionView> listOwnerOptions(LoginUser user) {
-        Map<Long, Department> departmentMap = departmentRepository.findByDeletedFalse().stream()
+        Map<String, Department> departmentMap = departmentRepository.findByDeletedFalse().stream()
             .collect(Collectors.toMap(Department::getId, department -> department, (a, b) -> a, LinkedHashMap::new));
         return listAssignableUsers(user).stream()
             .filter(candidate -> Boolean.TRUE.equals(candidate.getEnabled()))
-            .sorted(Comparator.comparing(AppUser::getFullName, String.CASE_INSENSITIVE_ORDER))
+            .sorted(Comparator.comparing(OrgUser::getFullName, String.CASE_INSENSITIVE_ORDER))
             .map(candidate -> new CustomerOwnerOptionView(
                 candidate.getId(),
                 candidate.getUsername(),
@@ -174,24 +166,24 @@ public class CustomerService {
             .toList();
     }
 
-    public void delete(Long id) {
+    public void delete(String id) {
         Customer customer = customerRepository.findById(id).orElseThrow(() -> new BusinessException("error.customer.notFound"));
         customer.setDeleted(true);
         customerRepository.save(customer);
     }
 
-    public List<Traveler> listTravelers(Long customerId) {
+    public List<Traveler> listTravelers(String customerId) {
         return travelerRepository.findByCustomerIdAndDeletedFalse(customerId);
     }
 
-    public List<Traveler> listTravelersVisible(Long customerId) {
+    public List<Traveler> listTravelersVisible(String customerId) {
         if (customerId != null) {
             return travelerRepository.findByCustomerIdAndDeletedFalse(customerId);
         }
         return travelerRepository.findByDeletedFalse();
     }
 
-    public Traveler addTraveler(Long customerId, TravelerRequest request) {
+    public Traveler addTraveler(String customerId, TravelerRequest request) {
         customerRepository.findById(customerId).orElseThrow(() -> new BusinessException("error.customer.notFound"));
         Traveler traveler = new Traveler();
         traveler.setCustomerId(customerId);
@@ -199,7 +191,7 @@ public class CustomerService {
         return travelerRepository.save(traveler);
     }
 
-    public Traveler updateTraveler(Long travelerId, TravelerRequest request) {
+    public Traveler updateTraveler(String travelerId, TravelerRequest request) {
         Traveler traveler = travelerRepository.findById(travelerId)
             .orElseThrow(() -> new BusinessException("error.traveler.notFound"));
         customerRepository.findById(traveler.getCustomerId()).orElseThrow(() -> new BusinessException("error.customer.notFound"));
@@ -207,7 +199,7 @@ public class CustomerService {
         return travelerRepository.save(traveler);
     }
 
-    public void deleteTraveler(Long travelerId) {
+    public void deleteTraveler(String travelerId) {
         Traveler traveler = travelerRepository.findById(travelerId)
             .orElseThrow(() -> new BusinessException("error.traveler.notFound"));
         traveler.setDeleted(true);
@@ -384,7 +376,7 @@ public class CustomerService {
         return new ImportResult(success, errors.size(), errors);
     }
 
-    private List<AppUser> listAssignableUsers(LoginUser user) {
+    private List<OrgUser> listAssignableUsers(LoginUser user) {
         if (user == null) {
             return List.of();
         }
@@ -400,18 +392,18 @@ public class CustomerService {
             }
             return userRepository.findByDepartmentIdAndDeletedFalse(user.getDepartmentId());
         }
-        Set<Long> departmentIds = dataScopeResolver.resolveDepartmentIds(user);
+        Set<String> departmentIds = dataScopeResolver.resolveDepartmentIds(user);
         if (departmentIds.isEmpty()) {
             return List.of();
         }
         return userRepository.findByDepartmentIdInAndDeletedFalse(departmentIds);
     }
 
-    private OwnerAssignment resolveOwnerByUserId(Long ownerUserId, LoginUser operator) {
+    private OwnerAssignment resolveOwnerByUserId(String ownerUserId, LoginUser operator) {
         if (operator == null) {
             throw new BusinessException("error.auth.unauthenticated");
         }
-        AppUser owner = userRepository.findByIdAndDeletedFalse(ownerUserId)
+        OrgUser owner = userRepository.findByIdAndDeletedFalse(ownerUserId)
             .orElseThrow(() -> new BusinessException("error.user.notFound"));
         if (!Boolean.TRUE.equals(owner.getEnabled())) {
             throw new BusinessException("error.customer.owner.disabled");
@@ -422,7 +414,7 @@ public class CustomerService {
         return new OwnerAssignment(owner.getId(), owner.getDepartmentId());
     }
 
-    private boolean canAssignOwner(LoginUser operator, AppUser owner) {
+    private boolean canAssignOwner(LoginUser operator, OrgUser owner) {
         if (operator.getDataScope() == DataScope.ALL) {
             return true;
         }
@@ -432,11 +424,11 @@ public class CustomerService {
         if (operator.getDataScope() == DataScope.DEPARTMENT) {
             return Objects.equals(operator.getDepartmentId(), owner.getDepartmentId());
         }
-        Set<Long> departmentIds = dataScopeResolver.resolveDepartmentIds(operator);
+        Set<String> departmentIds = dataScopeResolver.resolveDepartmentIds(operator);
         return owner.getDepartmentId() != null && departmentIds.contains(owner.getDepartmentId());
     }
 
-    private String buildDepartmentPath(Long departmentId, Map<Long, Department> departmentMap) {
+    private String buildDepartmentPath(String departmentId, Map<String, Department> departmentMap) {
         if (departmentId == null) {
             return null;
         }
@@ -467,22 +459,22 @@ public class CustomerService {
     }
 
     private List<CustomerView> toViews(List<Customer> customers) {
-        Map<Long, String> userNameMap = userRepository.findByDeletedFalse().stream()
-            .collect(Collectors.toMap(AppUser::getId, AppUser::getFullName, (a, b) -> a, LinkedHashMap::new));
-        Map<Long, String> departmentNameMap = departmentRepository.findByDeletedFalse().stream()
+        Map<String, String> userNameMap = userRepository.findByDeletedFalse().stream()
+            .collect(Collectors.toMap(OrgUser::getId, OrgUser::getFullName, (a, b) -> a, LinkedHashMap::new));
+        Map<String, String> departmentNameMap = departmentRepository.findByDeletedFalse().stream()
             .collect(Collectors.toMap(Department::getId, Department::getName, (a, b) -> a, LinkedHashMap::new));
         return customers.stream().map(customer -> toView(customer, userNameMap, departmentNameMap)).toList();
     }
 
     private CustomerView toView(Customer customer) {
-        Map<Long, String> userNameMap = userRepository.findByDeletedFalse().stream()
-            .collect(Collectors.toMap(AppUser::getId, AppUser::getFullName, (a, b) -> a, LinkedHashMap::new));
-        Map<Long, String> departmentNameMap = departmentRepository.findByDeletedFalse().stream()
+        Map<String, String> userNameMap = userRepository.findByDeletedFalse().stream()
+            .collect(Collectors.toMap(OrgUser::getId, OrgUser::getFullName, (a, b) -> a, LinkedHashMap::new));
+        Map<String, String> departmentNameMap = departmentRepository.findByDeletedFalse().stream()
             .collect(Collectors.toMap(Department::getId, Department::getName, (a, b) -> a, LinkedHashMap::new));
         return toView(customer, userNameMap, departmentNameMap);
     }
 
-    private CustomerView toView(Customer customer, Map<Long, String> userNameMap, Map<Long, String> departmentNameMap) {
+    private CustomerView toView(Customer customer, Map<String, String> userNameMap, Map<String, String> departmentNameMap) {
         return new CustomerView(
             customer.getId(),
             customer.getName(),
@@ -508,7 +500,7 @@ public class CustomerService {
         );
     }
 
-    private record OwnerAssignment(Long ownerUserId, Long ownerDeptId) {
+    private record OwnerAssignment(String ownerUserId, String ownerDeptId) {
     }
 
     private int normalizePage(int page) {
@@ -523,7 +515,7 @@ public class CustomerService {
     }
 
     private Specification<Customer> buildCustomerSpec(LoginUser user, String keyword, String tab, String ownerScope) {
-        Set<Long> departmentIds = null;
+        Set<String> departmentIds = null;
         if (user.getDataScope() == DataScope.DEPARTMENT_TREE) {
             departmentIds = dataScopeResolver.resolveDepartmentIds(user);
             if (departmentIds.isEmpty()) {
@@ -531,7 +523,7 @@ public class CustomerService {
             }
         }
 
-        final Set<Long> scopedDepartmentIds = departmentIds;
+        final Set<String> scopedDepartmentIds = departmentIds;
         String normalizedKeyword = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
         String normalizedTab = tab == null ? "" : tab.trim().toLowerCase(Locale.ROOT);
         String normalizedOwnerScope = ownerScope == null ? "" : ownerScope.trim().toLowerCase(Locale.ROOT);
