@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <a-layout class="pro-layout">
     <a-layout-sider
       v-model:collapsed="collapsed"
@@ -10,8 +10,8 @@
       <div class="brand">
         <div class="logo-dot"></div>
         <div v-if="!collapsed" class="brand-text">
-          <strong>JINCAI CRM</strong>
-          <span>Travel Agency Console</span>
+          <strong>袋鼠旅客通</strong>
+          <span>旅业智能管家</span>
         </div>
       </div>
 
@@ -63,6 +63,7 @@
             </a>
             <template #overlay>
               <a-menu>
+                <a-menu-item key="profile" @click="router.push('/profile')">个人中心</a-menu-item>
                 <a-menu-item key="logout" @click="logout">退出登录</a-menu-item>
               </a-menu>
             </template>
@@ -129,22 +130,24 @@ const notifications = ref<any[]>([]);
 
 const allMenuItems: MenuNode[] = [
   { key: '/dashboard', path: '/dashboard', title: '经营看板', icon: PieChartOutlined },
+  { key: '/customers', path: '/customers', title: '客户管理', icon: UserOutlined },
+  { key: '/products', path: '/products', title: '产品团期', icon: ShopOutlined },
+  { key: '/orders', path: '/orders', title: '订单管理', icon: SnippetsOutlined },
+  { key: '/finance', path: '/finance', title: '收付审核', icon: PayCircleOutlined },
+  { key: '/reports', path: '/reports', title: 'BI 报表', icon: BarChartOutlined },
+  { key: '/workflow', path: '/workflow', title: '流程模板', icon: ApartmentOutlined },
   {
     key: 'system',
     title: '系统管理',
     icon: SettingOutlined,
     children: [
-      { key: '/system/org', path: '/system/org', title: '组织架构', permissionPath: '/org' },
-      { key: '/system/role', path: '/system/role', title: '角色权限', permissionPath: '/org' },
-      { key: '/system/security', path: '/system/security', title: '登录安全', permissionPath: '/security' }
+      { key: '/system/org', path: '/system/org', title: '组织架构', permissionPath: '/system/org' },
+      { key: '/system/role', path: '/system/role', title: '角色权限', permissionPath: '/system/role' },
+      { key: '/system/permission', path: '/system/permission', title: '菜单权限', permissionPath: '/system/permission' },
+      { key: '/system/security', path: '/system/security', title: '登录安全', permissionPath: '/system/security' },
+      { key: '/system/audit', path: '/system/audit', title: '审计日志', permissionPath: '/system/audit' }
     ]
   },
-  { key: '/customers', path: '/customers', title: '客户管理', icon: UserOutlined },
-  { key: '/products', path: '/products', title: '产品团期', icon: ShopOutlined },
-  { key: '/workflow', path: '/workflow', title: '流程模板', icon: ApartmentOutlined },
-  { key: '/orders', path: '/orders', title: '订单管理', icon: SnippetsOutlined },
-  { key: '/finance', path: '/finance', title: '收付审核', icon: PayCircleOutlined },
-  { key: '/reports', path: '/reports', title: 'BI 报表', icon: BarChartOutlined }
 ];
 
 const hasPermission = (item: MenuNode) => {
@@ -170,7 +173,6 @@ const filterMenuNodes = (nodes: MenuNode[]): MenuNode[] =>
     .filter(Boolean) as MenuNode[];
 
 const menuItems = computed(() => filterMenuNodes(allMenuItems));
-
 const menuLeafPaths = computed(() => {
   const result: string[] = [];
   const walk = (nodes: MenuNode[]) => {
@@ -348,5 +350,3 @@ onMounted(async () => {
   padding: 14px;
 }
 </style>
-
-

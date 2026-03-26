@@ -14,5 +14,7 @@ public interface PermissionRepository extends JpaRepository<Permission, Long> {
     List<Permission> findByIdIn(Collection<Long> ids);
 
     List<Permission> findByDeletedFalse();
+
+    List<Permission> findByParentIdAndDeletedFalse(Long parentId);
 }
 

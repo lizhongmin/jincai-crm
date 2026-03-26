@@ -1,5 +1,5 @@
-﻿<template>
-  <a-table :columns="columns" :data-source="items" row-key="id" :scroll="{ x: 1180 }">
+<template>
+  <pro-table :columns="columns" :data-source="items" row-key="id" :scroll="{ x: 'max-content' }">
     <template #bodyCell="{ column, record }">
       <template v-if="column.dataIndex === 'customerType'">
         {{ mapCustomerType(record.customerType) }}
@@ -23,7 +23,7 @@
         </a-space>
       </template>
     </template>
-  </a-table>
+  </pro-table>
 </template>
 
 <script setup lang="ts">
@@ -43,7 +43,7 @@ const columns = [
   { title: '状态', dataIndex: 'status', width: 110 },
   { title: '负责人', dataIndex: 'ownerUserName', width: 140, customRender: ({ text }: any) => text || '-' },
   { title: '城市', dataIndex: 'city', width: 120, customRender: ({ text }: any) => text || '-' },
-  { title: '操作', dataIndex: 'actions', width: 180, fixed: 'right' }
+  { title: '操作', dataIndex: 'actions', width: 180, fixed: 'right' as const }
 ];
 
 const mapCustomerType = (value?: string) => ({ PERSONAL: '个人', ENTERPRISE: '企业' }[value || ''] || value || '-');

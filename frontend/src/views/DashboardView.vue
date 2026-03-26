@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="dashboard">
     <div class="metric-grid biz-summary">
       <div class="item">

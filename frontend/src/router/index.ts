@@ -9,6 +9,7 @@ const routes: RouteRecordRaw[] = [
     redirect: '/dashboard',
     children: [
       { path: 'dashboard', name: 'dashboard', meta: { title: '经营看板' }, component: () => import('../views/DashboardView.vue') },
+      { path: 'profile', name: 'profile', meta: { title: '个人中心' }, component: () => import('../views/ProfileView.vue') },
       {
         path: 'system',
         redirect: '/system/org',
@@ -17,20 +18,32 @@ const routes: RouteRecordRaw[] = [
           {
             path: 'org',
             name: 'system-org',
-            meta: { title: '组织架构', permissionPath: '/org' },
+            meta: { title: '组织架构', permissionPath: '/system/org' },
             component: () => import('../views/SystemOrgView.vue')
           },
           {
             path: 'role',
             name: 'system-role',
-            meta: { title: '角色权限', permissionPath: '/org' },
+            meta: { title: '角色权限', permissionPath: '/system/role' },
             component: () => import('../views/SystemRoleView.vue')
+          },
+          {
+            path: 'permission',
+            name: 'system-permission',
+            meta: { title: '菜单权限', permissionPath: '/system/permission' },
+            component: () => import('../views/SystemPermissionView.vue')
           },
           {
             path: 'security',
             name: 'system-security',
-            meta: { title: '登录安全', permissionPath: '/security' },
+            meta: { title: '登录安全', permissionPath: '/system/security' },
             component: () => import('../views/SystemSecurityView.vue')
+          },
+          {
+            path: 'audit',
+            name: 'system-audit',
+            meta: { title: '审计日志', permissionPath: '/system/audit' },
+            component: () => import('../views/SystemAuditLogView.vue')
           }
         ]
       },
@@ -55,6 +68,11 @@ router.beforeEach((to) => {
   const auth = useAuthStore();
   if (to.path !== '/login' && !auth.isLogin) return '/login';
   if (to.path === '/login' && auth.isLogin) return '/dashboard';
+
+  // 个人中心页面不需要权限检查
+  if (to.path === '/profile') {
+    return true;
+  }
 
   if (to.path !== '/login' && auth.allowedMenuPaths.length > 0) {
     const permissionPath = String(to.meta.permissionPath || to.path);

@@ -17,9 +17,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuditController {
 
     private final AuditLogService auditLogService;
+    private final ApiAuditLogService apiAuditLogService;
 
-    public AuditController(AuditLogService auditLogService) {
+    public AuditController(AuditLogService auditLogService, ApiAuditLogService apiAuditLogService) {
         this.auditLogService = auditLogService;
+        this.apiAuditLogService = apiAuditLogService;
     }
 
     @GetMapping
@@ -27,5 +29,13 @@ public class AuditController {
     public ApiResponse<List<AuditLog>> list(@RequestParam("entityType") String entityType,
                                             @RequestParam("entityId") Long entityId) {
         return ApiResponse.ok(auditLogService.list(entityType, entityId));
+    }
+
+    @GetMapping("/api-logs")
+    @PreAuthorize("hasAuthority('MENU_SYSTEM_AUDIT')")
+    public ApiResponse<com.jincai.crm.common.PageResult<ApiAuditLog>> apiLogsPage(
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size) {
+        return ApiResponse.ok(apiAuditLogService.page(page, size));
     }
 }

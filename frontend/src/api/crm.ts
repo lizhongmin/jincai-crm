@@ -40,6 +40,10 @@ export const orgApi = {
   rolePermissions: (roleId: number) => http.get<ApiResponse<number[]>>(`/roles/${roleId}/permissions`),
   permissions: () => http.get<ApiResponse<any[]>>('/permissions'),
   permissionsTree: () => http.get<ApiResponse<any[]>>('/permissions/tree'),
+  permissionsTreeView: () => http.get<ApiResponse<any[]>>('/permissions/tree-view'),
+  createPermission: (payload: any) => http.post<ApiResponse<any>>('/permissions', payload),
+  updatePermission: (id: number, payload: any) => http.put<ApiResponse<any>>(`/permissions/${id}`, payload),
+  deletePermission: (id: number) => http.delete<ApiResponse<void>>(`/permissions/${id}`),
   grantRole: (roleId: number, permissionIds: number[]) =>
     http.post<ApiResponse<void>>(`/roles/${roleId}/grant`, { permissionIds })
 };
@@ -153,7 +157,9 @@ export const fileApi = {
 
 export const auditApi = {
   list: (entityType: string, entityId: number) =>
-    http.get<ApiResponse<any[]>>('/audits', { params: { entityType, entityId } })
+    http.get<ApiResponse<any[]>>('/audits', { params: { entityType, entityId } }),
+  apiLogsPage: (params: { page?: number; size?: number }) =>
+    http.get<ApiResponse<PageResult<any>>>('/audits/api-logs', { params })
 };
 
 export const financeApi = {

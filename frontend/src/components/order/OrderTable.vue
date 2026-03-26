@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import ProTable from '../common/ProTable.vue';
 import {
   CONTRACT_STATUS_LABEL_MAP,
   INVENTORY_STATUS_LABEL_MAP,
@@ -33,19 +34,21 @@ const emit = defineEmits<{
   (e: 'table-change', pagination: { current?: number; pageSize?: number }): void;
 }>();
 
-const columns = [
+const baseColumns = [
   { title: '订单号', dataIndex: 'orderNo', ellipsis: true, width: 210 },
-  { title: '客户', dataIndex: 'customerName', ellipsis: true, width: 150 },
-  { title: '线路', dataIndex: 'routeName', ellipsis: true, width: 180 },
-  { title: '团期', dataIndex: 'departureLabel', width: 260 },
-  { title: '金额', dataIndex: 'totalAmount', width: 110 },
-  { title: '主状态', dataIndex: 'status', width: 120 },
+  { title: '客户', dataIndex: 'customerName', ellipsis: true, minWidth: 120 },
+  { title: '线路', dataIndex: 'routeName', ellipsis: true, minWidth: 150 },
+  { title: '团期', dataIndex: 'departureLabel', minWidth: 200 },
+  { title: '金额', dataIndex: 'totalAmount', width: 90 },
+  { title: '主状态', dataIndex: 'status', width: 90 },
   { title: '签约', dataIndex: 'contractStatus', width: 90 },
   { title: '收款', dataIndex: 'paymentStatus', width: 90 },
   { title: '锁位', dataIndex: 'inventoryStatus', width: 90 },
   { title: '结算', dataIndex: 'settlementStatus', width: 90 },
-  { title: '操作', dataIndex: 'actions', width: 420, className: 'action-column' }
+  { title: '操作', dataIndex: 'actions', width: 260, fixed: 'right' as const }
 ];
+
+const columns = baseColumns;
 
 const statusLabelMap: Record<string, string> = {
   ...ORDER_STATUS_LABEL_MAP,
@@ -121,7 +124,7 @@ const moreActions = (record: any) => {
   return actions;
 };
 
-const tableScroll = computed(() => ({ x: 2000 }));
+const tableScroll = computed(() => ({ x: 'max-content' }));
 
 const customRow = (record: any) => ({
   onClick: () => emit('view', record)
@@ -133,7 +136,7 @@ const onTableChange = (pagination: { current?: number; pageSize?: number }) => {
 </script>
 
 <template>
-  <a-table
+  <pro-table
     :columns="columns"
     :data-source="props.items"
     row-key="id"
@@ -189,7 +192,7 @@ const onTableChange = (pagination: { current?: number; pageSize?: number }) => {
         </div>
       </template>
     </template>
-  </a-table>
+  </pro-table>
 </template>
 
 <style scoped>
@@ -211,17 +214,10 @@ const onTableChange = (pagination: { current?: number; pageSize?: number }) => {
 
 .action-cell {
   width: 100%;
-  max-width: 400px;
-  overflow-x: auto;
   white-space: nowrap;
-  padding-bottom: 2px;
 }
 
 :deep(.ant-table-body) {
   overflow-x: auto !important;
-}
-
-:deep(.action-column) {
-  min-width: 420px;
 }
 </style>

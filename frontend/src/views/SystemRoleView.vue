@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="role-page">
     <a-card class="section-card role-card" :bordered="false">
       <div class="role-layout">
@@ -21,11 +21,11 @@
             </a-tooltip>
           </div>
 
-          <div class="role-sub-info">共 {{ roleTotal }} 个角色</div>
+          <div class="role-sub-info">共 {{ roles.length }} 个角色</div>
 
           <div class="role-list">
             <div
-              v-for="role in roles"
+              v-for="role in filteredRoles"
               :key="role.id"
               class="role-item"
               :class="{ active: role.id === selectedRoleId }"
@@ -49,17 +49,7 @@
               </a-space>
             </div>
 
-            <a-empty v-if="!roles.length && !roleLoading" :image="false" description="暂无角色" />
-            <a-pagination
-              class="role-list-pagination"
-              :current="rolePage"
-              :page-size="rolePageSize"
-              :total="roleTotal"
-              :show-size-changer="true"
-              :page-size-options="['12', '24', '48']"
-              :show-total="(total:number) => `共 ${total} 条`"
-              @change="onRolePageChange"
-            />
+            <a-empty v-if="!filteredRoles.length && !roleLoading" :image="false" description="暂无角色" />
           </div>
         </aside>
 
@@ -98,10 +88,6 @@
             <a-tabs v-model:activeKey="detailTab" class="detail-tabs">
               <a-tab-pane key="permission" tab="权限配置">
                 <div class="permission-pane">
-                  <div class="scope-inline">
-                    <a-tag color="processing">数据范围：{{ dataScopeLabels[roleDataScope] || '全部数据' }}</a-tag>
-                    <span class="scope-tip">当前版本以功能权限为主，数据范围会在后续版本接入。</span>
-                  </div>
 
                   <div class="permission-scroll-wrap">
                     <permission-tree-panel v-model:checkedKeys="grantPermissionIds" :groups="permissionGroups" />
@@ -179,9 +165,6 @@ const savingGrant = ref(false);
 const roleDataScope = ref('ALL');
 
 const roles = ref<any[]>([]);
-const roleTotal = ref(0);
-const rolePage = ref(1);
-const rolePageSize = ref(12);
 const roleLoading = ref(false);
 const roleMembers = ref<any[]>([]);
 const memberTotal = ref(0);
@@ -217,12 +200,22 @@ const memberColumns = [
 ];
 
 const activeRole = computed(() => roles.value.find((item) => item.id === selectedRoleId.value));
+const filteredRoles = computed(() => {
+  const kw = roleKeyword.value.trim().toLowerCase();
+  if (!kw) return roles.value;
+  return roles.value.filter(
+    (r) => r.name?.toLowerCase().includes(kw) || r.code?.toLowerCase().includes(kw)
+  );
+});
 const activeRoleMembers = computed(() => roleMembers.value);
 
 const activeModuleCount = computed(() => {
   const granted = new Set(grantPermissionIds.value || []);
-  return (permissionGroups.value || []).filter((group) =>
-    (group.permissions || []).some((permission: any) => granted.has(permission.id))
+  return (permissionGroups.value || []).filter((group: any) =>
+    (group.subMenus || []).some((sub: any) =>
+      (sub.menuPermission && granted.has(sub.menuPermission.id)) ||
+      (sub.actions || []).some((a: any) => granted.has(a.id))
+    ) || (group.menuPermission && granted.has(group.menuPermission.id))
   ).length;
 });
 
@@ -241,16 +234,11 @@ const selectRole = (roleId: number) => {
   selectedRoleId.value = roleId;
 };
 
-const loadRolesPage = async () => {
+const loadRoles = async () => {
   roleLoading.value = true;
   try {
-    const { data } = await orgApi.rolesPage({
-      page: rolePage.value,
-      size: rolePageSize.value,
-      keyword: roleKeyword.value.trim() || undefined
-    });
-    roles.value = data.data?.items || [];
-    roleTotal.value = Number(data.data?.total || 0);
+    const { data } = await orgApi.roles();
+    roles.value = data.data || [];
 
     if (selectedRoleId.value && !roles.value.some((item) => item.id === selectedRoleId.value)) {
       selectedRoleId.value = roles.value[0]?.id;
@@ -308,21 +296,13 @@ watch(selectedRoleId, (roleId) => {
   void loadRoleMembers(roleId);
 });
 
-watch(roleKeyword, async () => {
-  rolePage.value = 1;
-  await loadRolesPage();
-});
+// roleKeyword 在前端过滤，无需 watch 触发请求
 
 const loadPermissionTree = async () => {
   const { data } = await orgApi.permissionsTree();
   permissionGroups.value = data.data || [];
 };
 
-const onRolePageChange = (page: number, pageSize: number) => {
-  rolePage.value = page;
-  rolePageSize.value = pageSize;
-  void loadRolesPage();
-};
 
 const onMemberPageChange = (pagination: { current?: number; pageSize?: number }) => {
   memberPage.value = pagination.current || 1;
@@ -333,7 +313,7 @@ const onMemberPageChange = (pagination: { current?: number; pageSize?: number })
 const load = async () => {
   try {
     await Promise.all([
-      loadRolesPage(),
+      loadRoles(),
       loadPermissionTree()
     ]);
     await loadRoleMembers(selectedRoleId.value);
@@ -373,7 +353,7 @@ const saveRole = async () => {
     }
 
     roleModal.value = false;
-    await load();
+    await loadRoles();
   } catch (error) {
     notifyError(error);
   } finally {
@@ -463,11 +443,6 @@ onMounted(load);
   gap: 6px;
   max-height: calc(100vh - 245px);
   overflow: auto;
-}
-
-.role-list-pagination {
-  margin-top: 6px;
-  padding: 0 2px 6px;
 }
 
 .role-item {

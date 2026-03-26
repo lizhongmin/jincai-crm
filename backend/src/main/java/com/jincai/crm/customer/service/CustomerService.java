@@ -103,6 +103,9 @@ public class CustomerService {
         if (user == null) {
             throw new BusinessException("error.auth.unauthenticated");
         }
+        if (customerRepository.existsByPhoneAndDeletedFalse(request.phone())) {
+            throw new BusinessException("error.customer.phoneExists");
+        }
         Customer customer = new Customer();
         applyCustomer(customer, request);
         OwnerAssignment ownerAssignment = resolveOwnerByUserId(
@@ -111,18 +114,48 @@ public class CustomerService {
         );
         customer.setOwnerUserId(ownerAssignment.ownerUserId());
         customer.setOwnerDeptId(ownerAssignment.ownerDeptId());
-        return toView(customerRepository.save(customer));
+        Customer savedCustomer = customerRepository.save(customer);
+
+        Traveler traveler = new Traveler();
+        traveler.setCustomerId(savedCustomer.getId());
+        traveler.setName(request.name());
+        traveler.setPhone(request.phone());
+        traveler.setNationality("中国");
+        travelerRepository.save(traveler);
+
+        return toView(savedCustomer);
     }
 
     public CustomerView update(Long id, CustomerRequest request, LoginUser user) {
         Customer customer = customerRepository.findById(id).orElseThrow(() -> new BusinessException("error.customer.notFound"));
+        if (customerRepository.existsByPhoneAndIdNotAndDeletedFalse(request.phone(), id)) {
+            throw new BusinessException("error.customer.phoneExists");
+        }
+
+        String oldName = customer.getName();
+        String oldPhone = customer.getPhone();
+
         applyCustomer(customer, request);
         if (request.ownerUserId() != null) {
             OwnerAssignment ownerAssignment = resolveOwnerByUserId(request.ownerUserId(), user);
             customer.setOwnerUserId(ownerAssignment.ownerUserId());
             customer.setOwnerDeptId(ownerAssignment.ownerDeptId());
         }
-        return toView(customerRepository.save(customer));
+
+        Customer savedCustomer = customerRepository.save(customer);
+
+        if (!java.util.Objects.equals(oldName, request.name()) || !java.util.Objects.equals(oldPhone, request.phone())) {
+            List<Traveler> travelers = travelerRepository.findByCustomerIdAndDeletedFalse(id);
+            for (Traveler traveler : travelers) {
+                if (java.util.Objects.equals(traveler.getName(), oldName) && java.util.Objects.equals(traveler.getPhone(), oldPhone)) {
+                    traveler.setName(request.name());
+                    traveler.setPhone(request.phone());
+                    travelerRepository.save(traveler);
+                }
+            }
+        }
+
+        return toView(savedCustomer);
     }
 
     public List<CustomerOwnerOptionView> listOwnerOptions(LoginUser user) {

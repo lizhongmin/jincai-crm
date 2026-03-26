@@ -17,7 +17,7 @@ public class LoginSecurityPolicyService {
         this.repository = repository;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public LoginSecurityPolicyView getPolicy() {
         return toView(getPolicyEntity());
     }
