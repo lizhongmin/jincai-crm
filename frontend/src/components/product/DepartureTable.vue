@@ -35,6 +35,7 @@ const statusLabel = (value?: string) => enumLabel(DEPARTURE_STATUS_LABEL_MAP, va
 
 const columns = [
   { title: '团期编码', dataIndex: 'code', width: 160 },
+  { title: '团期名称', dataIndex: 'name', width: 160, customRender: ({ text }: any) => text || '-' },
   { title: '线路', dataIndex: 'routeName', width: 180, customRender: ({ text }: any) => text || '-' },
   { title: '出发日期', dataIndex: 'startDate', width: 120 },
   { title: '截止报名', dataIndex: 'registrationDeadline', width: 120, customRender: ({ text }: any) => text || '-' },

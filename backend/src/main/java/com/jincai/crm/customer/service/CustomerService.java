@@ -12,6 +12,7 @@ import com.jincai.crm.system.entity.Department;
 import com.jincai.crm.system.entity.OrgUser;
 import com.jincai.crm.system.repository.DepartmentRepository;
 import com.jincai.crm.system.repository.OrgUserRepository;
+import jakarta.persistence.criteria.Subquery;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -181,6 +182,24 @@ public class CustomerService {
             return travelerRepository.findByCustomerIdAndDeletedFalse(customerId);
         }
         return travelerRepository.findByDeletedFalse();
+    }
+
+    public PageResult<Traveler> pageTravelersVisible(LoginUser user, int page, int size, String keyword, String customerId) {
+        if (user == null) {
+            return new PageResult<>(List.of(), 0, normalizePage(page), normalizeSize(size));
+        }
+        int normalizedPage = normalizePage(page);
+        int normalizedSize = normalizeSize(size);
+        Specification<Traveler> spec = buildTravelerSpec(user, keyword, customerId);
+        Page<Traveler> result = travelerRepository.findAll(
+            spec,
+            PageRequest.of(
+                normalizedPage - 1,
+                normalizedSize,
+                Sort.by(Sort.Direction.DESC, "updatedAt").and(Sort.by(Sort.Direction.DESC, "id"))
+            )
+        );
+        return new PageResult<>(result.getContent(), result.getTotalElements(), normalizedPage, normalizedSize);
     }
 
     public Traveler addTraveler(String customerId, TravelerRequest request) {
@@ -558,6 +577,56 @@ public class CustomerService {
                 keywordPredicates.add(cb.like(cb.lower(root.get("phone")), likeValue));
                 keywordPredicates.add(cb.like(cb.lower(cb.coalesce(root.get("city"), "")), likeValue));
                 keywordPredicates.add(cb.like(cb.lower(cb.coalesce(root.get("tags"), "")), likeValue));
+                predicates.add(cb.or(keywordPredicates.toArray(new jakarta.persistence.criteria.Predicate[0])));
+            }
+
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
+    }
+
+    private Specification<Traveler> buildTravelerSpec(LoginUser user, String keyword, String customerId) {
+        Set<String> scopedDepartmentIds = null;
+        if (user.getDataScope() == DataScope.DEPARTMENT_TREE) {
+            scopedDepartmentIds = dataScopeResolver.resolveDepartmentIds(user);
+            if (scopedDepartmentIds.isEmpty()) {
+                return (root, query, cb) -> cb.disjunction();
+            }
+        }
+        final Set<String> finalDeptIds = scopedDepartmentIds;
+        String normalizedKeyword = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
+
+        return (root, query, cb) -> {
+            List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.isFalse(root.get("deleted")));
+
+            // 通过子查询关联客户表实施数据权限
+            if (user.getDataScope() != DataScope.ALL) {
+                Subquery<String> customerSubquery = query.subquery(String.class);
+                jakarta.persistence.criteria.Root<Customer> customerRoot = customerSubquery.from(Customer.class);
+                customerSubquery.select(customerRoot.get("id"));
+                List<jakarta.persistence.criteria.Predicate> scopePredicates = new ArrayList<>();
+                scopePredicates.add(cb.isFalse(customerRoot.get("deleted")));
+                if (user.getDataScope() == DataScope.SELF) {
+                    scopePredicates.add(cb.equal(customerRoot.get("ownerUserId"), user.getUserId()));
+                } else if (user.getDataScope() == DataScope.DEPARTMENT) {
+                    scopePredicates.add(cb.equal(customerRoot.get("ownerDeptId"), user.getDepartmentId()));
+                } else if (user.getDataScope() == DataScope.DEPARTMENT_TREE) {
+                    scopePredicates.add(customerRoot.get("ownerDeptId").in(finalDeptIds));
+                }
+                customerSubquery.where(scopePredicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+                predicates.add(root.get("customerId").in(customerSubquery));
+            }
+
+            if (customerId != null && !customerId.isBlank()) {
+                predicates.add(cb.equal(root.get("customerId"), customerId));
+            }
+
+            if (!normalizedKeyword.isBlank()) {
+                String likeValue = "%" + normalizedKeyword + "%";
+                List<jakarta.persistence.criteria.Predicate> keywordPredicates = new ArrayList<>();
+                keywordPredicates.add(cb.like(cb.lower(root.get("name")), likeValue));
+                keywordPredicates.add(cb.like(cb.lower(cb.coalesce(root.get("phone"), "")), likeValue));
+                keywordPredicates.add(cb.like(cb.lower(cb.coalesce(root.get("idNo"), "")), likeValue));
                 predicates.add(cb.or(keywordPredicates.toArray(new jakarta.persistence.criteria.Predicate[0])));
             }
 

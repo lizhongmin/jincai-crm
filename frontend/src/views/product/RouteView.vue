@@ -8,6 +8,7 @@
       <route-table
         style="margin-top: 10px"
         :items="routeRows"
+        :pagination="false"
         @view="openRouteDetail"
         @edit="openRoute"
         @remove="removeRoute"

@@ -15,6 +15,7 @@
       <departure-table
         style="margin-top: 10px"
         :items="decoratedDepartureRows"
+        :pagination="false"
         @view="openDepartureDetail"
         @edit="openDeparture"
         @remove="removeDeparture"
@@ -39,7 +40,8 @@
         </div>
         <a-descriptions :column="2" bordered size="small">
           <a-descriptions-item label="团期编码">{{ activeDeparture.code }}</a-descriptions-item>
-          <a-descriptions-item label="线路">{{ activeDeparture.routeName || '-' }}</a-descriptions-item>
+          <a-descriptions-item label="团期名称">{{ activeDeparture.name || '-' }}</a-descriptions-item>
+          <a-descriptions-item label="线路" :span="2">{{ activeDeparture.routeName || '-' }}</a-descriptions-item>
           <a-descriptions-item label="出发日期">{{ activeDeparture.startDate }}</a-descriptions-item>
           <a-descriptions-item label="返程日期">{{ activeDeparture.endDate }}</a-descriptions-item>
           <a-descriptions-item label="截止报名">{{ activeDeparture.registrationDeadline || '-' }}</a-descriptions-item>

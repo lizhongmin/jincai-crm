@@ -139,8 +139,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'update:open', value: boolean): void;
   (e: 'save'): void;
-  (e: 'customer-change', customerId?: number): void;
-  (e: 'departure-change', departureId?: number): void;
+  (e: 'customer-change', customerId?: string): void;
+  (e: 'departure-change', departureId?: string): void;
   (e: 'request-quote'): void;
 }>();
 
@@ -149,7 +149,7 @@ const selectedRoute = computed(() => props.routes.find((item) => item.id === pro
 const selectedTravelerIds = computed(() => props.model.travelerSelections.map((item: any) => item.travelerId));
 const travelerOptions = computed(() => props.travelers.map((item) => ({ label: `${item.name}${item.phone ? ` (${item.phone})` : ''}`, value: item.id })));
 const travelerQuoteMap = computed(() => {
-  const map = new Map<number, any>();
+  const map = new Map<string, any>();
   (props.quote?.priceItems || []).forEach((item: any) => {
     if (item.travelerId) {
       map.set(item.travelerId, item);
@@ -173,10 +173,10 @@ const quoteColumns = [
   { title: '金额', dataIndex: 'amount', width: 120 }
 ];
 
-const travelerName = (travelerId: number) => props.travelers.find((item) => item.id === travelerId)?.name || `出行人#${travelerId}`;
+const travelerName = (travelerId: string) => props.travelers.find((item) => item.id === travelerId)?.name || `出行人#${travelerId}`;
 const priceLabel = (price: any) => price.priceLabel || enumLabel(PRICE_TYPE_LABEL_MAP, price.priceType);
 const currencyLabel = (value?: string) => enumLabel(CURRENCY_LABEL_MAP, value);
-const travelerAgeText = (travelerId: number) => {
+const travelerAgeText = (travelerId: string) => {
   const traveler = props.travelers.find((item) => item.id === travelerId);
   if (!traveler?.birthday) return '年龄：未填写生日';
   const [year, month, day] = String(traveler.birthday).split('-').map((value) => Number(value));
@@ -191,7 +191,7 @@ const travelerAgeText = (travelerId: number) => {
   }
   return age < 0 ? '年龄：生日无效' : `年龄：${age}岁`;
 };
-const travelerMatchedPriceText = (travelerId: number) => {
+const travelerMatchedPriceText = (travelerId: string) => {
   const priceItem = travelerQuoteMap.value.get(travelerId);
   if (!priceItem) return '待匹配价格';
   return `${priceItem.itemName} / ${priceItem.unitPrice} ${currencyLabel(priceItem.currency)}`;
@@ -216,7 +216,7 @@ const handleCustomerChange = () => {
   emit('request-quote');
 };
 
-const handleTravelerIdsChange = (travelerIds: number[]) => {
+const handleTravelerIdsChange = (travelerIds: string[]) => {
   const currentMap = new Map(props.model.travelerSelections.map((item: any) => [item.travelerId, item]));
   props.model.travelerSelections = travelerIds.map((travelerId) => currentMap.get(travelerId) || {
     travelerId,
