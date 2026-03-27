@@ -60,6 +60,9 @@
           <template v-else-if="column.dataIndex === 'menuPath'">
             <span v-if="record.type === 'MENU'">{{ record.menuPath || '-' }}</span>
           </template>
+          <template v-else-if="column.dataIndex === 'sortOrder'">
+            <span>{{ record.sortOrder ?? '-' }}</span>
+          </template>
           <template v-else-if="column.dataIndex === 'actions'">
             <a-space size="small">
               <a-button type="link" size="small" @click="openPermissionForm(record)">编辑</a-button>
@@ -121,6 +124,10 @@
             :disabled="permissionForm.type === 'MENU' && !permissionForm.id"
           />
         </a-form-item>
+
+        <a-form-item label="排序">
+          <a-input-number v-model:value="permissionForm.sortOrder" style="width: 100%" :min="0" :precision="0" placeholder="请输入排序值，越小越靠前" />
+        </a-form-item>
       </a-form>
     </a-drawer>
   </div>
@@ -139,6 +146,7 @@ interface PermissionNode {
   type: string;
   menuPath?: string;
   parentId?: string;
+  sortOrder?: number;
   children?: PermissionNode[];
   level?: number;
 }
@@ -151,12 +159,13 @@ const searchKeyword = ref('');
 
 const permissions = ref<PermissionNode[]>([]);
 const permissionForm = reactive({
-  id: undefined as number | undefined,
+  id: undefined as string | undefined,
   code: '',
   name: '',
   type: 'MENU',
   menuPath: '',
-  parentId: undefined as number | undefined
+  parentId: undefined as string | undefined,
+  sortOrder: 0
 });
 
 const columns = [
@@ -164,13 +173,14 @@ const columns = [
   { title: '编码', dataIndex: 'code', width: 200 },
   { title: '类型', dataIndex: 'type', width: 100 },
   { title: '路由路径', dataIndex: 'menuPath', width: 150 },
+  { title: '排序', dataIndex: 'sortOrder', width: 80 },
   { title: '操作', dataIndex: 'actions', width: 200 }
 ];
 
 const normalizedKeyword = computed(() => searchKeyword.value.trim().toLowerCase());
 
-const collectExpandableKeys = (nodes: PermissionNode[]): number[] => {
-  const keys: number[] = [];
+const collectExpandableKeys = (nodes: PermissionNode[]): string[] => {
+  const keys: string[] = [];
 
   const traverse = (items: PermissionNode[]) => {
     items.forEach(node => {
@@ -186,7 +196,7 @@ const collectExpandableKeys = (nodes: PermissionNode[]): number[] => {
 };
 
 // Check if a row is expanded
-const isExpanded = (key: number) => {
+const isExpanded = (key: string) => {
   return expandedRowKeys.value.includes(key);
 };
 
@@ -200,7 +210,7 @@ const toggleExpand = (record: PermissionNode) => {
   const key = record.id;
   if (isExpanded(key)) {
     // Collapse - remove key and all children
-    const keysToRemove = new Set<number>();
+    const keysToRemove = new Set<string>();
     const collectKeys = (node: PermissionNode) => {
       keysToRemove.add(node.id);
       if (node.children) {
@@ -341,6 +351,7 @@ const openPermissionForm = (record?: PermissionNode | null, parent?: PermissionN
     permissionForm.type = record.type;
     permissionForm.menuPath = record.menuPath || '';
     permissionForm.parentId = record.parentId;
+    permissionForm.sortOrder = record.sortOrder ?? 0;
   } else if (parent) {
     // Add child to parent
     permissionForm.id = undefined;
@@ -349,6 +360,7 @@ const openPermissionForm = (record?: PermissionNode | null, parent?: PermissionN
     permissionForm.type = 'BUTTON';
     permissionForm.menuPath = '';
     permissionForm.parentId = parent.id;
+    permissionForm.sortOrder = 0;
   } else {
     // Add new top-level menu
     permissionForm.id = undefined;
@@ -357,6 +369,7 @@ const openPermissionForm = (record?: PermissionNode | null, parent?: PermissionN
     permissionForm.type = 'MENU';
     permissionForm.menuPath = '';
     permissionForm.parentId = undefined;
+    permissionForm.sortOrder = 0;
   }
   permissionModal.value = true;
 };
@@ -373,7 +386,8 @@ const savePermission = async () => {
       name: permissionForm.name,
       type: permissionForm.type,
       menuPath: permissionForm.type === 'MENU' ? permissionForm.menuPath : undefined,
-      parentId: permissionForm.parentId
+      parentId: permissionForm.parentId,
+      sortOrder: Number(permissionForm.sortOrder ?? 0)
     };
 
     if (permissionForm.id) {

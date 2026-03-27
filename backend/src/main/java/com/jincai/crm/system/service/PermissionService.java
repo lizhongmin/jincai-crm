@@ -60,12 +60,15 @@ public class PermissionService {
             .toList();
     }
 
+    private static final Comparator<Permission> PERMISSION_SORT_COMPARATOR = Comparator
+        .comparing((Permission p) -> p.getSortOrder() == null ? Integer.MAX_VALUE : p.getSortOrder())
+        .thenComparing(p -> "MENU".equalsIgnoreCase(p.getType()) ? 0 : 1)
+        .thenComparing(p -> p.getParentId() == null ? "0" : p.getParentId())
+        .thenComparing(Permission::getCode);
+
     public List<Permission> list() {
         return permissionRepository.findByDeletedFalse().stream()
-            .sorted(java.util.Comparator
-                .comparing((Permission p) -> "MENU".equalsIgnoreCase(p.getType()) ? 0 : 1)
-                .thenComparing(p -> p.getParentId() == null ? "0" : p.getParentId())
-                .thenComparing(Permission::getCode))
+            .sorted(PERMISSION_SORT_COMPARATOR)
             .toList();
     }
 
@@ -93,7 +96,7 @@ public class PermissionService {
         // 1级：顶级菜单（parentId == null && type == MENU）
         List<Permission> topMenus = all.stream()
             .filter(p -> "MENU".equalsIgnoreCase(p.getType()) && p.getParentId() == null)
-            .sorted(java.util.Comparator.comparing(Permission::getCode))
+            .sorted(PERMISSION_SORT_COMPARATOR)
             .toList();
 
         java.util.Set<String> visited = new java.util.HashSet<>();
@@ -106,13 +109,13 @@ public class PermissionService {
             // 2级：子菜单
             List<Permission> subMenus = topChildren.stream()
                 .filter(p -> "MENU".equalsIgnoreCase(p.getType()))
-                .sorted(java.util.Comparator.comparing(Permission::getCode))
+                .sorted(PERMISSION_SORT_COMPARATOR)
                 .toList();
 
             // 直接挂在顶级菜单下的权限点（无子菜单中间层）
             List<Permission> topActions = topChildren.stream()
                 .filter(p -> !"MENU".equalsIgnoreCase(p.getType()))
-                .sorted(java.util.Comparator.comparing(Permission::getCode))
+                .sorted(PERMISSION_SORT_COMPARATOR)
                 .toList();
 
             List<PermissionTreeGroupView.SubMenuView> subViews = new java.util.ArrayList<>();
@@ -129,7 +132,7 @@ public class PermissionService {
                 visited.add(sub.getId());
                 List<Permission> actions = childrenOf.getOrDefault(sub.getId(), List.of()).stream()
                     .filter(p -> !"MENU".equalsIgnoreCase(p.getType()))
-                    .sorted(java.util.Comparator.comparing(Permission::getCode))
+                    .sorted(PERMISSION_SORT_COMPARATOR)
                     .peek(p -> visited.add(p.getId()))
                     .toList();
                 subViews.add(new PermissionTreeGroupView.SubMenuView(
@@ -143,7 +146,7 @@ public class PermissionService {
         // 未归属到任何顶级菜单的孤立权限点
         List<Permission> orphans = all.stream()
             .filter(p -> !visited.contains(p.getId()))
-            .sorted(java.util.Comparator.comparing(Permission::getCode))
+            .sorted(PERMISSION_SORT_COMPARATOR)
             .toList();
         if (!orphans.isEmpty()) {
             List<PermissionTreeGroupView.SubMenuView> orphanSubs = List.of(
@@ -162,9 +165,7 @@ public class PermissionService {
     public List<PermissionTreeView> treeView() {
         List<Permission> all = permissionRepository.findByDeletedFalse();
 
-        all.sort(java.util.Comparator
-            .comparing((Permission p) -> "MENU".equalsIgnoreCase(p.getType()) ? 0 : 1)
-            .thenComparing(Permission::getCode));
+        all.sort(PERMISSION_SORT_COMPARATOR);
 
         Map<String, PermissionTreeView> nodeMap = new LinkedHashMap<>();
         all.forEach(permission -> nodeMap.put(permission.getId(), new PermissionTreeView(permission)));
@@ -212,6 +213,7 @@ public class PermissionService {
         permission.setType(request.type());
         permission.setMenuPath(request.menuPath());
         permission.setParentId(request.parentId());
+        permission.setSortOrder(request.sortOrder());
 
         return permissionRepository.save(permission);
     }
@@ -241,6 +243,7 @@ public class PermissionService {
         permission.setType(request.type());
         permission.setMenuPath(request.menuPath());
         permission.setParentId(request.parentId());
+        permission.setSortOrder(request.sortOrder());
 
         return permissionRepository.save(permission);
     }

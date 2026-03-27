@@ -420,7 +420,7 @@ const departureDetailOpen = ref(false);
 const routePolicyOpen = ref(false);
 const departurePolicyOpen = ref(false);
 const routeKeyword = ref('');
-const departureFilterRouteId = ref<number | undefined>();
+const departureFilterRouteId = ref<string | undefined>();
 const routePage = ref(1);
 const routePageSize = ref(10);
 const routeTotal = ref(0);
@@ -558,17 +558,17 @@ const loadDepartures = async () => {
   departureTotal.value = Number(data.data?.total || 0);
 };
 
-const loadPrices = async (departureId: number) => {
+const loadPrices = async (departureId: string) => {
   const { data } = await productApi.prices(departureId);
   prices.value = data.data || [];
 };
 
-const loadRoutePolicy = async (routeId: number) => {
+const loadRoutePolicy = async (routeId: string) => {
   const { data } = await productApi.routeOrderPolicy(routeId);
   Object.assign(routePolicyModel, data.data || {});
 };
 
-const loadDeparturePolicy = async (departureId: number) => {
+const loadDeparturePolicy = async (departureId: string) => {
   const { data } = await productApi.departureOrderPolicy(departureId);
   const payload = data.data || {};
   departureEffectivePolicy.value = payload.effective || null;
@@ -730,7 +730,7 @@ const saveDeparture = async () => {
       ...departureForm,
       code: String(departureForm.code || '').trim() || undefined
     };
-    let departureId = departureForm.id as number | undefined;
+    let departureId = departureForm.id as string | undefined;
     if (departureForm.id) {
       await productApi.updateDeparture(departureForm.id, payload);
       notifySuccess('团期更新成功');

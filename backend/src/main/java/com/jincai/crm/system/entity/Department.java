@@ -24,5 +24,8 @@ public class Department extends BaseEntity {
 
     @Column(name = "leader_user_id")
     private String leaderUserId;
+
+    @Column(name = "sort_order")
+    private Integer sortOrder;
 }
 

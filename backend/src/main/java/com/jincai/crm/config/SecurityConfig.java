@@ -28,6 +28,12 @@ public class SecurityConfig {
         http
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(eh -> eh.authenticationEntryPoint((request, response, authException) -> {
+                response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType(org.springframework.http.MediaType.APPLICATION_JSON_VALUE);
+                response.setCharacterEncoding("UTF-8");
+                response.getWriter().write("{\"success\":false,\"code\":\"UNAUTHORIZED\",\"message\":\"未登录或登录已失效\"}");
+            }))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/auth/login", "/auth/login-state", "/auth/captcha", "/actuator/health").permitAll()
                 .anyRequest().authenticated())

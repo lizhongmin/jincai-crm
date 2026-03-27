@@ -1,5 +1,5 @@
 <template>
-  <div class="permission-panel">
+  <div class="permission-panel" :class="{ 'is-readonly': disabled }">
     <div class="perm-table">
       <div class="perm-table-header">
         <div class="col-module">功能</div>
@@ -88,6 +88,7 @@ interface GroupView {
 const props = defineProps<{
   groups: GroupView[];
   checkedKeys: string[];
+  disabled?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -266,5 +267,12 @@ const toggleGroup = (group: GroupView, checked: boolean) => {
   color: #bbb;
   font-size: 13px;
   padding-top: 2px;
+}
+
+/* Readonly mode: block interaction and dim the panel */
+.permission-panel.is-readonly {
+  pointer-events: none;
+  opacity: 0.55;
+  user-select: none;
 }
 </style>

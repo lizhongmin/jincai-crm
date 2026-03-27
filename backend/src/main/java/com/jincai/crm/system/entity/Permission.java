@@ -27,5 +27,8 @@ public class Permission extends BaseEntity {
 
     @Column(name = "parent_id")
     private String parentId;
+
+    @Column(name = "sort_order")
+    private Integer sortOrder;
 }
 

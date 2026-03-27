@@ -55,58 +55,61 @@
 
         <section class="role-detail-pane">
           <template v-if="activeRole">
-            <div class="detail-head">
-              <div>
+            <div class="detail-head card-surface">
+              <div class="detail-head-main">
                 <div class="detail-title-line">
                   <h3>{{ activeRole.name }}</h3>
                   <a-tag v-if="isAdminRole(activeRole)" color="blue">系统管理员角色</a-tag>
                 </div>
                 <p>{{ activeRole.code }}</p>
               </div>
-              <a-button type="link" :disabled="isAdminRole(activeRole)" @click="openRole(activeRole)">编辑角色</a-button>
+              <div class="detail-head-actions">
+                <a-button type="link" :disabled="isAdminRole(activeRole)" @click="openRole(activeRole)">编辑角色</a-button>
+                <a-button :disabled="!grantEditable || !grantChanged" @click="resetGrantSelection">撤销更改</a-button>
+                <a-button type="primary" :loading="savingGrant" :disabled="!grantEditable || !grantChanged" @click="saveGrant">更新</a-button>
+              </div>
             </div>
 
             <div class="metrics-row">
-              <div class="metric-item">
+              <div class="metric-item card-surface">
                 <span class="metric-label">角色成员</span>
                 <strong class="metric-value">{{ memberTotal }}</strong>
               </div>
-              <div class="metric-item">
+              <div class="metric-item card-surface">
                 <span class="metric-label">已分配权限</span>
                 <strong class="metric-value">{{ grantPermissionIds.length }}</strong>
               </div>
-              <div class="metric-item">
+              <div class="metric-item card-surface">
                 <span class="metric-label">覆盖模块</span>
                 <strong class="metric-value">{{ activeModuleCount }}</strong>
               </div>
-              <div class="metric-item" :class="{ warn: grantChanged }">
+              <div class="metric-item card-surface" :class="{ warn: grantChanged }">
                 <span class="metric-label">变更状态</span>
                 <strong class="metric-value">{{ grantChanged ? '未保存' : '已同步' }}</strong>
               </div>
             </div>
 
-            <a-tabs v-model:activeKey="detailTab" class="detail-tabs">
+            <a-tabs v-model:activeKey="detailTab" class="detail-tabs role-detail-tabs">
               <a-tab-pane key="permission" tab="权限配置">
                 <div class="permission-pane">
-
                   <div class="permission-scroll-wrap">
-                    <div class="data-scope-section">
-                      <div class="section-title">数据权限</div>
-                      <a-radio-group v-model:value="activeDataScope" class="data-scope-radio">
-                        <a-radio value="ALL">全部数据</a-radio>
-                        <a-radio value="DEPARTMENT_TREE">本部门数据</a-radio>
-                        <a-radio value="SELF">仅本人数据</a-radio>
-                      </a-radio-group>
+                    <div class="permission-config card-surface">
+                      <div class="data-scope-section">
+                        <div class="section-title">数据权限</div>
+                        <a-radio-group v-model:value="activeDataScope" class="data-scope-radio" :disabled="!grantEditable">
+                          <a-radio value="ALL">全部数据</a-radio>
+                          <a-radio value="DEPARTMENT_TREE">本部门数据</a-radio>
+                          <a-radio value="SELF">仅本人数据</a-radio>
+                        </a-radio-group>
+                      </div>
+
+                      <div class="permission-tree-section">
+                        <div class="section-title">功能权限</div>
+                        <permission-tree-panel v-model:checkedKeys="grantPermissionIds" :groups="permissionGroups" :disabled="!grantEditable" />
+                      </div>
                     </div>
-
-                    <div class="section-title">功能权限</div>
-                    <permission-tree-panel v-model:checkedKeys="grantPermissionIds" :groups="permissionGroups" />
                   </div>
 
-                  <div class="grant-actions">
-                    <a-button :disabled="!grantChanged" @click="resetGrantSelection">撤销更改</a-button>
-                    <a-button type="primary" :loading="savingGrant" :disabled="!grantChanged" @click="saveGrant">更新</a-button>
-                  </div>
                 </div>
               </a-tab-pane>
 
@@ -238,7 +241,13 @@ const activeModuleCount = computed(() => {
   ).length;
 });
 
+const isAdminRole = (role?: any) => String(role?.code || '').toUpperCase() === 'ADMIN';
+const grantEditable = computed(() => !!activeRole.value && !isAdminRole(activeRole.value));
+
 const grantChanged = computed(() => {
+  if (!grantEditable.value) {
+    return false;
+  }
   if (activeRole.value && activeDataScope.value !== activeRole.value.dataScope) {
     return true;
   }
@@ -249,8 +258,6 @@ const grantChanged = computed(() => {
   }
   return current.some((id, index) => id !== original[index]);
 });
-
-const isAdminRole = (role?: any) => String(role?.code || '').toUpperCase() === 'ADMIN';
 
 const selectRole = (roleId: string) => {
   selectedRoleId.value = roleId;
@@ -411,7 +418,7 @@ const resetGrantSelection = () => {
 };
 
 const saveGrant = async () => {
-  if (!selectedRoleId.value || !activeRole.value) {
+  if (!selectedRoleId.value || !activeRole.value || !grantEditable.value) {
     return;
   }
   savingGrant.value = true;
@@ -447,6 +454,11 @@ onMounted(load);
   gap: 10px;
 }
 
+.role-card {
+  border-radius: 10px;
+  overflow: hidden;
+}
+
 .role-card :deep(.ant-card-body) {
   padding: 0;
   height: 100%;
@@ -454,22 +466,28 @@ onMounted(load);
 
 .role-layout {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
+  grid-template-columns: 280px minmax(0, 1fr);
   height: calc(100vh - 120px);
-  background: #fff;
+  background: #f6f9fc;
 }
 
 .role-list-pane {
   border-right: 1px solid #e8edf5;
   background: #fbfcff;
   min-width: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
 }
 
 .role-toolbar {
   display: flex;
   gap: 8px;
-  padding: 10px;
+  padding: 12px;
   border-bottom: 1px solid #edf2f8;
+}
+
+.role-toolbar :deep(.ant-input-affix-wrapper) {
+  border-radius: 8px;
 }
 
 .role-sub-info {
@@ -481,47 +499,59 @@ onMounted(load);
 
 .role-list {
   padding: 8px;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 6px;
-  height: calc(100% - 90px);
+  min-height: 0;
   overflow-y: auto;
 }
 
 .role-item {
-  border: 1px solid transparent;
-  border-radius: 8px;
-  padding: 8px 10px;
+  border: 1px solid #edf2f8;
+  border-radius: 10px;
+  padding: 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   cursor: pointer;
+  background: #fff;
+  transition: all 0.2s ease;
 }
 
 .role-item:hover {
+  border-color: #d6e4ff;
   background: #f6f9ff;
 }
 
 .role-item.active {
-  border-color: #b5d4ff;
+  border-color: #91caff;
   background: #eaf4ff;
+  box-shadow: inset 0 0 0 1px rgba(22, 119, 255, 0.08);
 }
 
 .role-main {
   min-width: 0;
+  flex: 1;
 }
 
 .role-name {
   font-weight: 600;
   color: #243042;
+  line-height: 1.4;
 }
 
 .role-code {
+  margin-top: 4px;
   font-size: 12px;
   color: #7a879b;
+  line-height: 1.4;
 }
 
 .role-actions {
   opacity: 0;
+  flex-shrink: 0;
+  transition: opacity 0.2s ease;
 }
 
 .role-item:hover .role-actions,
@@ -535,13 +565,20 @@ onMounted(load);
   grid-template-rows: auto auto minmax(0, 1fr);
   gap: 10px;
   min-width: 0;
+  min-height: 0;
 }
 
 .detail-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  gap: 12px;
+}
+
+.detail-head-actions {
+  display: flex;
   gap: 8px;
+  align-items: center;
 }
 
 .detail-title-line {
@@ -608,37 +645,57 @@ onMounted(load);
 }
 
 .permission-pane {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
   height: 100%;
   min-height: 0;
 }
 
-.scope-inline {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border: 1px solid #e8edf5;
-  border-radius: 8px;
-  padding: 8px 10px;
-  background: #fafcff;
-}
-
-.scope-tip {
-  color: #6c7890;
-  font-size: 12px;
-}
-
 .permission-scroll-wrap {
+  flex: 1;
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  padding-bottom: 12px;
 }
 
-.grant-actions {
+.permission-config {
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.data-scope-section,
+.permission-tree-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.section-title {
+  font-weight: 600;
+  color: #243042;
+  font-size: 15px;
+  position: relative;
+  padding-left: 10px;
+}
+
+.section-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 14px;
+  background: #1677ff;
+  border-radius: 2px;
+}
+
+.card-surface {
+  background: #fff;
+  border-radius: 10px;
+  padding: 16px;
+  border: 1px solid #edf2f8;
 }
 
 .member-table :deep(.ant-table-thead > tr > th) {
@@ -655,6 +712,7 @@ onMounted(load);
   .role-layout {
     grid-template-columns: 1fr;
     min-height: auto;
+    height: auto;
   }
 
   .role-list-pane {
@@ -664,6 +722,16 @@ onMounted(load);
 
   .role-list {
     max-height: 300px;
+  }
+
+  .detail-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .detail-head-actions {
+    justify-content: flex-end;
+    flex-wrap: wrap;
   }
 }
 </style>

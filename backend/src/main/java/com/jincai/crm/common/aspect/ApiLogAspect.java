@@ -3,6 +3,8 @@ package com.jincai.crm.common.aspect;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jincai.crm.audit.entity.ApiAuditLog;
 import com.jincai.crm.audit.repository.ApiAuditLogRepository;
+import com.jincai.crm.security.LoginUser;
+import com.jincai.crm.security.SecurityUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -72,16 +74,18 @@ public class ApiLogAspect {
 
         ApiAuditLog apiLog = new ApiAuditLog();
         apiLog.setTraceId(traceId);
-        apiLog.setRequestUrl(request.getRequestURL().toString());
+        apiLog.setRequestUrl(request.getRequestURI());
         apiLog.setHttpMethod(request.getMethod());
         apiLog.setClassMethod(methodName);
-        apiLog.setSourceIp(request.getRemoteAddr());
+        apiLog.setSourceIp(extractClientIp(request));
+        fillOperatorInfo(apiLog);
 
         // 过滤掉不能被序列化的请求参数
         Object[] args = joinPoint.getArgs();
         List<Object> validArgs = new ArrayList<>();
         for (Object arg : args) {
-            if (arg instanceof HttpServletRequest || arg instanceof HttpServletResponse || arg instanceof MultipartFile || arg instanceof MultipartFile[]) {
+            if (arg instanceof HttpServletRequest || arg instanceof HttpServletResponse
+                || arg instanceof MultipartFile || arg instanceof MultipartFile[]) {
                 continue;
             }
             validArgs.add(arg);
@@ -144,6 +148,36 @@ public class ApiLogAspect {
         }
 
         return result;
+    }
+    private void fillOperatorInfo(ApiAuditLog apiLog) {
+        LoginUser currentUser = SecurityUtils.currentUser();
+        if (currentUser == null) {
+            apiLog.setCreatedBy("ANONYMOUS");
+            return;
+        }
+        apiLog.setCreatedBy(currentUser.getUsername());
+    }
+
+    private String extractClientIp(HttpServletRequest request) {
+        String[] headerNames = {
+            "X-Forwarded-For",
+            "Proxy-Client-IP",
+            "WL-Proxy-Client-IP",
+            "HTTP_X_FORWARDED_FOR",
+            "HTTP_X_FORWARDED",
+            "HTTP_X_CLUSTER_CLIENT_IP",
+            "HTTP_CLIENT_IP",
+            "HTTP_FORWARDED_FOR",
+            "HTTP_FORWARDED",
+            "X-Real-IP"
+        };
+        for (String headerName : headerNames) {
+            String ip = request.getHeader(headerName);
+            if (ip != null && !ip.isBlank() && !"unknown".equalsIgnoreCase(ip)) {
+                return ip.split(",")[0].trim();
+            }
+        }
+        return request.getRemoteAddr();
     }
 }
 

@@ -5,7 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 public record DepartmentRequest(
     @NotBlank String name,
     String parentId,
-    String leaderUserId
+    String leaderUserId,
+    Integer sort
 ) {
 }
 

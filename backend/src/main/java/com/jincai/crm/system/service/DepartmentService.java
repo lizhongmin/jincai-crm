@@ -36,6 +36,7 @@ public class DepartmentService {
         department.setName(request.name());
         department.setParentId(request.parentId());
         department.setLeaderUserId(request.leaderUserId());
+        department.setSortOrder(request.sort());
         department.setTreePath(buildTreePath(request.parentId()));
         return departmentRepository.save(department);
     }
@@ -52,6 +53,7 @@ public class DepartmentService {
         department.setName(request.name());
         department.setParentId(request.parentId());
         department.setLeaderUserId(request.leaderUserId());
+        department.setSortOrder(request.sort());
         department.setTreePath(buildTreePath(request.parentId()));
         Department saved = departmentRepository.save(department);
         refreshDescendantTreePath(saved.getId());
@@ -155,6 +157,10 @@ public class DepartmentService {
         return parent.getTreePath() + parent.getId() + "/";
     }
 
+    private static final Comparator<DepartmentTreeView> DEPARTMENT_TREE_VIEW_COMPARATOR = Comparator
+        .comparing((DepartmentTreeView d) -> d.sort() == null ? Integer.MAX_VALUE : d.sort())
+        .thenComparing(DepartmentTreeView::name);
+
     private List<DepartmentTreeView> buildTreeViews() {
         List<Department> departments = departmentRepository.findByDeletedFalse();
         Map<String, Department> departmentMap = departments.stream()
@@ -192,7 +198,8 @@ public class DepartmentService {
                     department.getLeaderUserId(),
                     department.getLeaderUserId() == null ? null : userNameMap.get(department.getLeaderUserId()),
                     hasUsersMap.getOrDefault(department.getId(), false),
-                    hasChildrenMap.getOrDefault(department.getId(), false)
+                    hasChildrenMap.getOrDefault(department.getId(), false),
+                    department.getSortOrder()
                 )
             );
         });
@@ -210,6 +217,14 @@ public class DepartmentService {
             }
             parent.children().add(node);
         });
+
+        roots.sort(DEPARTMENT_TREE_VIEW_COMPARATOR);
+        nodeMap.values().forEach(node -> {
+            if (node.children() != null && !node.children().isEmpty()) {
+                node.children().sort(DEPARTMENT_TREE_VIEW_COMPARATOR);
+            }
+        });
+
         return roots;
     }
 }

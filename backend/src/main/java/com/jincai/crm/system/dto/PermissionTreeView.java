@@ -15,10 +15,11 @@ public record PermissionTreeView(
     String type,
     String menuPath,
     String parentId,
+    Integer sortOrder,
     List<PermissionTreeView> children
 ) {
-    public PermissionTreeView(String id, String code, String name, String type, String menuPath, String parentId) {
-        this(id, code, name, type, menuPath, parentId, new ArrayList<>());
+    public PermissionTreeView(String id, String code, String name, String type, String menuPath, String parentId, Integer sortOrder) {
+        this(id, code, name, type, menuPath, parentId, sortOrder, new ArrayList<>());
     }
 
     public PermissionTreeView(Permission permission) {
@@ -28,7 +29,8 @@ public record PermissionTreeView(
             permission.getName(),
             permission.getType(),
             permission.getMenuPath(),
-            permission.getParentId()
+            permission.getParentId(),
+            permission.getSortOrder()
         );
     }
 
@@ -40,6 +42,7 @@ public record PermissionTreeView(
             permission.getType(),
             permission.getMenuPath(),
             permission.getParentId(),
+            permission.getSortOrder(),
             children
         );
     }
