@@ -59,13 +59,13 @@ import { notifyError } from '../utils/notify';
 import type { FormInstance } from 'ant-design-vue';
 
 interface Profile {
-  id: number;
+  id: string;
   username: string;
   name: string;
   email?: string;
   phone?: string;
   departmentName?: string;
-  roles: Array<{ id: number; name: string }>;
+  roles: Array<{ id: string; name: string }>;
   createdAt?: string;
   updatedAt?: string;
 }

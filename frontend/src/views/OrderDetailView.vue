@@ -41,7 +41,7 @@ const actionTitle = ref('订单动作');
 const actionPlaceholder = ref('请输入备注信息');
 
 const canReviewPermission = computed(() => canOrderReviewByRole(auth.profile?.roles));
-const orderId = computed(() => Number(route.params.id));
+const orderId = computed(() => route.params.id as string);
 const currentOrder = computed(() => detailState.value?.order);
 
 const customerMap = computed(() => Object.fromEntries(customers.value.map((item) => [item.id, item.name])));
@@ -133,7 +133,7 @@ const openAction = (action: OrderAction) => {
 };
 
 const loadDetail = async () => {
-  if (!Number.isFinite(orderId.value) || orderId.value <= 0) {
+  if (!orderId.value) {
     notifyError(new Error('订单ID不合法'));
     router.replace('/orders');
     return;

@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia';
 
 interface UserProfile {
-  userId: number;
+  userId: string;
   username: string;
   roles: string[];
-  departmentId?: number;
+  departmentId?: string;
   dataScope?: string;
 }
 

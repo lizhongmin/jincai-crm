@@ -3,7 +3,7 @@ import type { ApiResponse, DashboardFunnel, PageResult } from './types';
 
 export const authApi = {
   login: (payload: { username: string; password: string; captchaId?: string; captchaCode?: string }) =>
-    http.post<ApiResponse<{ token: string; userId: number; username: string; fullName: string; roles: string[] }>>('/auth/login', payload),
+    http.post<ApiResponse<{ token: string; userId: string; username: string; fullName: string; roles: string[] }>>('/auth/login', payload),
   me: () => http.get<ApiResponse<any>>('/auth/me'),
   loginState: (username: string) => http.get<ApiResponse<{ captchaRequired: boolean; locked: boolean; lockSeconds: number }>>('/auth/login-state', { params: { username } }),
   captcha: (username: string) => http.get<ApiResponse<{ captchaId: string; imageBase64: string; expireSeconds: number }>>('/auth/captcha', { params: { username } }),
@@ -18,33 +18,33 @@ export const permissionApi = {
 export const orgApi = {
   departments: () => http.get<ApiResponse<any[]>>('/departments'),
   departmentsTree: () => http.get<ApiResponse<any[]>>('/departments/tree'),
-  createDepartment: (payload: { name: string; parentId?: number; leaderUserId?: number }) =>
+  createDepartment: (payload: { name: string; parentId?: string; leaderUserId?: string }) =>
     http.post<ApiResponse<any>>('/departments', payload),
-  updateDepartment: (id: number, payload: { name: string; parentId?: number; leaderUserId?: number }) =>
+  updateDepartment: (id: string, payload: { name: string; parentId?: string; leaderUserId?: string }) =>
     http.put<ApiResponse<any>>(`/departments/${id}`, payload),
-  deleteDepartment: (id: number) => http.delete<ApiResponse<void>>(`/departments/${id}`),
+  deleteDepartment: (id: string) => http.delete<ApiResponse<void>>(`/departments/${id}`),
   users: () => http.get<ApiResponse<any[]>>('/users'),
-  usersPage: (params: { page?: number; size?: number; keyword?: string; departmentId?: number; roleId?: number }) =>
+  usersPage: (params: { page?: number; size?: number; keyword?: string; departmentId?: string; roleId?: string }) =>
     http.get<ApiResponse<PageResult<any>>>('/users/page', { params }),
   createUser: (payload: any) => http.post<ApiResponse<any>>('/users', payload),
-  updateUser: (id: number, payload: any) => http.put<ApiResponse<any>>(`/users/${id}`, payload),
-  updateUserStatus: (id: number, enabled: boolean) => http.post<ApiResponse<any>>(`/users/${id}/status`, { enabled }),
-  resetUserPassword: (id: number, password?: string) => http.post<ApiResponse<void>>(`/users/${id}/reset-password`, password ? { password } : {}),
-  deleteUser: (id: number) => http.delete<ApiResponse<void>>(`/users/${id}`),
+  updateUser: (id: string, payload: any) => http.put<ApiResponse<any>>(`/users/${id}`, payload),
+  updateUserStatus: (id: string, enabled: boolean) => http.post<ApiResponse<any>>(`/users/${id}/status`, { enabled }),
+  resetUserPassword: (id: string, password?: string) => http.post<ApiResponse<void>>(`/users/${id}/reset-password`, password ? { password } : {}),
+  deleteUser: (id: string) => http.delete<ApiResponse<void>>(`/users/${id}`),
   roles: () => http.get<ApiResponse<any[]>>('/roles'),
   rolesPage: (params: { page?: number; size?: number; keyword?: string }) =>
     http.get<ApiResponse<PageResult<any>>>('/roles/page', { params }),
   createRole: (payload: any) => http.post<ApiResponse<any>>('/roles', payload),
-  updateRole: (id: number, payload: any) => http.put<ApiResponse<any>>(`/roles/${id}`, payload),
-  deleteRole: (id: number) => http.delete<ApiResponse<void>>(`/roles/${id}`),
-  rolePermissions: (roleId: number) => http.get<ApiResponse<number[]>>(`/roles/${roleId}/permissions`),
+  updateRole: (id: string, payload: any) => http.put<ApiResponse<any>>(`/roles/${id}`, payload),
+  deleteRole: (id: string) => http.delete<ApiResponse<void>>(`/roles/${id}`),
+  rolePermissions: (roleId: string) => http.get<ApiResponse<string[]>>(`/roles/${roleId}/permissions`),
   permissions: () => http.get<ApiResponse<any[]>>('/permissions'),
   permissionsTree: () => http.get<ApiResponse<any[]>>('/permissions/tree'),
   permissionsTreeView: () => http.get<ApiResponse<any[]>>('/permissions/tree-view'),
   createPermission: (payload: any) => http.post<ApiResponse<any>>('/permissions', payload),
-  updatePermission: (id: number, payload: any) => http.put<ApiResponse<any>>(`/permissions/${id}`, payload),
-  deletePermission: (id: number) => http.delete<ApiResponse<void>>(`/permissions/${id}`),
-  grantRole: (roleId: number, permissionIds: number[]) =>
+  updatePermission: (id: string, payload: any) => http.put<ApiResponse<any>>(`/permissions/${id}`, payload),
+  deletePermission: (id: string) => http.delete<ApiResponse<void>>(`/permissions/${id}`),
+  grantRole: (roleId: string, permissionIds: string[]) =>
     http.post<ApiResponse<void>>(`/roles/${roleId}/grant`, { permissionIds })
 };
 
@@ -59,17 +59,17 @@ export const customerApi = {
     http.get<ApiResponse<PageResult<any>>>('/customers/page', { params }),
   ownerOptions: () => http.get<ApiResponse<any[]>>('/customers/owner-options'),
   createCustomer: (payload: any) => http.post<ApiResponse<any>>('/customers', payload),
-  updateCustomer: (id: number, payload: any) => http.put<ApiResponse<any>>(`/customers/${id}`, payload),
-  deleteCustomer: (id: number) => http.delete<ApiResponse<void>>(`/customers/${id}`),
-  travelers: (customerId: number) =>
+  updateCustomer: (id: string, payload: any) => http.put<ApiResponse<any>>(`/customers/${id}`, payload),
+  deleteCustomer: (id: string) => http.delete<ApiResponse<void>>(`/customers/${id}`),
+  travelers: (customerId: string) =>
     http.get<ApiResponse<any[]>>(`/customers/${customerId}/travelers`),
-  travelerList: (customerId?: number) =>
+  travelerList: (customerId?: string) =>
     http.get<ApiResponse<any[]>>('/travelers', { params: customerId ? { customerId } : {} }),
-  createTraveler: (customerId: number, payload: any) =>
+  createTraveler: (customerId: string, payload: any) =>
     http.post<ApiResponse<any>>(`/customers/${customerId}/travelers`, payload),
-  updateTraveler: (travelerId: number, payload: any) =>
+  updateTraveler: (travelerId: string, payload: any) =>
     http.put<ApiResponse<any>>(`/customers/travelers/${travelerId}`, payload),
-  deleteTraveler: (travelerId: number) => http.delete<ApiResponse<void>>(`/customers/travelers/${travelerId}`),
+  deleteTraveler: (travelerId: string) => http.delete<ApiResponse<void>>(`/customers/travelers/${travelerId}`),
   importCustomers: (file: File) => {
     const form = new FormData();
     form.append('file', file);
@@ -82,25 +82,25 @@ export const productApi = {
   routePage: (params: { page?: number; size?: number; keyword?: string }) =>
     http.get<ApiResponse<PageResult<any>>>('/routes/page', { params }),
   createRoute: (payload: any) => http.post<ApiResponse<any>>('/routes', payload),
-  updateRoute: (id: number, payload: any) => http.put<ApiResponse<any>>(`/routes/${id}`, payload),
-  deleteRoute: (id: number) => http.delete<ApiResponse<void>>(`/routes/${id}`),
-  routeOrderPolicy: (id: number) => http.get<ApiResponse<any>>(`/routes/${id}/order-policy`),
-  updateRouteOrderPolicy: (id: number, payload: any) => http.put<ApiResponse<any>>(`/routes/${id}/order-policy`, payload),
-  departures: (routeId?: number) =>
+  updateRoute: (id: string, payload: any) => http.put<ApiResponse<any>>(`/routes/${id}`, payload),
+  deleteRoute: (id: string) => http.delete<ApiResponse<void>>(`/routes/${id}`),
+  routeOrderPolicy: (id: string) => http.get<ApiResponse<any>>(`/routes/${id}/order-policy`),
+  updateRouteOrderPolicy: (id: string, payload: any) => http.put<ApiResponse<any>>(`/routes/${id}/order-policy`, payload),
+  departures: (routeId?: string) =>
     http.get<ApiResponse<any[]>>('/departures', { params: routeId ? { routeId } : {} }),
-  departurePage: (params: { page?: number; size?: number; routeId?: number; keyword?: string }) =>
+  departurePage: (params: { page?: number; size?: number; routeId?: string; keyword?: string }) =>
     http.get<ApiResponse<PageResult<any>>>('/departures/page', { params }),
   createDeparture: (payload: any) => http.post<ApiResponse<any>>('/departures', payload),
-  updateDeparture: (id: number, payload: any) => http.put<ApiResponse<any>>(`/departures/${id}`, payload),
-  deleteDeparture: (id: number) => http.delete<ApiResponse<void>>(`/departures/${id}`),
-  departureOrderPolicy: (id: number) => http.get<ApiResponse<any>>(`/departures/${id}/order-policy`),
-  updateDepartureOrderPolicy: (id: number, payload: any) => http.put<ApiResponse<any>>(`/departures/${id}/order-policy`, payload),
-  prices: (departureId: number) => http.get<ApiResponse<any[]>>(`/departures/${departureId}/prices`),
-  createPrice: (departureId: number, payload: any) =>
+  updateDeparture: (id: string, payload: any) => http.put<ApiResponse<any>>(`/departures/${id}`, payload),
+  deleteDeparture: (id: string) => http.delete<ApiResponse<void>>(`/departures/${id}`),
+  departureOrderPolicy: (id: string) => http.get<ApiResponse<any>>(`/departures/${id}/order-policy`),
+  updateDepartureOrderPolicy: (id: string, payload: any) => http.put<ApiResponse<any>>(`/departures/${id}/order-policy`, payload),
+  prices: (departureId: string) => http.get<ApiResponse<any[]>>(`/departures/${departureId}/prices`),
+  createPrice: (departureId: string, payload: any) =>
     http.post<ApiResponse<any>>(`/departures/${departureId}/prices`, payload),
-  updatePrice: (departureId: number, priceId: number, payload: any) =>
+  updatePrice: (departureId: string, priceId: string, payload: any) =>
     http.put<ApiResponse<any>>(`/departures/${departureId}/prices/${priceId}`, payload),
-  deletePrice: (departureId: number, priceId: number) =>
+  deletePrice: (departureId: string, priceId: string) =>
     http.delete<ApiResponse<void>>(`/departures/${departureId}/prices/${priceId}`)
 };
 
@@ -110,32 +110,32 @@ export const workflowApi = {
     http.get<ApiResponse<PageResult<any>>>('/workflow/templates/page', { params }),
   contextOptions: () => http.get<ApiResponse<any>>('/workflow/templates/context-options'),
   create: (payload: any) => http.post<ApiResponse<any>>('/workflow/templates', payload),
-  update: (id: number, payload: any) => http.put<ApiResponse<any>>(`/workflow/templates/${id}`, payload),
-  remove: (id: number) => http.delete<ApiResponse<void>>(`/workflow/templates/${id}`)
+  update: (id: string, payload: any) => http.put<ApiResponse<any>>(`/workflow/templates/${id}`, payload),
+  remove: (id: string) => http.delete<ApiResponse<void>>(`/workflow/templates/${id}`)
 };
 
 export const orderApi = {
   list: () => http.get<ApiResponse<any[]>>('/orders'),
-  page: (params: { page?: number; size?: number; keyword?: string; status?: string; customerId?: number }) =>
+  page: (params: { page?: number; size?: number; keyword?: string; status?: string; customerId?: string }) =>
     http.get<ApiResponse<PageResult<any>>>('/orders/page', { params }),
   contextOptions: () => http.get<ApiResponse<any>>('/orders/context-options'),
-  customerTravelers: (customerId: number) =>
+  customerTravelers: (customerId: string) =>
     http.get<ApiResponse<any[]>>(`/orders/context-options/customers/${customerId}/travelers`),
-  departurePrices: (departureId: number) =>
+  departurePrices: (departureId: string) =>
     http.get<ApiResponse<any[]>>(`/orders/context-options/departures/${departureId}/prices`),
-  detail: (id: number) => http.get<ApiResponse<any>>(`/orders/${id}`),
+  detail: (id: string) => http.get<ApiResponse<any>>(`/orders/${id}`),
   quote: (payload: any) => http.post<ApiResponse<any>>('/orders/quote', payload),
   create: (payload: any) => http.post<ApiResponse<any>>('/orders', payload),
-  update: (id: number, payload: any) => http.put<ApiResponse<any>>(`/orders/${id}`, payload),
-  remove: (id: number) => http.delete<ApiResponse<void>>(`/orders/${id}`),
-  action: (id: number, payload: { action: string; comment?: string; targetRoleCode?: string }) =>
+  update: (id: string, payload: any) => http.put<ApiResponse<any>>(`/orders/${id}`, payload),
+  remove: (id: string) => http.delete<ApiResponse<void>>(`/orders/${id}`),
+  action: (id: string, payload: { action: string; comment?: string; targetRoleCode?: string }) =>
     http.post<ApiResponse<any>>(`/orders/${id}/actions`, payload),
-  submit: (id: number) => http.post<ApiResponse<any>>(`/orders/${id}/submit`),
-  approve: (id: number, comment: string) =>
+  submit: (id: string) => http.post<ApiResponse<any>>(`/orders/${id}/submit`),
+  approve: (id: string, comment: string) =>
     http.post<ApiResponse<any>>(`/orders/${id}/approve`, { comment }),
-  reject: (id: number, comment: string) =>
+  reject: (id: string, comment: string) =>
     http.post<ApiResponse<any>>(`/orders/${id}/reject`, { comment }),
-  logs: (id: number) => http.get<ApiResponse<any[]>>(`/orders/${id}/logs`),
+  logs: (id: string) => http.get<ApiResponse<any[]>>(`/orders/${id}/logs`),
   importOrders: (file: File) => {
     const form = new FormData();
     form.append('file', file);
@@ -144,9 +144,9 @@ export const orderApi = {
 };
 
 export const fileApi = {
-  list: (bizType: string, bizId: number) =>
+  list: (bizType: string, bizId: string) =>
     http.get<ApiResponse<any[]>>('/files', { params: { bizType, bizId } }),
-  upload: (bizType: string, bizId: number, file: File) => {
+  upload: (bizType: string, bizId: string, file: File) => {
     const form = new FormData();
     form.append('bizType', bizType);
     form.append('bizId', String(bizId));
@@ -156,7 +156,7 @@ export const fileApi = {
 };
 
 export const auditApi = {
-  list: (entityType: string, entityId: number) =>
+  list: (entityType: string, entityId: string) =>
     http.get<ApiResponse<any[]>>('/audits', { params: { entityType, entityId } }),
   apiLogsPage: (params: { page?: number; size?: number }) =>
     http.get<ApiResponse<PageResult<any>>>('/audits/api-logs', { params })
@@ -164,24 +164,24 @@ export const auditApi = {
 
 export const financeApi = {
   orderOptions: () => http.get<ApiResponse<any[]>>('/finance/orders/options'),
-  receivables: (orderId: number) => http.get<ApiResponse<any[]>>(`/orders/${orderId}/receivables`),
-  payables: (orderId: number) => http.get<ApiResponse<any[]>>(`/orders/${orderId}/payables`),
-  refunds: (orderId: number) => http.get<ApiResponse<any[]>>(`/orders/${orderId}/refunds`),
-  receipts: (receivableId: number) => http.get<ApiResponse<any[]>>(`/receivables/${receivableId}/receipts`),
-  payments: (payableId: number) => http.get<ApiResponse<any[]>>(`/payables/${payableId}/payments`),
-  createReceivable: (orderId: number, payload: any) =>
+  receivables: (orderId: string) => http.get<ApiResponse<any[]>>(`/orders/${orderId}/receivables`),
+  payables: (orderId: string) => http.get<ApiResponse<any[]>>(`/orders/${orderId}/payables`),
+  refunds: (orderId: string) => http.get<ApiResponse<any[]>>(`/orders/${orderId}/refunds`),
+  receipts: (receivableId: string) => http.get<ApiResponse<any[]>>(`/receivables/${receivableId}/receipts`),
+  payments: (payableId: string) => http.get<ApiResponse<any[]>>(`/payables/${payableId}/payments`),
+  createReceivable: (orderId: string, payload: any) =>
     http.post<ApiResponse<any>>(`/orders/${orderId}/receivables`, payload),
-  updateReceivable: (id: number, payload: any) => http.put<ApiResponse<any>>(`/receivables/${id}`, payload),
-  deleteReceivable: (id: number) => http.delete<ApiResponse<void>>(`/receivables/${id}`),
+  updateReceivable: (id: string, payload: any) => http.put<ApiResponse<any>>(`/receivables/${id}`, payload),
+  deleteReceivable: (id: string) => http.delete<ApiResponse<void>>(`/receivables/${id}`),
   createReceipt: (payload: any) => http.post<ApiResponse<any>>('/receipts', payload),
   createRefund: (payload: any) => http.post<ApiResponse<any>>('/refunds', payload),
-  updateRefund: (id: number, payload: any) => http.put<ApiResponse<any>>(`/refunds/${id}`, payload),
-  deleteRefund: (id: number) => http.delete<ApiResponse<void>>(`/refunds/${id}`),
+  updateRefund: (id: string, payload: any) => http.put<ApiResponse<any>>(`/refunds/${id}`, payload),
+  deleteRefund: (id: string) => http.delete<ApiResponse<void>>(`/refunds/${id}`),
   createPayable: (payload: any) => http.post<ApiResponse<any>>('/payables', payload),
-  updatePayable: (id: number, payload: any) => http.put<ApiResponse<any>>(`/payables/${id}`, payload),
-  deletePayable: (id: number) => http.delete<ApiResponse<void>>(`/payables/${id}`),
+  updatePayable: (id: string, payload: any) => http.put<ApiResponse<any>>(`/payables/${id}`, payload),
+  deletePayable: (id: string) => http.delete<ApiResponse<void>>(`/payables/${id}`),
   createPayment: (payload: any) => http.post<ApiResponse<any>>('/payments', payload),
-  review: (id: number, payload: any) => http.post<ApiResponse<any>>(`/finance/${id}/review`, payload)
+  review: (id: string, payload: any) => http.post<ApiResponse<any>>(`/finance/${id}/review`, payload)
 };
 
 export const reportApi = {
@@ -195,5 +195,5 @@ export const reportApi = {
 
 export const notificationApi = {
   list: () => http.get<ApiResponse<any[]>>('/notifications'),
-  read: (id: number) => http.post<ApiResponse<void>>(`/notifications/${id}/read`)
+  read: (id: string) => http.post<ApiResponse<void>>(`/notifications/${id}/read`)
 };

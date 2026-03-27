@@ -6,9 +6,6 @@
         <h2 class="detail-title">{{ customer?.name || '客户详情' }}</h2>
       </div>
       <a-space>
-        <a-button @click="emit('toggle-collapse')">
-          {{ basicInfoCollapsed ? '展开基本信息' : '收起基本信息' }}
-        </a-button>
         <a-button @click="emit('edit', customer)">编辑</a-button>
         <a-button @click="emit('transfer', customer)">转移</a-button>
         <a-button @click="emit('move-pool', customer)">移入公海</a-button>
@@ -21,7 +18,10 @@
     <div class="detail-layout" :class="{ collapsed: basicInfoCollapsed }">
       <a-card v-show="!basicInfoCollapsed" class="section-card detail-side" :bordered="false">
         <div class="side-block">
-          <h3>基本信息</h3>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3 style="margin: 0;">基本信息</h3>
+            <MenuFoldOutlined style="cursor: pointer; color: #8c8c8c; font-size: 16px;" @click="emit('toggle-collapse')" title="收起" />
+          </div>
           <div class="info-row"><span>客户名称</span><strong>{{ customer?.name || '-' }}</strong></div>
           <div class="info-row"><span>手机号</span><strong>{{ customer?.phone || '-' }}</strong></div>
           <div class="info-row"><span>客户等级</span><strong>{{ mapLevel(customer?.level) }}</strong></div>
@@ -41,17 +41,22 @@
           <h3>负责人信息</h3>
           <div class="info-row"><span>负责人</span><strong>{{ customer?.ownerUserName || '-' }}</strong></div>
           <div class="info-row"><span>部门</span><strong>{{ customer?.ownerDeptName || '-' }}</strong></div>
-          <div class="info-row"><span>最新跟进人员</span><strong>{{ customer?.updatedBy || '-' }}</strong></div>
+          <div class="info-row"><span>最新跟进人员</span><strong>{{ mapUserName(customer?.updatedBy) }}</strong></div>
           <div class="info-row"><span>最新跟进时间</span><strong>{{ formatDateTime(customer?.updatedAt) }}</strong></div>
-          <div class="info-row"><span>创建人</span><strong>{{ customer?.createdBy || '-' }}</strong></div>
+          <div class="info-row"><span>创建人</span><strong>{{ mapUserName(customer?.createdBy) }}</strong></div>
           <div class="info-row"><span>创建时间</span><strong>{{ formatDateTime(customer?.createdAt) }}</strong></div>
-          <div class="info-row"><span>更新人</span><strong>{{ customer?.updatedBy || '-' }}</strong></div>
+          <div class="info-row"><span>更新人</span><strong>{{ mapUserName(customer?.updatedBy) }}</strong></div>
           <div class="info-row"><span>更新时间</span><strong>{{ formatDateTime(customer?.updatedAt) }}</strong></div>
         </div>
       </a-card>
 
       <a-card class="section-card detail-main" :bordered="false">
         <a-tabs :active-key="detailTab" @update:activeKey="(key) => emit('update:detail-tab', key as 'contact' | 'order')">
+          <template #leftExtra v-if="basicInfoCollapsed">
+            <a-button type="text" style="margin-right: 16px; padding: 0 8px;" @click="emit('toggle-collapse')" title="展开基本信息">
+              <MenuUnfoldOutlined style="font-size: 16px; color: #1890ff;" />
+            </a-button>
+          </template>
           <a-tab-pane key="contact" tab="出行人信息">
             <div class="detail-pane">
               <div class="list-toolbar">
@@ -108,6 +113,7 @@
 </template>
 
 <script setup lang="ts">
+import { MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons-vue';
 import TravelerTable from './TravelerTable.vue';
 
 defineProps<{
@@ -127,6 +133,7 @@ defineProps<{
   mapStatus: (value?: string) => string;
   mapOrderStatus: (value?: string) => string;
   formatDateTime: (value?: string) => string;
+  mapUserName: (value?: string) => string;
 }>();
 
 const emit = defineEmits<{

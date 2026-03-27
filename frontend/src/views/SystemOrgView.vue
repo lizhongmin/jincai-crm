@@ -254,15 +254,15 @@ const expandedDepartmentKeys = ref<number[]>([]);
 const selectedDepartmentId = ref<number>();
 
 const departmentForm = reactive({
-  id: undefined as number | undefined,
+  id: undefined as string | undefined,
   name: '',
-  parentId: undefined as number | undefined,
+  parentId: undefined as string | undefined,
   parentName: '',
   sort: 0
 });
 
 const userForm = reactive({
-  id: undefined as number | undefined,
+  id: undefined as string | undefined,
   username: '',
   fullName: '',
   phone: '',
@@ -273,8 +273,8 @@ const userForm = reactive({
   hireDate: undefined as string | undefined,
   emergencyPhone: '',
   enabled: true,
-  departmentId: undefined as number | undefined,
-  roleIds: [] as number[],
+  departmentId: undefined as string | undefined,
+  roleIds: [] as string[],
   dataScope: 'SELF'
 });
 

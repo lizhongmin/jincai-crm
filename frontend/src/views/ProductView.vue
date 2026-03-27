@@ -485,7 +485,7 @@ const priceTypeLabelToCode = PRICE_TYPE_OPTIONS.reduce((acc, item) => {
 }, {} as Record<string, string>);
 
 const routeForm = reactive({
-  id: undefined as number | undefined,
+  id: undefined as string | undefined,
   code: '',
   name: '',
   category: '国内游',
@@ -502,8 +502,8 @@ const routeForm = reactive({
   description: ''
 });
 const departureForm = reactive({
-  id: undefined as number | undefined,
-  routeId: undefined as number | undefined,
+  id: undefined as string | undefined,
+  routeId: undefined as string | undefined,
   code: '',
   startDate: '2026-04-01',
   endDate: '2026-04-07',

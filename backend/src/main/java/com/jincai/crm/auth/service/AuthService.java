@@ -1,6 +1,7 @@
 package com.jincai.crm.auth.service;
 
 import com.jincai.crm.auth.dto.*;
+import lombok.extern.slf4j.Slf4j;
 import com.jincai.crm.common.BusinessException;
 import com.jincai.crm.security.JwtService;
 import com.jincai.crm.security.LoginUser;
@@ -22,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Service
 public class AuthService {
 
@@ -48,6 +50,7 @@ public class AuthService {
 
     public LoginResponse login(LoginRequest request) {
         String normalizedUsername = request.username() == null ? null : request.username().trim();
+        log.info("Attempting login for user: {}", normalizedUsername);
         loginSecurityService.ensureLoginAllowedAndValidateCaptcha(normalizedUsername, request.captchaId(), request.captchaCode());
         try {
             Authentication authentication = authenticationManager.authenticate(
@@ -57,20 +60,24 @@ public class AuthService {
                 .orElseThrow(() -> new BusinessException("error.user.notFound"));
             loginSecurityService.onLoginSuccess(normalizedUsername);
             String token = jwtService.generateToken(user.getUsername());
+            log.info("Login successful for user: {}", normalizedUsername);
             return new LoginResponse(token, orgUser.getId(), orgUser.getUsername(), orgUser.getFullName(), user.getRoleCodes());
         } catch (DisabledException ex) {
+            log.warn("Login failed: account disabled for user: {}", normalizedUsername);
             throw ex;
         } catch (AuthenticationException ex) {
+            log.warn("Login failed: authentication rejected for user: {}", normalizedUsername);
             LoginStateResponse state = loginSecurityService.onLoginFailure(normalizedUsername);
             if (state.locked()) {
                 long minutes = state.lockSeconds() <= 0 ? 0 : (long) Math.ceil(state.lockSeconds() / 60.0);
+                log.warn("Account locked for user: {} for {} minutes due to too many failed attempts", normalizedUsername, minutes);
                 throw new BusinessException("error.auth.accountLocked", minutes);
             }
             throw ex;
         }
     }
 
-    public Map<String, Object> me() {
+    public UserProfileResponse me() {
         LoginUser user = SecurityUtils.currentUser();
         if (user == null) {
             throw new BusinessException("error.auth.unauthenticated");
@@ -78,13 +85,13 @@ public class AuthService {
         List<String> roleIds = userRoleRepository.findByUserIdAndDeletedFalse(user.getUserId()).stream()
             .map(UserRole::getRoleId)
             .toList();
-        return Map.of(
-            "userId", user.getUserId(),
-            "username", user.getUsername(),
-            "departmentId", user.getDepartmentId(),
-            "dataScope", user.getDataScope(),
-            "roleIds", roleIds,
-            "roles", user.getRoleCodes()
+        return new UserProfileResponse(
+            user.getUserId(),
+            user.getUsername(),
+            user.getDepartmentId(),
+            user.getDataScope(),
+            roleIds,
+            user.getRoleCodes()
         );
     }
 
@@ -100,22 +107,28 @@ public class AuthService {
     public void changePassword(ChangePasswordRequest request) {
         LoginUser loginUser = SecurityUtils.currentUser();
         if (loginUser == null) {
+            log.error("Change password failed: user unauthenticated");
             throw new BusinessException("error.auth.unauthenticated");
         }
+        log.info("User {} is attempting to change password", loginUser.getUsername());
         if (!request.newPassword().equals(request.confirmPassword())) {
+            log.warn("Change password failed for {}: confirm password mismatch", loginUser.getUsername());
             throw new BusinessException("error.auth.password.confirmMismatch");
         }
         OrgUser user = userRepository.findById(loginUser.getUserId())
             .orElseThrow(() -> new BusinessException("error.user.notFound"));
         if (!passwordEncoder.matches(request.oldPassword(), user.getPassword())) {
+            log.warn("Change password failed for {}: old password mismatch", loginUser.getUsername());
             throw new BusinessException("error.auth.password.oldMismatch");
         }
         if (passwordEncoder.matches(request.newPassword(), user.getPassword())) {
+            log.warn("Change password failed for {}: new password is the same as the old one", loginUser.getUsername());
             throw new BusinessException("error.auth.password.sameAsOld");
         }
         loginSecurityPolicyService.validatePasswordByPolicy(request.newPassword());
         user.setPassword(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
+        log.info("Password successfully changed for user: {}", loginUser.getUsername());
     }
 }
 

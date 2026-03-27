@@ -49,15 +49,15 @@ const actionPlaceholder = ref('请输入备注信息');
 const actionComment = ref('');
 
 const createForm = reactive({
-  id: undefined as number | undefined,
+  id: undefined as string | undefined,
   orderNo: '',
-  customerId: undefined as number | undefined,
-  routeId: undefined as number | undefined,
-  departureId: undefined as number | undefined,
+  customerId: undefined as string | undefined,
+  routeId: undefined as string | undefined,
+  departureId: undefined as string | undefined,
   orderType: 'GROUP',
   productCategory: '国内游',
-  travelerSelections: [] as Array<{ travelerId: number; departurePriceId?: number }>,
-  extraSelections: [] as Array<{ departurePriceId?: number; quantity: number }>
+  travelerSelections: [] as Array<{ travelerId: string; departurePriceId?: string }>,
+  extraSelections: [] as Array<{ departurePriceId?: string; quantity: number }>
 });
 
 const statusLabelMap: Record<string, string> = {
@@ -206,7 +206,7 @@ const loadBase = async () => {
   ]);
 };
 
-const loadCustomerTravelers = async (customerId?: number) => {
+const loadCustomerTravelers = async (customerId?: string) => {
   if (!customerId) {
     customerTravelers.value = [];
     return;
@@ -215,7 +215,7 @@ const loadCustomerTravelers = async (customerId?: number) => {
   customerTravelers.value = data.data || [];
 };
 
-const loadDeparturePrices = async (departureId?: number) => {
+const loadDeparturePrices = async (departureId?: string) => {
   if (!departureId) {
     departurePrices.value = [];
     return;
@@ -313,11 +313,11 @@ const openCreate = async (record?: any) => {
   createModal.value = true;
 };
 
-const handleCustomerChange = async (customerId?: number) => {
+const handleCustomerChange = async (customerId?: string) => {
   await loadCustomerTravelers(customerId);
 };
 
-const handleDepartureChange = async (departureId?: number) => {
+const handleDepartureChange = async (departureId?: string) => {
   await loadDeparturePrices(departureId);
   await requestQuote();
 };

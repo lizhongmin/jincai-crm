@@ -92,7 +92,7 @@ import { customerApi } from '../../api/crm';
 import { notifyError, notifySuccess } from '../../utils/notify';
 
 interface CustomerOption {
-  id: number;
+  id: string;
   name: string;
 }
 

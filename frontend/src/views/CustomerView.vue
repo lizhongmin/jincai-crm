@@ -132,6 +132,7 @@
       :map-status="mapStatus"
       :map-order-status="mapOrderStatus"
       :format-date-time="formatDateTime"
+      :map-user-name="mapUserName"
       @back="backToList"
       @toggle-collapse="basicInfoCollapsed = !basicInfoCollapsed"
       @edit="openCustomer(selectedCustomer || undefined)"
@@ -303,7 +304,7 @@ const detailOrderTotal = ref(0);
 const selectedCustomer = ref<any | null>(null);
 const selectedTravelerRecord = ref<any | null>(null);
 const transferCustomer = ref<any | null>(null);
-const transferOwnerUserId = ref<number | undefined>();
+const transferOwnerUserId = ref<string | undefined>();
 
 const customerColumns = [
   {
@@ -336,7 +337,7 @@ const detailOrderColumns = [
 ];
 
 const customerForm = reactive({
-  id: undefined as number | undefined,
+  id: undefined as string | undefined,
   name: '',
   phone: '',
   customerType: 'PERSONAL',
@@ -344,7 +345,7 @@ const customerForm = reactive({
   intentionLevel: 'MEDIUM',
   status: 'ACTIVE',
   level: 'B',
-  ownerUserId: undefined as number | undefined,
+  ownerUserId: undefined as string | undefined,
   wechat: '',
   email: '',
   city: '',
@@ -448,8 +449,11 @@ const formatDateTime = (value?: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
   const pad = (n: number) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 };
+
+const userMap = computed(() => Object.fromEntries(users.value.map(u => [u.id, u.fullName])));
+const mapUserName = (id?: string) => userMap.value[id] || id || '-';
 
 const loadCustomers = async () => {
   const tabParam = moduleTab.value === 'pool' ? 'pool' : 'customer';
@@ -471,9 +475,12 @@ const loadCustomers = async () => {
   }
 };
 
+const travelersLoaded = ref(false);
+
 const loadTravelers = async () => {
   const { data } = await customerApi.travelerList();
   travelers.value = data.data || [];
+  travelersLoaded.value = true;
 };
 
 const loadUsers = async () => {
@@ -694,9 +701,19 @@ const beforeImport = async (file: File) => {
 watch([moduleTab, listFilter], async () => {
   customerPage.value = 1;
   if (moduleTab.value === 'contact') {
-    await loadTravelers();
+    if (!travelersLoaded.value) {
+      await loadTravelers();
+    }
   } else {
     await loadCustomers();
+  }
+});
+
+watch([detailMode, detailTab], async ([dMode, dTab]) => {
+  if (dMode && dTab === 'contact') {
+    if (!travelersLoaded.value) {
+      await loadTravelers();
+    }
   }
 });
 
@@ -749,7 +766,10 @@ const exportCustomerCsv = () => {
 
 onMounted(async () => {
   try {
-    await Promise.all([loadCustomers(), loadTravelers(), loadUsers()]);
+    await Promise.all([loadCustomers(), loadUsers()]);
+    if (moduleTab.value === 'contact' || (detailMode.value && detailTab.value === 'contact')) {
+      await loadTravelers();
+    }
   } catch (error) {
     notifyError(error);
   }

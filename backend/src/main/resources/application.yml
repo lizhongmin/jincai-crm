@@ -55,3 +55,4 @@ app:
 logging:
   level:
     org.hibernate.SQL: info
+    root: info

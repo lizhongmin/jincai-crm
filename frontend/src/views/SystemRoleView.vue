@@ -90,12 +90,22 @@
                 <div class="permission-pane">
 
                   <div class="permission-scroll-wrap">
+                    <div class="data-scope-section">
+                      <div class="section-title">数据权限</div>
+                      <a-radio-group v-model:value="activeDataScope" class="data-scope-radio">
+                        <a-radio value="ALL">全部数据</a-radio>
+                        <a-radio value="DEPARTMENT_TREE">本部门数据</a-radio>
+                        <a-radio value="SELF">仅本人数据</a-radio>
+                      </a-radio-group>
+                    </div>
+
+                    <div class="section-title">功能权限</div>
                     <permission-tree-panel v-model:checkedKeys="grantPermissionIds" :groups="permissionGroups" />
                   </div>
 
                   <div class="grant-actions">
                     <a-button :disabled="!grantChanged" @click="resetGrantSelection">撤销更改</a-button>
-                    <a-button type="primary" :loading="savingGrant" :disabled="!grantChanged" @click="saveGrant">保存权限</a-button>
+                    <a-button type="primary" :loading="savingGrant" :disabled="!grantChanged" @click="saveGrant">更新</a-button>
                   </div>
                 </div>
               </a-tab-pane>
@@ -114,7 +124,8 @@
                     pageSize: memberPageSize,
                     total: memberTotal,
                     showSizeChanger: true,
-                    showTotal: (total: number) => `共 ${total} 人`
+                    pageSizeOptions: ['10', '20', '50'],
+                    showTotal: (total: number) => `共 ${total} 条`
                   }"
                   @change="onMemberPageChange"
                 />
@@ -170,7 +181,6 @@ const detailTab = ref('permission');
 const roleModal = ref(false);
 const savingRole = ref(false);
 const savingGrant = ref(false);
-const roleDataScope = ref('ALL');
 
 const roles = ref<any[]>([]);
 const roleLoading = ref(false);
@@ -180,16 +190,17 @@ const memberPage = ref(1);
 const memberPageSize = ref(10);
 const memberLoading = ref(false);
 const permissionGroups = ref<any[]>([]);
-const selectedRoleId = ref<number>();
-const grantPermissionIds = ref<number[]>([]);
-const grantOriginalPermissionIds = ref<number[]>([]);
+const selectedRoleId = ref<string>();
+const grantPermissionIds = ref<string[]>([]);
+const grantOriginalPermissionIds = ref<string[]>([]);
+const activeDataScope = ref('SELF');
 
-const roleForm = reactive({ id: undefined as number | undefined, code: '', name: '', dataScope: 'SELF', description: '' });
+const roleForm = reactive({ id: undefined as string | undefined, code: '', name: '', dataScope: 'SELF', description: '' });
 
 const dataScopeLabels: Record<string, string> = {
   SELF: '仅本人',
   DEPARTMENT: '本部门',
-  DEPARTMENT_TREE: '本部门及子部门',
+  DEPARTMENT_TREE: '本部门数据',
   ALL: '全部数据'
 };
 
@@ -228,8 +239,11 @@ const activeModuleCount = computed(() => {
 });
 
 const grantChanged = computed(() => {
-  const current = Array.from(new Set(grantPermissionIds.value || [])).sort((a, b) => a - b);
-  const original = Array.from(new Set(grantOriginalPermissionIds.value || [])).sort((a, b) => a - b);
+  if (activeRole.value && activeDataScope.value !== activeRole.value.dataScope) {
+    return true;
+  }
+  const current = Array.from(new Set(grantPermissionIds.value || [])).sort();
+  const original = Array.from(new Set(grantOriginalPermissionIds.value || [])).sort();
   if (current.length !== original.length) {
     return true;
   }
@@ -238,7 +252,7 @@ const grantChanged = computed(() => {
 
 const isAdminRole = (role?: any) => String(role?.code || '').toUpperCase() === 'ADMIN';
 
-const selectRole = (roleId: number) => {
+const selectRole = (roleId: string) => {
   selectedRoleId.value = roleId;
 };
 
@@ -261,7 +275,7 @@ const loadRoles = async () => {
   }
 };
 
-const loadRoleMembers = async (roleId?: number) => {
+const loadRoleMembers = async (roleId?: string) => {
   if (!roleId) {
     roleMembers.value = [];
     memberTotal.value = 0;
@@ -283,7 +297,7 @@ const loadRoleMembers = async (roleId?: number) => {
   }
 };
 
-const loadGrantPermissions = async (roleId?: number) => {
+const loadGrantPermissions = async (roleId?: string) => {
   if (!roleId) {
     grantPermissionIds.value = [];
     grantOriginalPermissionIds.value = [];
@@ -293,6 +307,11 @@ const loadGrantPermissions = async (roleId?: number) => {
     const { data } = await orgApi.rolePermissions(roleId);
     grantPermissionIds.value = data.data || [];
     grantOriginalPermissionIds.value = [...grantPermissionIds.value];
+
+    const role = roles.value.find(r => r.id === roleId);
+    if (role) {
+      activeDataScope.value = role.dataScope || 'SELF';
+    }
   } catch (error) {
     notifyError(error);
   }
@@ -386,14 +405,29 @@ const removeRole = async (record: any) => {
 
 const resetGrantSelection = () => {
   grantPermissionIds.value = [...grantOriginalPermissionIds.value];
+  if (activeRole.value) {
+    activeDataScope.value = activeRole.value.dataScope || 'SELF';
+  }
 };
 
 const saveGrant = async () => {
-  if (!selectedRoleId.value) {
+  if (!selectedRoleId.value || !activeRole.value) {
     return;
   }
   savingGrant.value = true;
   try {
+    // If dataScope changed, update role first
+    if (activeDataScope.value !== activeRole.value.dataScope) {
+       await orgApi.updateRole(selectedRoleId.value, {
+         code: activeRole.value.code,
+         name: activeRole.value.name,
+         description: activeRole.value.description,
+         dataScope: activeDataScope.value
+       });
+       // update local role data
+       activeRole.value.dataScope = activeDataScope.value;
+    }
+
     await orgApi.grantRole(selectedRoleId.value, grantPermissionIds.value);
     notifySuccess('角色权限更新成功');
     grantOriginalPermissionIds.value = [...grantPermissionIds.value];
@@ -414,16 +448,14 @@ onMounted(load);
 }
 
 .role-card :deep(.ant-card-body) {
-  padding: 10px;
+  padding: 0;
+  height: 100%;
 }
 
 .role-layout {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
-  min-height: calc(100vh - 132px);
-  border: 1px solid #e8edf5;
-  border-radius: 10px;
-  overflow: hidden;
+  grid-template-columns: 260px minmax(0, 1fr);
+  height: calc(100vh - 120px);
   background: #fff;
 }
 
@@ -451,8 +483,8 @@ onMounted(load);
   padding: 8px;
   display: grid;
   gap: 6px;
-  max-height: calc(100vh - 245px);
-  overflow: auto;
+  height: calc(100% - 90px);
+  overflow-y: auto;
 }
 
 .role-item {

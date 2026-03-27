@@ -73,12 +73,12 @@ const templateTotal = ref(0);
 const templateKeyword = ref('');
 
 const form = reactive<any>({
-  id: undefined as number | undefined,
+  id: undefined as string | undefined,
   name: '',
   orderType: 'GROUP',
   productCategory: '国内游',
-  routeId: undefined as number | undefined,
-  departureId: undefined as number | undefined,
+  routeId: undefined as string | undefined,
+  departureId: undefined as string | undefined,
   minAmount: undefined,
   maxAmount: undefined,
   active: true,
@@ -211,7 +211,7 @@ const save = async () => {
   }
 };
 
-const remove = async (id: number) => {
+const remove = async (id: string) => {
   try {
     await workflowApi.remove(id);
     notifySuccess('模板删除成功');

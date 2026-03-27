@@ -133,12 +133,12 @@ import { orgApi } from '../api/crm';
 import { notifyError, notifySuccess } from '../utils/notify';
 
 interface PermissionNode {
-  id: number;
+  id: string;
   code: string;
   name: string;
   type: string;
   menuPath?: string;
-  parentId?: number;
+  parentId?: string;
   children?: PermissionNode[];
   level?: number;
 }
@@ -146,7 +146,7 @@ interface PermissionNode {
 const loading = ref(false);
 const saving = ref(false);
 const permissionModal = ref(false);
-const expandedRowKeys = ref<number[]>([]);
+const expandedRowKeys = ref<string[]>([]);
 const searchKeyword = ref('');
 
 const permissions = ref<PermissionNode[]>([]);

@@ -22,7 +22,7 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ApiResponse<Object> me() {
+    public ApiResponse<UserProfileResponse> me() {
         return ApiResponse.ok(authService.me());
     }
 

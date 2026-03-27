@@ -126,7 +126,7 @@ import { notifyError, notifySuccess } from '../utils/notify';
 
 const auth = useAuthStore();
 const orders = ref<any[]>([]);
-const activeOrderId = ref<number | null>(null);
+const activeOrderId = ref<string | null>(null);
 const receivables = ref<any[]>([]);
 const payables = ref<any[]>([]);
 const refunds = ref<any[]>([]);
@@ -139,12 +139,12 @@ const itemModalOpen = ref(false);
 const itemModalMode = ref<'receivable' | 'payable' | 'refund'>('receivable');
 const flowModalOpen = ref(false);
 const flowModalMode = ref<'receipt' | 'payment'>('receipt');
-const activeReceivableId = ref<number | null>(null);
-const activePayableId = ref<number | null>(null);
+const activeReceivableId = ref<string | null>(null);
+const activePayableId = ref<string | null>(null);
 
-const receivableForm = reactive({ id: undefined as number | undefined, itemName: '团费', amount: 2000 });
-const payableForm = reactive({ id: undefined as number | undefined, itemName: '地接成本', amount: 1200 });
-const refundForm = reactive({ id: undefined as number | undefined, amount: 200, reason: '客户取消订单' });
+const receivableForm = reactive({ id: undefined as string | undefined, itemName: '团费', amount: 2000 });
+const payableForm = reactive({ id: undefined as string | undefined, itemName: '地接成本', amount: 1200 });
+const refundForm = reactive({ id: undefined as string | undefined, amount: 200, reason: '客户取消订单' });
 const receiptForm = reactive({ amount: 1000, remark: '到账确认' });
 const paymentForm = reactive({ amount: 600, remark: '已打款' });
 
@@ -185,7 +185,7 @@ const loadOrders = async () => {
   }
 };
 
-const loadForOrder = async (orderId?: number | null) => {
+const loadForOrder = async (orderId?: string | null) => {
   if (!orderId) {
     receivables.value = [];
     payables.value = [];

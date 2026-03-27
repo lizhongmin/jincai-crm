@@ -32,7 +32,7 @@
     </a-card>
 
     <a-card class="section-card" :bordered="false" title="线路毛利分布">
-      <a-table :columns="columns" :data-source="profit" row-key="routeId" :pagination="{ pageSize: 10 }" :scroll="{ x: 760 }" />
+      <a-table :columns="columns" :data-source="profit" row-key="routeId" :pagination="{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'], showTotal: (total) => `共 ${total} 条` }" :scroll="{ x: 760 }" />
     </a-card>
   </div>
 </template>

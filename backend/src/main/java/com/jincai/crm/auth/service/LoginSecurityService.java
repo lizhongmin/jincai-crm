@@ -1,5 +1,6 @@
 package com.jincai.crm.auth.service;
 
+import lombok.extern.slf4j.Slf4j;
 import com.jincai.crm.auth.dto.CaptchaResponse;
 import com.jincai.crm.auth.dto.LoginStateResponse;
 import com.jincai.crm.common.BusinessException;
@@ -18,6 +19,7 @@ import java.util.Base64;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
+@Slf4j
 @Service
 public class LoginSecurityService {
 
@@ -54,6 +56,7 @@ public class LoginSecurityService {
     public void ensureLoginAllowedAndValidateCaptcha(String username, String captchaId, String captchaCode) {
         LoginStateResponse state = getLoginState(username);
         if (state.locked()) {
+            log.warn("Login attempt blocked: account {} is locked for {} minutes", username, toLockMinutes(state.lockSeconds()));
             throw new BusinessException("error.auth.accountLocked", toLockMinutes(state.lockSeconds()));
         }
         if (state.captchaRequired()) {
@@ -75,9 +78,11 @@ public class LoginSecurityService {
         }
 
         long current = failCount == null ? 0 : failCount;
+        log.warn("Recorded login failure for user: {}. Total failures: {}", normalized, current);
         if (current >= policy.getLockAfterFailures()) {
             redisTemplate.delete(failKey);
             redisTemplate.opsForValue().set(lockKey(normalized), "1", Duration.ofMinutes(policy.getLockMinutes()));
+            log.warn("Lock threshold reached. User {} locked for {} minutes", normalized, policy.getLockMinutes());
             return new LoginStateResponse(false, true, policy.getLockMinutes() * 60L);
         }
         return new LoginStateResponse(current >= policy.getCaptchaAfterFailures(), false, 0);
@@ -90,6 +95,7 @@ public class LoginSecurityService {
         }
         redisTemplate.delete(failKey(normalized));
         redisTemplate.delete(lockKey(normalized));
+        log.debug("Cleared login failure state for user: {}", normalized);
     }
 
     public CaptchaResponse generateCaptcha(String username) {
@@ -113,25 +119,30 @@ public class LoginSecurityService {
             throw new BusinessException("error.auth.username.required");
         }
         if (captchaId == null || captchaId.isBlank() || captchaCode == null || captchaCode.isBlank()) {
+            log.warn("Captcha validation failed for {}: missing captcha ID or code", normalized);
             throw new BusinessException("error.auth.captcha.required");
         }
         String key = captchaKey(captchaId.trim());
         String value = redisTemplate.opsForValue().get(key);
         if (value == null || value.isBlank()) {
+            log.warn("Captcha validation failed for {}: captcha expired or not found", normalized);
             throw new BusinessException("error.auth.captcha.expired");
         }
         String[] parts = value.split("\\|", 2);
         if (parts.length < 2) {
             redisTemplate.delete(key);
+            log.warn("Captcha validation failed for {}: invalid captcha data format in cache", normalized);
             throw new BusinessException("error.auth.captcha.expired");
         }
         String expectedUsername = parts[0];
         String expectedCode = parts[1];
         if (!normalized.equals(expectedUsername) || !expectedCode.equalsIgnoreCase(captchaCode.trim())) {
             redisTemplate.delete(key);
+            log.warn("Captcha validation failed for {}: incorrect code or username mismatch. Expected user: {}", normalized, expectedUsername);
             throw new BusinessException("error.auth.captcha.invalid");
         }
         redisTemplate.delete(key);
+        log.debug("Captcha successfully validated for user: {}", normalized);
     }
 
     private long getLockSeconds(String username) {

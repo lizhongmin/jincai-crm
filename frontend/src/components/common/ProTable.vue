@@ -12,6 +12,19 @@ const slots = useSlots();
 const visibleKeys = ref<string[]>(props.columns.map((c) => String(c.dataIndex || c.key)));
 const activeColumns = computed(() => props.columns.filter((c) => visibleKeys.value.includes(String(c.dataIndex || c.key))));
 
+const mergedPagination = computed(() => {
+  if (attrs.pagination === false) return false;
+  const base = {
+    showSizeChanger: true,
+    pageSizeOptions: ['10', '20', '50'],
+    showTotal: (total: number) => `共 ${total} 条`
+  };
+  if (typeof attrs.pagination === 'object' && attrs.pagination !== null) {
+    return { ...base, ...attrs.pagination };
+  }
+  return base;
+});
+
 const onColumnChange = (key: string, checked: boolean) => {
   if (checked) {
     visibleKeys.value.push(key);
@@ -22,11 +35,11 @@ const onColumnChange = (key: string, checked: boolean) => {
 </script>
 
 <template>
-  <a-table v-bind="attrs" :columns="activeColumns">
+  <a-table v-bind="attrs" :columns="activeColumns" :pagination="mergedPagination">
     <template v-for="(_, slotName) in slots" #[slotName]="slotProps">
       <slot v-if="slotName !== 'headerCell'" :name="slotName" v-bind="slotProps || {}"></slot>
     </template>
-    
+
     <template #headerCell="slotProps">
       <template v-if="(slotProps.column.dataIndex === 'actions' || slotProps.column.key === 'actions')">
         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%">

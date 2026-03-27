@@ -60,6 +60,7 @@ const pagination = ref({
   pageSize: 10,
   total: 0,
   showSizeChanger: true,
+  pageSizeOptions: ['10', '20', '50'],
   showTotal: (total: number) => `共 ${total} 条`
 });
 
@@ -82,8 +83,8 @@ const loadData = async () => {
       page: pagination.value.current,
       size: pagination.value.pageSize
     });
-    if (res.data.code === 200) {
-      logList.value = res.data.data.items || res.data.data.records;
+    if (res.data.success) {
+      logList.value = res.data.data.items ;
       pagination.value.total = res.data.data.total;
     } else {
       notifyError('加载审计日志失败', res.data.message);

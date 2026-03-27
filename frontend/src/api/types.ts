@@ -13,7 +13,7 @@ export interface PageResult<T> {
 
 export interface LoginResponse {
   token: string;
-  userId: number;
+  userId: string;
   username: string;
   fullName: string;
   roles: string[];
