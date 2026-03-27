@@ -201,6 +201,9 @@ const openMenuKeys = computed(() => {
   if (activeMenuKey.value.startsWith('/system/')) {
     return ['system'];
   }
+  if (activeMenuKey.value.startsWith('/products/')) {
+    return ['products'];
+  }
   return [];
 });
 

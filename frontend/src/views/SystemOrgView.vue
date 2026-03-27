@@ -436,7 +436,7 @@ const saveDepartment = async () => {
   }
 };
 
-const removeDepartment = async (id: number) => {
+const removeDepartment = async (id: string) => {
   try {
     await orgApi.deleteDepartment(id);
     notifySuccess('部门删除成功');
