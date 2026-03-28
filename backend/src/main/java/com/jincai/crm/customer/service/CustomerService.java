@@ -17,8 +17,11 @@ import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -33,6 +36,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class CustomerService {
+
+    private static final Logger log = LoggerFactory.getLogger(CustomerService.class);
 
     private final CustomerRepository customerRepository;
     private final TravelerRepository travelerRepository;
@@ -54,42 +59,72 @@ public class CustomerService {
 
     public List<CustomerView> listVisible(LoginUser user) {
         if (user == null) {
+            log.warn("用户未登录，无法查询可见客户列表");
             return List.of();
         }
-        List<Customer> customers;
-        if (user.getDataScope() == DataScope.ALL) {
-            customers = customerRepository.findByDeletedFalse();
-        } else if (user.getDataScope() == DataScope.SELF) {
-            customers = customerRepository.findByOwnerUserIdAndDeletedFalse(user.getUserId());
-        } else if (user.getDataScope() == DataScope.DEPARTMENT) {
-            customers = customerRepository.findByOwnerDeptIdAndDeletedFalse(user.getDepartmentId());
-        } else {
-            Set<String> departmentIds = dataScopeResolver.resolveDepartmentIds(user);
-            if (departmentIds.isEmpty()) {
-                return List.of();
+        log.debug("查询可见客户列表 - 用户ID: {}, 数据权限: {}", user.getUserId(), user.getDataScope());
+        try {
+            List<Customer> customers;
+            if (user.getDataScope() == DataScope.ALL) {
+                customers = customerRepository.findByDeletedFalse();
+                log.debug("查询所有客户记录 - 返回 {} 条", customers.size());
+            } else if (user.getDataScope() == DataScope.SELF) {
+                customers = customerRepository.findByOwnerUserIdAndDeletedFalse(user.getUserId());
+                log.debug("查询个人客户记录 - 用户ID: {}, 返回 {} 条", user.getUserId(), customers.size());
+            } else if (user.getDataScope() == DataScope.DEPARTMENT) {
+                customers = customerRepository.findByOwnerDeptIdAndDeletedFalse(user.getDepartmentId());
+                log.debug("查询本部门客户记录 - 部门ID: {}, 返回 {} 条", user.getDepartmentId(), customers.size());
+            } else {
+                Set<String> departmentIds = dataScopeResolver.resolveDepartmentIds(user);
+                if (departmentIds.isEmpty()) {
+                    log.debug("用户无部门权限 - 用户ID: {}", user.getUserId());
+                    return List.of();
+                }
+                customers = customerRepository.findByOwnerDeptIdInAndDeletedFalse(departmentIds);
+                log.debug("查询部门树客户记录 - 部门IDs: {}, 返回 {} 条", departmentIds, customers.size());
             }
-            customers = customerRepository.findByOwnerDeptIdInAndDeletedFalse(departmentIds);
+            List<CustomerView> views = toViews(customers);
+            log.info("成功查询可见客户列表 - 用户ID: {}, 返回 {} 条记录", user.getUserId(), views.size());
+            return views;
+        } catch (Exception e) {
+            log.error("查询可见客户列表失败 - 用户ID: {}", user.getUserId(), e);
+            throw e;
         }
-        return toViews(customers);
     }
 
     public PageResult<CustomerView> pageVisible(LoginUser user, int page, int size, String keyword, String tab, String ownerScope) {
         if (user == null) {
+            log.warn("用户未登录，无法分页查询客户列表");
             return new PageResult<>(List.of(), 0, normalizePage(page), normalizeSize(size));
         }
 
         int normalizedPage = normalizePage(page);
         int normalizedSize = normalizeSize(size);
-        Specification<Customer> spec = buildCustomerSpec(user, keyword, tab, ownerScope);
-        Page<Customer> result = customerRepository.findAll(
-            spec,
-            PageRequest.of(
-                normalizedPage - 1,
-                normalizedSize,
-                Sort.by(Sort.Direction.DESC, "updatedAt").and(Sort.by(Sort.Direction.DESC, "id"))
-            )
-        );
-        return new PageResult<>(toViews(result.getContent()), result.getTotalElements(), normalizedPage, normalizedSize);
+        log.debug("分页查询客户列表 - 用户ID: {}, 页码: {}, 大小: {}, 关键词: {}, 标签: {}, 所有者范围: {}",
+                user.getUserId(), normalizedPage, normalizedSize, keyword, tab, ownerScope);
+
+        try {
+            long startTime = System.currentTimeMillis();
+            Specification<Customer> spec = buildCustomerSpec(user, keyword, tab, ownerScope);
+            Page<Customer> result = customerRepository.findAll(
+                spec,
+                PageRequest.of(
+                    normalizedPage - 1,
+                    normalizedSize,
+                    Sort.by(Sort.Direction.DESC, "updatedAt").and(Sort.by(Sort.Direction.DESC, "id"))
+                )
+            );
+            List<CustomerView> views = toViews(result.getContent());
+            long elapsedTime = System.currentTimeMillis() - startTime;
+
+            log.info("成功分页查询客户列表 - 用户ID: {}, 页码: {}/{}, 总记录: {}, 耗时: {}ms",
+                    user.getUserId(), normalizedPage, normalizedSize, result.getTotalElements(), elapsedTime);
+
+            return new PageResult<>(views, result.getTotalElements(), normalizedPage, normalizedSize);
+        } catch (Exception e) {
+            log.error("分页查询客户列表失败 - 用户ID: {}, 页码: {}, 大小: {}", user.getUserId(), normalizedPage, normalizedSize, e);
+            throw e;
+        }
     }
 
     public CustomerView create(CustomerRequest request, LoginUser user) {
@@ -188,17 +223,46 @@ public class CustomerService {
         if (user == null) {
             return new PageResult<>(List.of(), 0, normalizePage(page), normalizeSize(size));
         }
+
         int normalizedPage = normalizePage(page);
         int normalizedSize = normalizeSize(size);
-        Specification<Traveler> spec = buildTravelerSpec(user, keyword, customerId);
-        Page<Traveler> result = travelerRepository.findAll(
-            spec,
-            PageRequest.of(
-                normalizedPage - 1,
-                normalizedSize,
-                Sort.by(Sort.Direction.DESC, "updatedAt").and(Sort.by(Sort.Direction.DESC, "id"))
-            )
+        Pageable pageable = PageRequest.of(
+            normalizedPage - 1,
+            normalizedSize,
+            Sort.by(Sort.Direction.DESC, "updatedAt").and(Sort.by(Sort.Direction.DESC, "id"))
         );
+
+        String normalizedKeyword = keyword == null ? null : keyword.trim().toLowerCase();
+        String normalizedCustomerId = customerId == null || customerId.isBlank() ? null : customerId.trim();
+
+        Page<Traveler> result;
+
+        switch (user.getDataScope()) {
+            case ALL:
+                result = travelerRepository.findAllWithKeyword(normalizedKeyword, normalizedCustomerId, pageable);
+                break;
+
+            case SELF:
+                result = travelerRepository.findByUserIdWithKeyword(
+                    user.getUserId(), normalizedKeyword, normalizedCustomerId, pageable);
+                break;
+
+            case DEPARTMENT:
+                Set<String> deptIds = Set.of(user.getDepartmentId());
+                result = travelerRepository.findByDepartmentIdsWithKeyword(
+                    deptIds, normalizedKeyword, normalizedCustomerId, pageable);
+                break;
+
+            default: // DEPARTMENT_TREE
+                Set<String> departmentIds = dataScopeResolver.resolveDepartmentIds(user);
+                if (departmentIds.isEmpty()) {
+                    return new PageResult<>(List.of(), 0, normalizedPage, normalizedSize);
+                }
+                result = travelerRepository.findByDepartmentIdsWithKeyword(
+                    departmentIds, normalizedKeyword, normalizedCustomerId, pageable);
+                break;
+        }
+
         return new PageResult<>(result.getContent(), result.getTotalElements(), normalizedPage, normalizedSize);
     }
 
@@ -577,56 +641,6 @@ public class CustomerService {
                 keywordPredicates.add(cb.like(cb.lower(root.get("phone")), likeValue));
                 keywordPredicates.add(cb.like(cb.lower(cb.coalesce(root.get("city"), "")), likeValue));
                 keywordPredicates.add(cb.like(cb.lower(cb.coalesce(root.get("tags"), "")), likeValue));
-                predicates.add(cb.or(keywordPredicates.toArray(new jakarta.persistence.criteria.Predicate[0])));
-            }
-
-            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
-        };
-    }
-
-    private Specification<Traveler> buildTravelerSpec(LoginUser user, String keyword, String customerId) {
-        Set<String> scopedDepartmentIds = null;
-        if (user.getDataScope() == DataScope.DEPARTMENT_TREE) {
-            scopedDepartmentIds = dataScopeResolver.resolveDepartmentIds(user);
-            if (scopedDepartmentIds.isEmpty()) {
-                return (root, query, cb) -> cb.disjunction();
-            }
-        }
-        final Set<String> finalDeptIds = scopedDepartmentIds;
-        String normalizedKeyword = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
-
-        return (root, query, cb) -> {
-            List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
-            predicates.add(cb.isFalse(root.get("deleted")));
-
-            // 通过子查询关联客户表实施数据权限
-            if (user.getDataScope() != DataScope.ALL) {
-                Subquery<String> customerSubquery = query.subquery(String.class);
-                jakarta.persistence.criteria.Root<Customer> customerRoot = customerSubquery.from(Customer.class);
-                customerSubquery.select(customerRoot.get("id"));
-                List<jakarta.persistence.criteria.Predicate> scopePredicates = new ArrayList<>();
-                scopePredicates.add(cb.isFalse(customerRoot.get("deleted")));
-                if (user.getDataScope() == DataScope.SELF) {
-                    scopePredicates.add(cb.equal(customerRoot.get("ownerUserId"), user.getUserId()));
-                } else if (user.getDataScope() == DataScope.DEPARTMENT) {
-                    scopePredicates.add(cb.equal(customerRoot.get("ownerDeptId"), user.getDepartmentId()));
-                } else if (user.getDataScope() == DataScope.DEPARTMENT_TREE) {
-                    scopePredicates.add(customerRoot.get("ownerDeptId").in(finalDeptIds));
-                }
-                customerSubquery.where(scopePredicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
-                predicates.add(root.get("customerId").in(customerSubquery));
-            }
-
-            if (customerId != null && !customerId.isBlank()) {
-                predicates.add(cb.equal(root.get("customerId"), customerId));
-            }
-
-            if (!normalizedKeyword.isBlank()) {
-                String likeValue = "%" + normalizedKeyword + "%";
-                List<jakarta.persistence.criteria.Predicate> keywordPredicates = new ArrayList<>();
-                keywordPredicates.add(cb.like(cb.lower(root.get("name")), likeValue));
-                keywordPredicates.add(cb.like(cb.lower(cb.coalesce(root.get("phone"), "")), likeValue));
-                keywordPredicates.add(cb.like(cb.lower(cb.coalesce(root.get("idNo"), "")), likeValue));
                 predicates.add(cb.or(keywordPredicates.toArray(new jakarta.persistence.criteria.Predicate[0])));
             }
 

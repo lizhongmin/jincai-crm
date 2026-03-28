@@ -8,11 +8,13 @@ import com.jincai.crm.customer.service.CustomerService;
 import com.jincai.crm.security.LoginUser;
 import com.jincai.crm.security.SecurityUtils;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequestMapping("/travelers")
 public class TravelerController {
@@ -34,8 +36,17 @@ public class TravelerController {
         @RequestParam(required = false) String keyword,
         @RequestParam(required = false) String customerId
     ) {
-        LoginUser user = SecurityUtils.currentUser();
-        return ApiResponse.ok(customerService.pageTravelersVisible(user, page, size, keyword, customerId));
+        log.info("请求出行人分页列表 - 用户ID: {}, 页码: {}, 大小: {}, 关键词: {}, 客户ID: {}",
+                SecurityUtils.currentUserId(), page, size, keyword, customerId);
+        try {
+            LoginUser user = SecurityUtils.currentUser();
+            PageResult<Traveler> result = customerService.pageTravelersVisible(user, page, size, keyword, customerId);
+            log.info("成功获取出行人分页列表 - 第{}页, 共{}条记录", result.page(), result.total());
+            return ApiResponse.ok(result);
+        } catch (Exception e) {
+            log.error("获取出行人分页列表失败 - 页码: {}, 大小: {}, 关键词: {}, 客户ID: {}", page, size, keyword, customerId, e);
+            throw e;
+        }
     }
 
     /**
@@ -44,7 +55,15 @@ public class TravelerController {
     @GetMapping
     @PreAuthorize("hasAuthority('MENU_CUSTOMER')")
     public ApiResponse<List<Traveler>> list(@RequestParam(required = false) String customerId) {
-        return ApiResponse.ok(customerService.listTravelersVisible(customerId));
+        log.info("请求出行人列表 - 用户ID: {}, 客户ID: {}", SecurityUtils.currentUserId(), customerId);
+        try {
+            List<Traveler> result = customerService.listTravelersVisible(customerId);
+            log.info("成功获取出行人列表 - 返回 {} 条记录", result.size());
+            return ApiResponse.ok(result);
+        } catch (Exception e) {
+            log.error("获取出行人列表失败 - 客户ID: {}", customerId, e);
+            throw e;
+        }
     }
 
     /**
@@ -56,7 +75,16 @@ public class TravelerController {
         @RequestParam String customerId,
         @Valid @RequestBody TravelerRequest request
     ) {
-        return ApiResponse.ok(customerService.addTraveler(customerId, request));
+        log.info("创建出行人请求 - 用户ID: {}, 客户ID: {}, 出行人姓名: {}, 电话: {}",
+                SecurityUtils.currentUserId(), customerId, request.name(), request.phone());
+        try {
+            Traveler result = customerService.addTraveler(customerId, request);
+            log.info("成功创建出行人 - 出行人ID: {}, 出行人姓名: {}", result.getId(), result.getName());
+            return ApiResponse.ok(result);
+        } catch (Exception e) {
+            log.error("创建出行人失败 - 客户ID: {}, 出行人姓名: {}", customerId, request.name(), e);
+            throw e;
+        }
     }
 
     /**
@@ -68,7 +96,16 @@ public class TravelerController {
         @PathVariable String travelerId,
         @Valid @RequestBody TravelerRequest request
     ) {
-        return ApiResponse.ok(customerService.updateTraveler(travelerId, request));
+        log.info("更新出行人请求 - 用户ID: {}, 出行人ID: {}, 出行人姓名: {}, 电话: {}",
+                SecurityUtils.currentUserId(), travelerId, request.name(), request.phone());
+        try {
+            Traveler result = customerService.updateTraveler(travelerId, request);
+            log.info("成功更新出行人 - 出行人ID: {}, 出行人姓名: {}", travelerId, result.getName());
+            return ApiResponse.ok(result);
+        } catch (Exception e) {
+            log.error("更新出行人失败 - 出行人ID: {}", travelerId, e);
+            throw e;
+        }
     }
 
     /**
@@ -77,7 +114,14 @@ public class TravelerController {
     @DeleteMapping("/{travelerId}")
     @PreAuthorize("hasAuthority('BTN_TRAVELER_DELETE')")
     public ApiResponse<Void> delete(@PathVariable String travelerId) {
-        customerService.deleteTraveler(travelerId);
-        return ApiResponse.ok(null);
+        log.info("删除出行人请求 - 用户ID: {}, 出行人ID: {}", SecurityUtils.currentUserId(), travelerId);
+        try {
+            customerService.deleteTraveler(travelerId);
+            log.info("成功删除出行人 - 出行人ID: {}", travelerId);
+            return ApiResponse.ok(null);
+        } catch (Exception e) {
+            log.error("删除出行人失败 - 出行人ID: {}", travelerId, e);
+            throw e;
+        }
     }
 }

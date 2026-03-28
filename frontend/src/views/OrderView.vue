@@ -196,7 +196,8 @@ const loadContextOptions = async () => {
   const { data } = await orderApi.contextOptions();
   customers.value = data.data?.customers || [];
   routes.value = data.data?.routes || [];
-  departures.value = data.data?.departures || [];
+  // departures 不再从 contextOptions 全量加载，改为按需加载
+  departures.value = [];
 };
 
 const loadBase = async () => {
@@ -305,12 +306,33 @@ const openCreate = async (record?: any) => {
       .filter((item: any) => !item.travelerId)
       .map((item: any) => ({ departurePriceId: item.departurePriceId, quantity: item.quantity }));
   }
+  
+  // 如果有 routeId，先加载该线路的团期
+  if (createForm.routeId) {
+    const { data } = await orderApi.routeDepartures(createForm.routeId);
+    departures.value = data.data || [];
+  }
+
   await Promise.all([
     loadCustomerTravelers(createForm.customerId),
     loadDeparturePrices(createForm.departureId)
   ]);
   await requestQuote();
   createModal.value = true;
+};
+
+const handleRouteChange = async (routeId?: string) => {
+  if (!routeId) {
+    departures.value = [];
+    return;
+  }
+  const { data } = await orderApi.routeDepartures(routeId);
+  departures.value = data.data || [];
+  
+  if (!departures.value.some((item) => item.id === createForm.departureId)) {
+    createForm.departureId = departures.value[0]?.id;
+  }
+  await handleDepartureChange(createForm.departureId);
 };
 
 const handleCustomerChange = async (customerId?: string) => {
@@ -523,6 +545,7 @@ onMounted(async () => {
       :prices="departurePrices"
       :quote="quote"
       @save="saveOrder"
+      @route-change="handleRouteChange"
       @customer-change="handleCustomerChange"
       @departure-change="handleDepartureChange"
       @request-quote="requestQuote"

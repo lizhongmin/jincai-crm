@@ -35,9 +35,9 @@
           </a-select>
         </a-form-item>
         <a-form-item label="团期" required>
-          <a-select v-model:value="model.departureId" placeholder="请选择团期" @change="handleDepartureChange">
-            <a-select-option v-for="item in routeDepartures" :key="item.id" :value="item.id">
-              {{ item.code }} ({{ item.startDate }} ~ {{ item.endDate }})
+          <a-select v-model:value="model.departureId" placeholder="请选择团期" @change="handleDepartureChange" option-label-prop="label">
+            <a-select-option v-for="item in routeDepartures" :key="item.id" :value="item.id" :label="item.name || item.code">
+              {{ item.name || item.code }} （{{ item.startDate }} ~ {{ item.endDate }}）
             </a-select-option>
           </a-select>
         </a-form-item>
@@ -139,6 +139,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'update:open', value: boolean): void;
   (e: 'save'): void;
+  (e: 'route-change', routeId?: string): void;
   (e: 'customer-change', customerId?: string): void;
   (e: 'departure-change', departureId?: string): void;
   (e: 'request-quote'): void;
@@ -147,7 +148,11 @@ const emit = defineEmits<{
 const routeDepartures = computed(() => props.departures.filter((item) => item.routeId === props.model.routeId));
 const selectedRoute = computed(() => props.routes.find((item) => item.id === props.model.routeId));
 const selectedTravelerIds = computed(() => props.model.travelerSelections.map((item: any) => item.travelerId));
-const travelerOptions = computed(() => props.travelers.map((item) => ({ label: `${item.name}${item.phone ? ` (${item.phone})` : ''}`, value: item.id })));
+const travelerOptions = computed(() =>
+  props.travelers
+    .filter(t => t.documents && t.documents.some((doc: any) => doc.documentType === 'NATIONAL_ID'))
+    .map((item) => ({ label: `${item.name}${item.phone ? ` (${item.phone})` : ''}`, value: item.id }))
+);
 const travelerQuoteMap = computed(() => {
   const map = new Map<string, any>();
   (props.quote?.priceItems || []).forEach((item: any) => {
@@ -198,10 +203,7 @@ const travelerMatchedPriceText = (travelerId: string) => {
 };
 
 const handleRouteChange = () => {
-  if (!routeDepartures.value.some((item) => item.id === props.model.departureId)) {
-    props.model.departureId = routeDepartures.value[0]?.id;
-  }
-  handleDepartureChange();
+  emit('route-change', props.model.routeId);
 };
 
 const handleDepartureChange = () => {

@@ -1,5 +1,8 @@
 ﻿<template>
-  <a-card size="small" :title="props.title" :bordered="true">
+  <a-card size="small" :bordered="true" :class="cardClass">
+    <template #title>
+      <span class="table-title">{{ props.title }}</span>
+    </template>
     <a-table :columns="columns" :data-source="props.items" row-key="id" size="small" :pagination="false" :scroll="{ x: 760 }">
       <template #bodyCell="{ column, record }">
         <template v-if="column.dataIndex === 'status'">
@@ -8,33 +11,45 @@
         <template v-else-if="column.dataIndex === 'actions'">
           <a-space wrap>
             <template v-if="props.mode === 'receivable' || props.mode === 'payable'">
-              <a-button size="small" type="link" @click="emit('primary', record)">{{ props.mode === 'receivable' ? '收款' : '付款' }}</a-button>
-              <a-button size="small" type="link" @click="emit('secondary', record)">记录</a-button>
+              <a-tooltip :title="props.mode === 'receivable' ? '收款' : '付款'">
+                <a-button size="small" type="link" @click="emit('primary', record)">{{ props.mode === 'receivable' ? '收款' : '付款' }}</a-button>
+              </a-tooltip>
+              <a-tooltip title="查看记录">
+                <a-button size="small" type="link" @click="emit('secondary', record)">记录</a-button>
+              </a-tooltip>
             </template>
             <template v-if="props.mode === 'refund'">
-              <a-button
-                v-if="props.canReviewPermission"
-                size="small"
-                type="primary"
-                :disabled="record.status === 'APPROVED'"
-                @click="emit('approve', record)"
-              >
-                通过
-              </a-button>
-              <a-button
-                v-if="props.canReviewPermission"
-                size="small"
-                danger
-                :disabled="record.status === 'REJECTED'"
-                @click="emit('reject', record)"
-              >
-                驳回
-              </a-button>
+              <a-tooltip title="审核通过">
+                <a-button
+                  v-if="props.canReviewPermission"
+                  size="small"
+                  type="primary"
+                  :disabled="record.status === 'APPROVED'"
+                  @click="emit('approve', record)"
+                >
+                  通过
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="审核驳回">
+                <a-button
+                  v-if="props.canReviewPermission"
+                  size="small"
+                  danger
+                  :disabled="record.status === 'REJECTED'"
+                  @click="emit('reject', record)"
+                >
+                  驳回
+                </a-button>
+              </a-tooltip>
             </template>
-            <a-button size="small" @click="emit('edit', record)">编辑</a-button>
-            <a-popconfirm title="确认删除这条记录？" @confirm="emit('remove', record)">
-              <a-button size="small" danger ghost>删除</a-button>
-            </a-popconfirm>
+            <a-tooltip title="编辑">
+              <a-button size="small" @click="emit('edit', record)">编辑</a-button>
+            </a-tooltip>
+            <a-tooltip title="删除">
+              <a-popconfirm title="确认删除这条记录？" @confirm="emit('remove', record)">
+                <a-button size="small" danger ghost>删除</a-button>
+              </a-popconfirm>
+            </a-tooltip>
           </a-space>
         </template>
       </template>
@@ -44,6 +59,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { Tooltip as ATooltip } from 'ant-design-vue';
 
 const props = withDefaults(defineProps<{
   title: string;
@@ -62,6 +78,14 @@ const emit = defineEmits<{
   (e: 'edit', record: any): void;
   (e: 'remove', record: any): void;
 }>();
+
+const cardClass = computed(() => {
+  return {
+    'receivable-card': props.mode === 'receivable',
+    'payable-card': props.mode === 'payable',
+    'refund-card': props.mode === 'refund'
+  };
+});
 
 const columns = computed(() => {
   if (props.mode === 'receivable') {
@@ -109,3 +133,58 @@ const statusLabel = (status: string) => ({
   REJECTED: '已驳回'
 }[status] || status);
 </script>
+
+<style scoped>
+.receivable-card :deep(.ant-card-head) {
+  border-left: 4px solid #1890ff;
+  padding-left: 12px;
+}
+
+.payable-card :deep(.ant-card-head) {
+  border-left: 4px solid #fa8c16;
+  padding-left: 12px;
+}
+
+.refund-card :deep(.ant-card-head) {
+  border-left: 4px solid #ff4d4f;
+  padding-left: 12px;
+}
+
+.table-title {
+  font-weight: 500;
+}
+
+/* 表格样式优化 */
+:deep(.ant-table) {
+  font-size: 12px;
+}
+
+:deep(.ant-table-thead > tr > th) {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 8px 8px;
+}
+
+:deep(.ant-table-tbody > tr > td) {
+  padding: 8px 8px;
+  font-size: 12px;
+}
+
+/* 操作按钮紧凑排列 */
+:deep(.ant-space) {
+  gap: 4px !important;
+}
+
+:deep(.ant-btn) {
+  font-size: 12px;
+  padding: 0 7px;
+  height: 24px;
+}
+
+/* 状态标签样式优化 */
+:deep(.ant-tag) {
+  font-size: 12px;
+  padding: 0 7px;
+  line-height: 20px;
+}
+</style>

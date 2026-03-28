@@ -1,46 +1,25 @@
 ﻿<template>
   <div class="finance-page">
-    <div class="biz-summary">
-      <div class="item">
-        <span class="label">应收合计</span>
-        <strong class="value">{{ receivableTotal }}</strong>
-      </div>
-      <div class="item">
-        <span class="label">实收合计</span>
-        <strong class="value">{{ receivedTotal }}</strong>
-      </div>
-      <div class="item">
-        <span class="label">应付合计</span>
-        <strong class="value">{{ payableTotal }}</strong>
-      </div>
-      <div class="item">
-        <span class="label">退款合计</span>
-        <strong class="value">{{ refundTotal }}</strong>
-      </div>
-    </div>
+    <finance-summary-bar
+      :receivable-total="receivableTotal"
+      :received-total="receivedTotal"
+      :payable-total="payableTotal"
+      :refund-total="refundTotal"
+    />
+
+    <finance-order-toolbar
+      :orders="orderOptions"
+      :active-order-id="activeOrderId"
+      :active-order="activeOrder"
+      :order-status-label="orderStatusLabel"
+      @add-receivable="openReceivable()"
+      @add-payable="openPayable()"
+      @add-refund="openRefund()"
+      @order-change="loadForOrder"
+    />
 
     <a-card class="section-card" :bordered="false">
-      <div class="toolbar-row">
-        <a-select v-model:value="activeOrderId" style="width: 340px" placeholder="选择订单" @change="loadForOrder">
-          <a-select-option v-for="item in orderOptions" :key="item.id" :value="item.id">
-            {{ item.orderNo }} ({{ orderStatusLabel(item.status) }})
-          </a-select-option>
-        </a-select>
-        <a-button type="primary" :disabled="!activeOrderId" @click="openReceivable()">新增应收</a-button>
-        <a-button :disabled="!activeOrderId" @click="openPayable()">新增应付</a-button>
-        <a-button danger :disabled="!activeOrderId" @click="openRefund()">新增退款</a-button>
-      </div>
-
-      <a-alert
-        v-if="activeOrder"
-        style="margin-top: 10px"
-        type="info"
-        show-icon
-        :message="`当前订单：${activeOrder.orderNo} / ${orderStatusLabel(activeOrder.status)}`"
-        :description="`客户ID：${activeOrder.customerId}，订单金额：${activeOrder.totalAmount} ${activeOrder.currency}`"
-      />
-
-      <div class="grid-3" style="margin-top: 10px">
+      <div class="grid-3">
         <finance-ledger-table
           title="应收列表"
           mode="receivable"
@@ -119,6 +98,8 @@ import { financeApi } from '../api/crm';
 import FinanceFormModal from '../components/finance/FinanceFormModal.vue';
 import FinanceLedgerTable from '../components/finance/FinanceLedgerTable.vue';
 import FinanceRecordTable from '../components/finance/FinanceRecordTable.vue';
+import FinanceSummaryBar from '../components/finance/FinanceSummaryBar.vue';
+import FinanceOrderToolbar from '../components/finance/FinanceOrderToolbar.vue';
 import { ORDER_STATUS_LABEL_MAP, enumLabel } from '../constants/display';
 import { useAuthStore } from '../stores/auth';
 import { canFinanceReviewByRole } from '../utils/role';
@@ -461,18 +442,56 @@ onMounted(async () => {
 <style scoped>
 .finance-page {
   display: grid;
-  gap: 10px;
+  gap: 16px;
+  padding: 16px;
 }
 
 .grid-3 {
   display: grid;
-  gap: 10px;
+  gap: 16px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.section-card {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+
 @media (max-width: 1200px) {
+  .finance-page {
+    padding: 12px;
+  }
+
   .grid-3 {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
+}
+
+/* 确保卡片等高 */
+:deep(.ant-card) {
+  height: 100%;
+}
+
+:deep(.ant-card-body) {
+  height: calc(100% - 40px);
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.ant-table-wrapper) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.ant-table-container) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.ant-table-body) {
+  flex: 1;
 }
 </style>

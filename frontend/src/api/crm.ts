@@ -119,6 +119,8 @@ export const orderApi = {
   page: (params: { page?: number; size?: number; keyword?: string; status?: string; customerId?: string }) =>
     http.get<ApiResponse<PageResult<any>>>('/orders/page', { params }),
   contextOptions: () => http.get<ApiResponse<any>>('/orders/context-options'),
+  routeDepartures: (routeId: string) =>
+    http.get<ApiResponse<any[]>>(`/orders/context-options/routes/${routeId}/departures`),
   customerTravelers: (customerId: string) =>
     http.get<ApiResponse<any[]>>(`/orders/context-options/customers/${customerId}/travelers`),
   departurePrices: (departureId: string) =>

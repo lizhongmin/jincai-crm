@@ -124,8 +124,14 @@ public class OrderService {
         return new OrderContextOptionsView(
             listVisibleCustomers(user),
             routeRepository.findByDeletedFalse(),
-            departureRepository.findByDeletedFalse()
+            List.of() // 剥离全量 departures
         );
+    }
+
+    public List<com.jincai.crm.product.entity.Departure> routeDepartures(String routeId) {
+        return departureRepository.findByDeletedFalse().stream()
+            .filter(d -> d.getRouteId() != null && d.getRouteId().equals(routeId))
+            .toList();
     }
 
     public OrderDetailView detail(String id) {
