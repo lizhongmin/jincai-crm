@@ -10,6 +10,7 @@ import com.jincai.crm.system.entity.RolePermission;
 import com.jincai.crm.system.repository.PermissionRepository;
 import com.jincai.crm.system.repository.RolePermissionRepository;
 import com.jincai.crm.system.repository.RoleRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -22,6 +23,7 @@ import java.util.Locale;
 import java.util.Set;
 
 @Service
+@Slf4j
 public class RoleService {
 
     private static final String ADMIN_ROLE_CODE = "ADMIN";
@@ -85,48 +87,78 @@ public class RoleService {
     }
 
     public Role create(RoleRequest request) {
-        if (ADMIN_ROLE_CODE.equalsIgnoreCase(request.code())) {
-            throw new BusinessException("error.role.admin.builtinCreateDenied");
+        log.info("创建角色 - 角色代码: {}, 角色名称: {}", request.code(), request.name());
+        try {
+            if (ADMIN_ROLE_CODE.equalsIgnoreCase(request.code())) {
+                throw new BusinessException("error.role.admin.builtinCreateDenied");
+            }
+            Role role = new Role();
+            role.setCode(request.code());
+            role.setName(request.name());
+            role.setDescription(request.description());
+            role.setDataScope(request.dataScope());
+            Role saved = roleRepository.save(role);
+            log.info("角色创建成功 - 角色ID: {}, 角色代码: {}", saved.getId(), saved.getCode());
+            return saved;
+        } catch (Exception e) {
+            log.error("创建角色失败 - 角色代码: {}", request.code(), e);
+            throw e;
         }
-        Role role = new Role();
-        role.setCode(request.code());
-        role.setName(request.name());
-        role.setDescription(request.description());
-        role.setDataScope(request.dataScope());
-        return roleRepository.save(role);
     }
 
     public Role update(String id, RoleRequest request) {
-        Role role = roleRepository.findById(id).orElseThrow(() -> new BusinessException("error.role.notFound"));
-        ensureNotAdminRole(role);
-        role.setCode(request.code());
-        role.setName(request.name());
-        role.setDescription(request.description());
-        role.setDataScope(request.dataScope());
-        return roleRepository.save(role);
+        log.info("更新角色 - 角色ID: {}, 角色代码: {}, 角色名称: {}", id, request.code(), request.name());
+        try {
+            Role role = roleRepository.findById(id).orElseThrow(() -> new BusinessException("error.role.notFound"));
+            ensureNotAdminRole(role);
+            role.setCode(request.code());
+            role.setName(request.name());
+            role.setDescription(request.description());
+            role.setDataScope(request.dataScope());
+            Role saved = roleRepository.save(role);
+            log.info("角色更新成功 - 角色ID: {}, 角色代码: {}", id, saved.getCode());
+            return saved;
+        } catch (Exception e) {
+            log.error("更新角色失败 - 角色ID: {}", id, e);
+            throw e;
+        }
     }
 
     public void delete(String id) {
-        Role role = roleRepository.findById(id).orElseThrow(() -> new BusinessException("error.role.notFound"));
-        ensureNotAdminRole(role);
-        role.setDeleted(true);
-        roleRepository.save(role);
+        log.info("删除角色 - 角色ID: {}", id);
+        try {
+            Role role = roleRepository.findById(id).orElseThrow(() -> new BusinessException("error.role.notFound"));
+            ensureNotAdminRole(role);
+            role.setDeleted(true);
+            roleRepository.save(role);
+            log.info("角色删除成功 - 角色ID: {}", id);
+        } catch (Exception e) {
+            log.error("删除角色失败 - 角色ID: {}", id, e);
+            throw e;
+        }
     }
 
     @Transactional
     public void grant(String id, RoleGrantRequest request) {
-        Role role = roleRepository.findById(id).orElseThrow(() -> new BusinessException("error.role.notFound"));
-        if (Boolean.TRUE.equals(role.getDeleted())) {
-            throw new BusinessException("error.role.notFound");
+        log.info("为角色授权 - 角色ID: {}, 授权数量: {}", id, request.permissionIds().size());
+        try {
+            Role role = roleRepository.findById(id).orElseThrow(() -> new BusinessException("error.role.notFound"));
+            if (Boolean.TRUE.equals(role.getDeleted())) {
+                throw new BusinessException("error.role.notFound");
+            }
+            ensureNotAdminRole(role);
+            rolePermissionRepository.deleteByRoleId(id);
+            request.permissionIds().forEach(permissionId -> {
+                RolePermission rp = new RolePermission();
+                rp.setRoleId(id);
+                rp.setPermissionId(permissionId);
+                rolePermissionRepository.save(rp);
+            });
+            log.info("角色授权成功 - 角色ID: {}", id);
+        } catch (Exception e) {
+            log.error("角色授权失败 - 角色ID: {}", id, e);
+            throw e;
         }
-        ensureNotAdminRole(role);
-        rolePermissionRepository.deleteByRoleId(id);
-        request.permissionIds().forEach(permissionId -> {
-            RolePermission rp = new RolePermission();
-            rp.setRoleId(id);
-            rp.setPermissionId(permissionId);
-            rolePermissionRepository.save(rp);
-        });
     }
 
     private void ensureNotAdminRole(Role role) {

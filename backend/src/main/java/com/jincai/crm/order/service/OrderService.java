@@ -1,5 +1,6 @@
 package com.jincai.crm.order.service;
 
+import lombok.extern.slf4j.Slf4j;
 import com.jincai.crm.audit.service.AuditLogService;
 import com.jincai.crm.common.*;
 import com.jincai.crm.customer.entity.Customer;
@@ -42,6 +43,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
+@Slf4j
 public class OrderService {
 
     private static final String CNY = "CNY";
@@ -162,64 +164,87 @@ public class OrderService {
 
     @Transactional
     public TravelOrder create(OrderRequest request, LoginUser user) {
-        if (user == null) {
-            throw new BusinessException("error.auth.unauthenticated");
-        }
-        assertCnyCurrency(request.currency());
-        TravelOrder order = new TravelOrder();
-        order.setOrderNo(request.orderNo() == null || request.orderNo().isBlank() ? generateOrderNo() : request.orderNo());
-        order.setCustomerId(request.customerId());
-        order.setRouteId(request.routeId());
-        order.setDepartureId(request.departureId());
-        order.setOrderType(request.orderType());
-        order.setCurrency(CNY);
-        order.setSalesUserId(user.getUserId());
-        order.setSalesDeptId(user.getDepartmentId());
+        log.info("创建订单 - 客户ID: {}, 线路ID: {}, 出团ID: {}, 订单类型: {}",
+                request.customerId(), request.routeId(), request.departureId(), request.orderType());
+        try {
+            if (user == null) {
+                throw new BusinessException("error.auth.unauthenticated");
+            }
+            assertCnyCurrency(request.currency());
+            TravelOrder order = new TravelOrder();
+            order.setOrderNo(request.orderNo() == null || request.orderNo().isBlank() ? generateOrderNo() : request.orderNo());
+            order.setCustomerId(request.customerId());
+            order.setRouteId(request.routeId());
+            order.setDepartureId(request.departureId());
+            order.setOrderType(request.orderType());
+            order.setCurrency(CNY);
+            order.setSalesUserId(user.getUserId());
+            order.setSalesDeptId(user.getDepartmentId());
 
-        PricingCalculation calculation = applyOrderAmounts(order, request);
-        applyPolicy(order, resolvePolicy(request.routeId(), request.departureId()), true);
-        TravelOrder saved = orderRepository.save(order);
-        persistPricing(saved.getId(), calculation);
-        addStatusLog(saved.getId(), null, OrderStatus.DRAFT.name(), "Order created");
-        return saved;
+            PricingCalculation calculation = applyOrderAmounts(order, request);
+            applyPolicy(order, resolvePolicy(request.routeId(), request.departureId()), true);
+            TravelOrder saved = orderRepository.save(order);
+            persistPricing(saved.getId(), calculation);
+            addStatusLog(saved.getId(), null, OrderStatus.DRAFT.name(), "Order created");
+            log.info("订单创建成功 - 订单ID: {}, 订单号: {}", saved.getId(), saved.getOrderNo());
+            return saved;
+        } catch (Exception e) {
+            log.error("创建订单失败 - 客户ID: {}, 线路ID: {}", request.customerId(), request.routeId(), e);
+            throw e;
+        }
     }
 
     @Transactional
     public TravelOrder update(String id, OrderRequest request, HttpServletRequest httpServletRequest) {
-        TravelOrder order = orderRepository.findById(id).orElseThrow(() -> new BusinessException("error.order.notFound"));
-        validateEditable(order);
-        assertCnyCurrency(request.currency());
-        Map<String, Object> before = Map.of(
-            "travelerCount", order.getTravelerCount(),
-            "totalAmount", order.getTotalAmount(),
-            "departureId", order.getDepartureId()
-        );
-        order.setCustomerId(request.customerId());
-        order.setRouteId(request.routeId());
-        order.setDepartureId(request.departureId());
-        order.setOrderType(request.orderType());
-        order.setCurrency(CNY);
+        log.info("更新订单 - 订单ID: {}, 客户ID: {}, 线路ID: {}, 出团ID: {}, 订单类型: {}",
+                id, request.customerId(), request.routeId(), request.departureId(), request.orderType());
+        try {
+            TravelOrder order = orderRepository.findById(id).orElseThrow(() -> new BusinessException("error.order.notFound"));
+            validateEditable(order);
+            assertCnyCurrency(request.currency());
+            Map<String, Object> before = Map.of(
+                "travelerCount", order.getTravelerCount(),
+                "totalAmount", order.getTotalAmount(),
+                "departureId", order.getDepartureId()
+            );
+            order.setCustomerId(request.customerId());
+            order.setRouteId(request.routeId());
+            order.setDepartureId(request.departureId());
+            order.setOrderType(request.orderType());
+            order.setCurrency(CNY);
 
-        PricingCalculation calculation = applyOrderAmounts(order, request);
-        applyPolicy(order, resolvePolicy(request.routeId(), request.departureId()), false);
-        TravelOrder saved = orderRepository.save(order);
-        replacePricing(saved.getId(), calculation);
-        Map<String, Object> after = Map.of(
-            "travelerCount", saved.getTravelerCount(),
-            "totalAmount", saved.getTotalAmount(),
-            "departureId", saved.getDepartureId()
-        );
-        auditLogService.logDiff("ORDER", saved.getId(), before, after, httpServletRequest.getRemoteAddr());
-        return saved;
+            PricingCalculation calculation = applyOrderAmounts(order, request);
+            applyPolicy(order, resolvePolicy(request.routeId(), request.departureId()), false);
+            TravelOrder saved = orderRepository.save(order);
+            replacePricing(saved.getId(), calculation);
+            Map<String, Object> after = Map.of(
+                "travelerCount", saved.getTravelerCount(),
+                "totalAmount", saved.getTotalAmount(),
+                "departureId", saved.getDepartureId()
+            );
+            auditLogService.logDiff("ORDER", saved.getId(), before, after, httpServletRequest.getRemoteAddr());
+            log.info("订单更新成功 - 订单ID: {}, 订单号: {}", saved.getId(), saved.getOrderNo());
+            return saved;
+        } catch (Exception e) {
+            log.error("更新订单失败 - 订单ID: {}", id, e);
+            throw e;
+        }
     }
 
     @Transactional
     public void delete(String id) {
-        TravelOrder order = orderRepository.findById(id).orElseThrow(() -> new BusinessException("error.order.notFound"));
-        validateEditable(order);
-        order.setDeleted(true);
-        orderRepository.save(order);
-        markPricingDeleted(id);
+        log.info("删除订单 - 订单ID: {}", id);
+        try {
+            TravelOrder order = orderRepository.findById(id).orElseThrow(() -> new BusinessException("error.order.notFound"));
+            validateEditable(order);
+            order.setDeleted(true);
+            orderRepository.save(order);
+            markPricingDeleted(id);
+            log.info("订单删除成功 - 订单ID: {}", id);
+        } catch (Exception e) {
+            log.error("删除订单失败 - 订单ID: {}", id, e);
+            throw e;
+        }
     }
 
     public List<Traveler> customerTravelers(String customerId, LoginUser user) {

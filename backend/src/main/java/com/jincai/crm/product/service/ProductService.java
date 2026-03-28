@@ -13,6 +13,7 @@ import com.jincai.crm.product.repository.DeparturePriceRepository;
 import com.jincai.crm.product.repository.DepartureRepository;
 import com.jincai.crm.product.repository.RouteProductRepository;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -31,6 +32,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
 
 @Service
+@Slf4j
 public class ProductService {
 
     private static final String CNY = "CNY";
@@ -86,16 +88,32 @@ public class ProductService {
 
     @Transactional
     public RouteProduct createRoute(@Valid RouteRequest request) {
-        RouteProduct route = new RouteProduct();
-        applyRoute(route, request);
-        return routeRepository.save(route);
+        log.info("创建线路产品 - 线路名称: {}, 类别: {}, 出发城市: {}", request.name(), request.category(), request.departureCity());
+        try {
+            RouteProduct route = new RouteProduct();
+            applyRoute(route, request);
+            RouteProduct saved = routeRepository.save(route);
+            log.info("线路产品创建成功 - 线路ID: {}, 线路代码: {}", saved.getId(), saved.getCode());
+            return saved;
+        } catch (Exception e) {
+            log.error("创建线路产品失败 - 线路名称: {}", request.name(), e);
+            throw e;
+        }
     }
 
     @Transactional
     public RouteProduct updateRoute(String id, @Valid RouteRequest request) {
-        RouteProduct route = routeRepository.findById(id).orElseThrow(() -> new BusinessException("error.route.notFound"));
-        applyRoute(route, request);
-        return routeRepository.save(route);
+        log.info("更新线路产品 - 线路ID: {}, 线路名称: {}", id, request.name());
+        try {
+            RouteProduct route = routeRepository.findById(id).orElseThrow(() -> new BusinessException("error.route.notFound"));
+            applyRoute(route, request);
+            RouteProduct saved = routeRepository.save(route);
+            log.info("线路产品更新成功 - 线路ID: {}, 线路代码: {}", id, saved.getCode());
+            return saved;
+        } catch (Exception e) {
+            log.error("更新线路产品失败 - 线路ID: {}", id, e);
+            throw e;
+        }
     }
 
     @Transactional
@@ -145,25 +163,48 @@ public class ProductService {
 
     @Transactional
     public Departure createDeparture(@Valid DepartureRequest request) {
-        routeRepository.findById(request.routeId()).orElseThrow(() -> new BusinessException("error.route.notFound"));
-        Departure departure = new Departure();
-        applyDeparture(departure, request);
-        return departureRepository.save(departure);
+        log.info("创建出团日期 - 线路ID: {}, 出团日期: {}, 状态: {}", request.routeId(), request.startDate(), request.status());
+        try {
+            routeRepository.findById(request.routeId()).orElseThrow(() -> new BusinessException("error.route.notFound"));
+            Departure departure = new Departure();
+            applyDeparture(departure, request);
+            Departure saved = departureRepository.save(departure);
+            log.info("出团日期创建成功 - 出团ID: {}, 出团代码: {}", saved.getId(), saved.getCode());
+            return saved;
+        } catch (Exception e) {
+            log.error("创建出团日期失败 - 线路ID: {}, 出团日期: {}", request.routeId(), request.startDate(), e);
+            throw e;
+        }
     }
 
     @Transactional
     public Departure updateDeparture(String id, @Valid DepartureRequest request) {
-        routeRepository.findById(request.routeId()).orElseThrow(() -> new BusinessException("error.route.notFound"));
-        Departure departure = departureRepository.findById(id).orElseThrow(() -> new BusinessException("error.departure.notFound"));
-        applyDeparture(departure, request);
-        return departureRepository.save(departure);
+        log.info("更新出团日期 - 出团ID: {}, 线路ID: {}, 出团日期: {}", id, request.routeId(), request.startDate());
+        try {
+            routeRepository.findById(request.routeId()).orElseThrow(() -> new BusinessException("error.route.notFound"));
+            Departure departure = departureRepository.findById(id).orElseThrow(() -> new BusinessException("error.departure.notFound"));
+            applyDeparture(departure, request);
+            Departure saved = departureRepository.save(departure);
+            log.info("出团日期更新成功 - 出团ID: {}, 出团代码: {}", id, saved.getCode());
+            return saved;
+        } catch (Exception e) {
+            log.error("更新出团日期失败 - 出团ID: {}", id, e);
+            throw e;
+        }
     }
 
     @Transactional
     public void deleteDeparture(String id) {
-        Departure departure = departureRepository.findById(id).orElseThrow(() -> new BusinessException("error.departure.notFound"));
-        departure.setDeleted(true);
-        departureRepository.save(departure);
+        log.info("删除出团日期 - 出团ID: {}", id);
+        try {
+            Departure departure = departureRepository.findById(id).orElseThrow(() -> new BusinessException("error.departure.notFound"));
+            departure.setDeleted(true);
+            departureRepository.save(departure);
+            log.info("出团日期删除成功 - 出团ID: {}", id);
+        } catch (Exception e) {
+            log.error("删除出团日期失败 - 出团ID: {}", id, e);
+            throw e;
+        }
     }
 
     public List<DeparturePrice> prices(String departureId) {
@@ -241,27 +282,50 @@ public class ProductService {
 
     @Transactional
     public DeparturePrice addPrice(String departureId, @Valid DeparturePriceRequest request) {
-        departureRepository.findById(departureId).orElseThrow(() -> new BusinessException("error.departure.notFound"));
-        DeparturePrice price = new DeparturePrice();
-        price.setDepartureId(departureId);
-        applyPrice(price, request);
-        return priceRepository.save(price);
+        log.info("添加出团价格 - 出团ID: {}, 价格类型: {}, 价格: {}", departureId, request.priceType(), request.price());
+        try {
+            departureRepository.findById(departureId).orElseThrow(() -> new BusinessException("error.departure.notFound"));
+            DeparturePrice price = new DeparturePrice();
+            price.setDepartureId(departureId);
+            applyPrice(price, request);
+            DeparturePrice saved = priceRepository.save(price);
+            log.info("出团价格添加成功 - 价格ID: {}, 出团ID: {}", saved.getId(), departureId);
+            return saved;
+        } catch (Exception e) {
+            log.error("添加出团价格失败 - 出团ID: {}", departureId, e);
+            throw e;
+        }
     }
 
     @Transactional
     public DeparturePrice updatePrice(String departureId, String priceId, @Valid DeparturePriceRequest request) {
-        departureRepository.findById(departureId).orElseThrow(() -> new BusinessException("error.departure.notFound"));
-        DeparturePrice price = priceRepository.findById(priceId).orElseThrow(() -> new BusinessException("error.price.notFound"));
-        applyPrice(price, request);
-        return priceRepository.save(price);
+        log.info("更新出团价格 - 价格ID: {}, 出团ID: {}, 价格类型: {}, 价格: {}", priceId, departureId, request.priceType(), request.price());
+        try {
+            departureRepository.findById(departureId).orElseThrow(() -> new BusinessException("error.departure.notFound"));
+            DeparturePrice price = priceRepository.findById(priceId).orElseThrow(() -> new BusinessException("error.price.notFound"));
+            applyPrice(price, request);
+            DeparturePrice saved = priceRepository.save(price);
+            log.info("出团价格更新成功 - 价格ID: {}, 出团ID: {}", priceId, departureId);
+            return saved;
+        } catch (Exception e) {
+            log.error("更新出团价格失败 - 价格ID: {}, 出团ID: {}", priceId, departureId, e);
+            throw e;
+        }
     }
 
     @Transactional
     public void deletePrice(String departureId, String priceId) {
-        departureRepository.findById(departureId).orElseThrow(() -> new BusinessException("error.departure.notFound"));
-        DeparturePrice price = priceRepository.findById(priceId).orElseThrow(() -> new BusinessException("error.price.notFound"));
-        price.setDeleted(true);
-        priceRepository.save(price);
+        log.info("删除出团价格 - 价格ID: {}, 出团ID: {}", priceId, departureId);
+        try {
+            departureRepository.findById(departureId).orElseThrow(() -> new BusinessException("error.departure.notFound"));
+            DeparturePrice price = priceRepository.findById(priceId).orElseThrow(() -> new BusinessException("error.price.notFound"));
+            price.setDeleted(true);
+            priceRepository.save(price);
+            log.info("出团价格删除成功 - 价格ID: {}, 出团ID: {}", priceId, departureId);
+        } catch (Exception e) {
+            log.error("删除出团价格失败 - 价格ID: {}, 出团ID: {}", priceId, departureId, e);
+            throw e;
+        }
     }
 
     private void applyRoute(RouteProduct route, RouteRequest request) {

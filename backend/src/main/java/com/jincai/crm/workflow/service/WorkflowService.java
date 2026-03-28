@@ -27,6 +27,7 @@ import com.jincai.crm.workflow.repository.WorkflowInstanceNodeRepository;
 import com.jincai.crm.workflow.repository.WorkflowInstanceRepository;
 import com.jincai.crm.workflow.repository.WorkflowTemplateNodeRepository;
 import com.jincai.crm.workflow.repository.WorkflowTemplateRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -41,6 +42,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class WorkflowService {
 
     private final WorkflowTemplateRepository templateRepository;
@@ -200,80 +202,105 @@ public class WorkflowService {
 
     @Transactional
     public void startWorkflow(TravelOrder order) {
-        closeActiveInstance(order.getId(), "REPLACED");
-        WorkflowTemplate template = matchTemplate(order);
-        List<WorkflowTemplateNode> templateNodes = templateNodeRepository.findByTemplateIdAndDeletedFalseOrderByStepOrderAsc(template.getId());
-        if (templateNodes.isEmpty()) {
-            throw new BusinessException("error.workflow.template.noNodes");
+        log.info("启动工作流 - 订单ID: {}, 订单号: {}, 订单类型: {}", order.getId(), order.getOrderNo(), order.getOrderType());
+        try {
+            closeActiveInstance(order.getId(), "REPLACED");
+            WorkflowTemplate template = matchTemplate(order);
+            log.debug("匹配到工作流模板 - 模板ID: {}, 模板名称: {}", template.getId(), template.getName());
+            List<WorkflowTemplateNode> templateNodes = templateNodeRepository.findByTemplateIdAndDeletedFalseOrderByStepOrderAsc(template.getId());
+            if (templateNodes.isEmpty()) {
+                throw new BusinessException("error.workflow.template.noNodes");
+            }
+            WorkflowInstance instance = new WorkflowInstance();
+            instance.setTemplateId(template.getId());
+            instance.setOrderId(order.getId());
+            instance.setCurrentStep(templateNodes.get(0).getStepOrder());
+            instance.setStatus("RUNNING");
+            WorkflowInstance savedInstance = instanceRepository.save(instance);
+            log.debug("创建工作流实例 - 实例ID: {}", savedInstance.getId());
+
+            templateNodes.forEach(node -> {
+                WorkflowInstanceNode in = new WorkflowInstanceNode();
+                in.setInstanceId(savedInstance.getId());
+                in.setStepOrder(node.getStepOrder());
+                in.setNodeName(node.getNodeName());
+                in.setApproverRoleCode(node.getApproverRoleCode());
+                in.setStatus(node.getStepOrder().equals(savedInstance.getCurrentStep()) ? "PENDING" : "WAITING");
+                instanceNodeRepository.save(in);
+            });
+
+            sendNodeNotification(savedInstance.getId(), savedInstance.getCurrentStep(), order.getOrderNo());
+            log.info("工作流启动成功 - 实例ID: {}, 订单ID: {}", savedInstance.getId(), order.getId());
+        } catch (Exception e) {
+            log.error("启动工作流失败 - 订单ID: {}", order.getId(), e);
+            throw e;
         }
-        WorkflowInstance instance = new WorkflowInstance();
-        instance.setTemplateId(template.getId());
-        instance.setOrderId(order.getId());
-        instance.setCurrentStep(templateNodes.get(0).getStepOrder());
-        instance.setStatus("RUNNING");
-        WorkflowInstance savedInstance = instanceRepository.save(instance);
-
-        templateNodes.forEach(node -> {
-            WorkflowInstanceNode in = new WorkflowInstanceNode();
-            in.setInstanceId(savedInstance.getId());
-            in.setStepOrder(node.getStepOrder());
-            in.setNodeName(node.getNodeName());
-            in.setApproverRoleCode(node.getApproverRoleCode());
-            in.setStatus(node.getStepOrder().equals(savedInstance.getCurrentStep()) ? "PENDING" : "WAITING");
-            instanceNodeRepository.save(in);
-        });
-
-        sendNodeNotification(savedInstance.getId(), savedInstance.getCurrentStep(), order.getOrderNo());
     }
 
     @Transactional
     public boolean approve(String orderId, LoginUser currentUser, String comment) {
-        WorkflowInstance instance = instanceRepository.findByOrderIdAndDeletedFalse(orderId)
-            .orElseThrow(() -> new BusinessException("error.workflow.instance.notFound"));
-        if (!"RUNNING".equals(instance.getStatus())) {
-            throw new BusinessException("error.workflow.instance.notRunning");
-        }
-        WorkflowInstanceNode node = instanceNodeRepository
-            .findByInstanceIdAndStepOrderAndDeletedFalse(instance.getId(), instance.getCurrentStep())
-            .orElseThrow(() -> new BusinessException("error.workflow.node.currentNotFound"));
-        checkApprover(currentUser, node.getApproverRoleCode());
-        node.setStatus("APPROVED");
-        node.setComment(comment);
-        instanceNodeRepository.save(node);
+        log.info("审批工作流节点 - 订单ID: {}, 审批人: {}, 审批意见: {}", orderId, currentUser.getUserId(), comment);
+        try {
+            WorkflowInstance instance = instanceRepository.findByOrderIdAndDeletedFalse(orderId)
+                .orElseThrow(() -> new BusinessException("error.workflow.instance.notFound"));
+            if (!"RUNNING".equals(instance.getStatus())) {
+                throw new BusinessException("error.workflow.instance.notRunning");
+            }
+            WorkflowInstanceNode node = instanceNodeRepository
+                .findByInstanceIdAndStepOrderAndDeletedFalse(instance.getId(), instance.getCurrentStep())
+                .orElseThrow(() -> new BusinessException("error.workflow.node.currentNotFound"));
+            checkApprover(currentUser, node.getApproverRoleCode());
+            node.setStatus("APPROVED");
+            node.setComment(comment);
+            instanceNodeRepository.save(node);
+            log.debug("当前节点审批通过 - 节点ID: {}, 实例ID: {}", node.getId(), instance.getId());
 
-        List<WorkflowInstanceNode> allNodes = instanceNodeRepository.findByInstanceIdAndDeletedFalseOrderByStepOrderAsc(instance.getId());
-        Optional<WorkflowInstanceNode> next = allNodes.stream().filter(n -> n.getStepOrder() > node.getStepOrder()).findFirst();
-        if (next.isEmpty()) {
-            instance.setStatus("APPROVED");
+            List<WorkflowInstanceNode> allNodes = instanceNodeRepository.findByInstanceIdAndDeletedFalseOrderByStepOrderAsc(instance.getId());
+            Optional<WorkflowInstanceNode> next = allNodes.stream().filter(n -> n.getStepOrder() > node.getStepOrder()).findFirst();
+            if (next.isEmpty()) {
+                instance.setStatus("APPROVED");
+                instanceRepository.save(instance);
+                log.info("工作流审批完成 - 实例ID: {}, 订单ID: {}", instance.getId(), orderId);
+                return true;
+            }
+
+            WorkflowInstanceNode nextNode = next.get();
+            nextNode.setStatus("PENDING");
+            instanceNodeRepository.save(nextNode);
+            instance.setCurrentStep(nextNode.getStepOrder());
             instanceRepository.save(instance);
-            return true;
+            sendNodeNotification(instance.getId(), nextNode.getStepOrder(), "ORDER-" + orderId);
+            log.info("工作流进入下一步 - 实例ID: {}, 下一步节点: {}, 订单ID: {}", instance.getId(), nextNode.getStepOrder(), orderId);
+            return false;
+        } catch (Exception e) {
+            log.error("审批工作流节点失败 - 订单ID: {}", orderId, e);
+            throw e;
         }
-
-        WorkflowInstanceNode nextNode = next.get();
-        nextNode.setStatus("PENDING");
-        instanceNodeRepository.save(nextNode);
-        instance.setCurrentStep(nextNode.getStepOrder());
-        instanceRepository.save(instance);
-        sendNodeNotification(instance.getId(), nextNode.getStepOrder(), "ORDER-" + orderId);
-        return false;
     }
 
     @Transactional
     public void reject(String orderId, LoginUser currentUser, String comment) {
-        WorkflowInstance instance = instanceRepository.findByOrderIdAndDeletedFalse(orderId)
-            .orElseThrow(() -> new BusinessException("error.workflow.instance.notFound"));
-        if (!"RUNNING".equals(instance.getStatus())) {
-            throw new BusinessException("error.workflow.instance.notRunning");
+        log.info("拒绝工作流节点 - 订单ID: {}, 审批人: {}, 拒绝意见: {}", orderId, currentUser.getUserId(), comment);
+        try {
+            WorkflowInstance instance = instanceRepository.findByOrderIdAndDeletedFalse(orderId)
+                .orElseThrow(() -> new BusinessException("error.workflow.instance.notFound"));
+            if (!"RUNNING".equals(instance.getStatus())) {
+                throw new BusinessException("error.workflow.instance.notRunning");
+            }
+            WorkflowInstanceNode node = instanceNodeRepository
+                .findByInstanceIdAndStepOrderAndDeletedFalse(instance.getId(), instance.getCurrentStep())
+                .orElseThrow(() -> new BusinessException("error.workflow.node.currentNotFound"));
+            checkApprover(currentUser, node.getApproverRoleCode());
+            node.setStatus("REJECTED");
+            node.setComment(comment);
+            instanceNodeRepository.save(node);
+            instance.setStatus("REJECTED");
+            instanceRepository.save(instance);
+            log.info("工作流节点被拒绝 - 实例ID: {}, 节点ID: {}, 订单ID: {}", instance.getId(), node.getId(), orderId);
+        } catch (Exception e) {
+            log.error("拒绝工作流节点失败 - 订单ID: {}", orderId, e);
+            throw e;
         }
-        WorkflowInstanceNode node = instanceNodeRepository
-            .findByInstanceIdAndStepOrderAndDeletedFalse(instance.getId(), instance.getCurrentStep())
-            .orElseThrow(() -> new BusinessException("error.workflow.node.currentNotFound"));
-        checkApprover(currentUser, node.getApproverRoleCode());
-        node.setStatus("REJECTED");
-        node.setComment(comment);
-        instanceNodeRepository.save(node);
-        instance.setStatus("REJECTED");
-        instanceRepository.save(instance);
     }
 
     @Transactional

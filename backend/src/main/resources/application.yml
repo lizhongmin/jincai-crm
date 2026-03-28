@@ -54,5 +54,8 @@ app:
 
 logging:
   level:
-    org.hibernate.SQL: info
-    root: info
+    root: INFO
+    com.jincai.crm: INFO
+    org.hibernate.SQL: WARN
+    org.springframework.security: WARN
+    org.springframework.web: WARN

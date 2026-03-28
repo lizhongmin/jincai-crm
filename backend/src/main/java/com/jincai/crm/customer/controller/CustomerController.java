@@ -55,7 +55,7 @@ public class CustomerController {
         try {
             LoginUser user = SecurityUtils.currentUser();
             PageResult<CustomerView> result = customerService.pageVisible(user, page, size, keyword, tab, ownerScope);
-            log.info("成功获取客户分页列表 - 第{}页, 共{}条记录", result.getPage(), result.getTotal());
+            log.info("成功获取客户分页列表 - 第{}页, 共{}条记录", result.page(), result.total());
             return ApiResponse.ok(result);
         } catch (Exception e) {
             log.error("获取客户分页列表失败 - 页码: {}, 大小: {}", page, size, e);
@@ -70,7 +70,7 @@ public class CustomerController {
                 SecurityUtils.currentUserId(), request.name(), request.phone());
         try {
             CustomerView result = customerService.create(request, SecurityUtils.currentUser());
-            log.info("成功创建客户 - 客户ID: {}, 客户姓名: {}", result.getId(), result.getName());
+            log.info("成功创建客户 - 客户ID: {}, 客户姓名: {}", result.id(), result.name());
             return ApiResponse.ok(result);
         } catch (Exception e) {
             log.error("创建客户失败 - 客户姓名: {}", request.name(), e);
@@ -85,7 +85,7 @@ public class CustomerController {
                 SecurityUtils.currentUserId(), id, request.name(), request.phone());
         try {
             CustomerView result = customerService.update(id, request, SecurityUtils.currentUser());
-            log.info("成功更新客户 - 客户ID: {}, 客户姓名: {}", id, result.getName());
+            log.info("成功更新客户 - 客户ID: {}, 客户姓名: {}", id, result.name());
             return ApiResponse.ok(result);
         } catch (Exception e) {
             log.error("更新客户失败 - 客户ID: {}", id, e);
@@ -128,7 +128,7 @@ public class CustomerController {
                 SecurityUtils.currentUserId(), file.getOriginalFilename(), file.getSize());
         try {
             ImportResult result = customerService.importCustomers(file, SecurityUtils.currentUser());
-            log.info("成功导入客户 - 成功: {} 条, 失败: {} 条", result.getSuccess(), result.getFailures());
+            log.info("成功导入客户 - 成功: {} 条, 失败: {} 条", result.success(), result.errors().size());
             return ApiResponse.ok(result);
         } catch (Exception e) {
             log.error("导入客户失败 - 文件名: {}", file.getOriginalFilename(), e);

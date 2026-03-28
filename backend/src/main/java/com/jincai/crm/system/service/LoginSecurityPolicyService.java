@@ -5,10 +5,12 @@ import com.jincai.crm.system.dto.LoginSecurityPolicyRequest;
 import com.jincai.crm.system.dto.LoginSecurityPolicyView;
 import com.jincai.crm.system.entity.LoginSecurityPolicy;
 import com.jincai.crm.system.repository.LoginSecurityPolicyRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Slf4j
 public class LoginSecurityPolicyService {
 
     private final LoginSecurityPolicyRepository repository;
@@ -30,18 +32,26 @@ public class LoginSecurityPolicyService {
 
     @Transactional
     public LoginSecurityPolicyView updatePolicy(LoginSecurityPolicyRequest request) {
-        validatePolicy(request);
-        LoginSecurityPolicy policy = getPolicyEntity();
-        policy.setCaptchaAfterFailures(request.captchaAfterFailures());
-        policy.setLockAfterFailures(request.lockAfterFailures());
-        policy.setLockMinutes(request.lockMinutes());
-        policy.setCaptchaExpireSeconds(request.captchaExpireSeconds());
-        policy.setPasswordMinLength(request.passwordMinLength());
-        policy.setPasswordRequireUppercase(request.passwordRequireUppercase());
-        policy.setPasswordRequireLowercase(request.passwordRequireLowercase());
-        policy.setPasswordRequireDigit(request.passwordRequireDigit());
-        policy.setPasswordRequireSpecial(request.passwordRequireSpecial());
-        return toView(repository.save(policy));
+        log.info("更新登录安全策略");
+        try {
+            validatePolicy(request);
+            LoginSecurityPolicy policy = getPolicyEntity();
+            policy.setCaptchaAfterFailures(request.captchaAfterFailures());
+            policy.setLockAfterFailures(request.lockAfterFailures());
+            policy.setLockMinutes(request.lockMinutes());
+            policy.setCaptchaExpireSeconds(request.captchaExpireSeconds());
+            policy.setPasswordMinLength(request.passwordMinLength());
+            policy.setPasswordRequireUppercase(request.passwordRequireUppercase());
+            policy.setPasswordRequireLowercase(request.passwordRequireLowercase());
+            policy.setPasswordRequireDigit(request.passwordRequireDigit());
+            policy.setPasswordRequireSpecial(request.passwordRequireSpecial());
+            LoginSecurityPolicy saved = repository.save(policy);
+            log.info("登录安全策略更新成功");
+            return toView(saved);
+        } catch (Exception e) {
+            log.error("更新登录安全策略失败", e);
+            throw e;
+        }
     }
 
     @Transactional(readOnly = true)

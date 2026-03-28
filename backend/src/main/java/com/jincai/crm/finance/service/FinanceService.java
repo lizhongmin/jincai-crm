@@ -11,8 +11,7 @@ import com.jincai.crm.order.repository.TravelOrderRepository;
 import com.jincai.crm.product.entity.Departure;
 import com.jincai.crm.product.repository.DepartureRepository;
 import com.jincai.crm.security.LoginUser;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,9 +21,9 @@ import java.util.List;
 import java.util.Set;
 
 @Service
+@Slf4j
 public class FinanceService {
 
-    private static final Logger log = LoggerFactory.getLogger(FinanceService.class);
 
     private final TravelOrderRepository orderRepository;
     private final ReceivableRepository receivableRepository;

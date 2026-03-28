@@ -11,11 +11,13 @@ import com.jincai.crm.system.entity.UserRole;
 import com.jincai.crm.system.repository.PermissionRepository;
 import com.jincai.crm.system.repository.RolePermissionRepository;
 import com.jincai.crm.system.repository.UserRoleRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
 
 @Service
+@Slf4j
 public class PermissionService {
 
     private final PermissionRepository permissionRepository;
@@ -202,20 +204,28 @@ public class PermissionService {
      * @return 创建的权限
      */
     public Permission create(PermissionRequest request) {
-        // 检查编码唯一性
-        if (permissionRepository.findByCodeAndDeletedFalse(request.code()).isPresent()) {
-            throw new BusinessException("error.permission.code.exists");
+        log.info("创建权限 - 权限代码: {}, 权限名称: {}, 类型: {}", request.code(), request.name(), request.type());
+        try {
+            // 检查编码唯一性
+            if (permissionRepository.findByCodeAndDeletedFalse(request.code()).isPresent()) {
+                throw new BusinessException("error.permission.code.exists");
+            }
+
+            Permission permission = new Permission();
+            permission.setCode(request.code());
+            permission.setName(request.name());
+            permission.setType(request.type());
+            permission.setMenuPath(request.menuPath());
+            permission.setParentId(request.parentId());
+            permission.setSortOrder(request.sortOrder());
+
+            Permission saved = permissionRepository.save(permission);
+            log.info("权限创建成功 - 权限ID: {}, 权限代码: {}", saved.getId(), saved.getCode());
+            return saved;
+        } catch (Exception e) {
+            log.error("创建权限失败 - 权限代码: {}", request.code(), e);
+            throw e;
         }
-
-        Permission permission = new Permission();
-        permission.setCode(request.code());
-        permission.setName(request.name());
-        permission.setType(request.type());
-        permission.setMenuPath(request.menuPath());
-        permission.setParentId(request.parentId());
-        permission.setSortOrder(request.sortOrder());
-
-        return permissionRepository.save(permission);
     }
 
     /**
@@ -225,27 +235,35 @@ public class PermissionService {
      * @return 更新后的权限
      */
     public Permission update(String id, PermissionRequest request) {
-        Permission permission = permissionRepository.findById(id)
-            .orElseThrow(() -> new BusinessException("error.permission.notFound"));
-        if (Boolean.TRUE.equals(permission.getDeleted())) {
-            throw new BusinessException("error.permission.notFound");
+        log.info("更新权限 - 权限ID: {}, 权限代码: {}, 权限名称: {}", id, request.code(), request.name());
+        try {
+            Permission permission = permissionRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("error.permission.notFound"));
+            if (Boolean.TRUE.equals(permission.getDeleted())) {
+                throw new BusinessException("error.permission.notFound");
+            }
+
+            // 检查编码唯一性（排除自身）
+            permissionRepository.findByCodeAndDeletedFalse(request.code())
+                .filter(p -> !p.getId().equals(id))
+                .ifPresent(p -> {
+                    throw new BusinessException("error.permission.code.exists");
+                });
+
+            permission.setCode(request.code());
+            permission.setName(request.name());
+            permission.setType(request.type());
+            permission.setMenuPath(request.menuPath());
+            permission.setParentId(request.parentId());
+            permission.setSortOrder(request.sortOrder());
+
+            Permission saved = permissionRepository.save(permission);
+            log.info("权限更新成功 - 权限ID: {}, 权限代码: {}", id, saved.getCode());
+            return saved;
+        } catch (Exception e) {
+            log.error("更新权限失败 - 权限ID: {}", id, e);
+            throw e;
         }
-
-        // 检查编码唯一性（排除自身）
-        permissionRepository.findByCodeAndDeletedFalse(request.code())
-            .filter(p -> !p.getId().equals(id))
-            .ifPresent(p -> {
-                throw new BusinessException("error.permission.code.exists");
-            });
-
-        permission.setCode(request.code());
-        permission.setName(request.name());
-        permission.setType(request.type());
-        permission.setMenuPath(request.menuPath());
-        permission.setParentId(request.parentId());
-        permission.setSortOrder(request.sortOrder());
-
-        return permissionRepository.save(permission);
     }
 
     /**
@@ -253,24 +271,31 @@ public class PermissionService {
      * @param id 权限ID
      */
     public void delete(String id) {
-        Permission permission = permissionRepository.findById(id)
-            .orElseThrow(() -> new BusinessException("error.permission.notFound"));
-        if (Boolean.TRUE.equals(permission.getDeleted())) {
-            throw new BusinessException("error.permission.notFound");
-        }
+        log.info("删除权限 - 权限ID: {}", id);
+        try {
+            Permission permission = permissionRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("error.permission.notFound"));
+            if (Boolean.TRUE.equals(permission.getDeleted())) {
+                throw new BusinessException("error.permission.notFound");
+            }
 
-        // 检查是否有子权限
-        if (!permissionRepository.findByParentIdAndDeletedFalse(id).isEmpty()) {
-            throw new BusinessException("error.permission.delete.hasChildren");
-        }
+            // 检查是否有子权限
+            if (!permissionRepository.findByParentIdAndDeletedFalse(id).isEmpty()) {
+                throw new BusinessException("error.permission.delete.hasChildren");
+            }
 
-        // 检查是否被角色引用
-        if (rolePermissionRepository.existsByPermissionIdAndDeletedFalse(id)) {
-            throw new BusinessException("error.permission.delete.inUse");
-        }
+            // 检查是否被角色引用
+            if (rolePermissionRepository.existsByPermissionIdAndDeletedFalse(id)) {
+                throw new BusinessException("error.permission.delete.inUse");
+            }
 
-        // 软删除
-        permission.setDeleted(true);
-        permissionRepository.save(permission);
+            // 软删除
+            permission.setDeleted(true);
+            permissionRepository.save(permission);
+            log.info("权限删除成功 - 权限ID: {}", id);
+        } catch (Exception e) {
+            log.error("删除权限失败 - 权限ID: {}", id, e);
+            throw e;
+        }
     }
 }

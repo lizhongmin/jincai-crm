@@ -14,6 +14,7 @@ import com.jincai.crm.system.repository.DepartmentRepository;
 import com.jincai.crm.system.repository.OrgUserRepository;
 import com.jincai.crm.system.repository.RoleRepository;
 import com.jincai.crm.system.repository.UserRoleRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -29,6 +30,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class UserService {
 
     private static final String ADMIN_USERNAME = "admin";
@@ -114,62 +116,100 @@ public class UserService {
 
     @Transactional
     public AppUserView create(UserUpsertRequest request) {
-        String normalizedPhone = normalizeRequired(request.phone(), "error.user.phone.required");
-        String normalizedEmployeeNo = normalizeNullable(request.employeeNo());
-        validatePhone(normalizedPhone, null);
-        validateEmployeeNo(normalizedEmployeeNo, null);
-        OrgUser user = new OrgUser();
-        user.setUsername(normalizeRequired(request.username(), "error.user.username.required"));
-        user.setPassword(passwordEncoder.encode(request.password() == null ? "123456" : request.password()));
-        applyUserFields(user, request, normalizedPhone, normalizedEmployeeNo);
-        OrgUser saved = userRepository.save(user);
-        saveRoles(saved.getId(), request.roleIds());
-        return toView(saved);
+        log.info("创建用户 - 用户名: {}, 姓名: {}, 手机号: {}",
+                request.username(), request.fullName(), request.phone());
+        try {
+            String normalizedPhone = normalizeRequired(request.phone(), "error.user.phone.required");
+            String normalizedEmployeeNo = normalizeNullable(request.employeeNo());
+            validatePhone(normalizedPhone, null);
+            validateEmployeeNo(normalizedEmployeeNo, null);
+            OrgUser user = new OrgUser();
+            user.setUsername(normalizeRequired(request.username(), "error.user.username.required"));
+            user.setPassword(passwordEncoder.encode(request.password() == null ? "123456" : request.password()));
+            applyUserFields(user, request, normalizedPhone, normalizedEmployeeNo);
+            OrgUser saved = userRepository.save(user);
+            saveRoles(saved.getId(), request.roleIds());
+            log.info("用户创建成功 - 用户ID: {}, 用户名: {}", saved.getId(), saved.getUsername());
+            return toView(saved);
+        } catch (Exception e) {
+            log.error("创建用户失败 - 用户名: {}", request.username(), e);
+            throw e;
+        }
     }
 
     @Transactional
     public AppUserView update(String id, UserUpsertRequest request) {
-        OrgUser user = userRepository.findById(id).orElseThrow(() -> new BusinessException("error.user.notFound"));
-        ensureNotAdminAccount(user);
-        String normalizedPhone = normalizeRequired(request.phone(), "error.user.phone.required");
-        String normalizedEmployeeNo = normalizeNullable(request.employeeNo());
-        validatePhone(normalizedPhone, id);
-        validateEmployeeNo(normalizedEmployeeNo, id);
+        log.info("更新用户 - 用户ID: {}, 用户名: {}, 姓名: {}",
+                id, request.username(), request.fullName());
+        try {
+            OrgUser user = userRepository.findById(id).orElseThrow(() -> new BusinessException("error.user.notFound"));
+            ensureNotAdminAccount(user);
+            String normalizedPhone = normalizeRequired(request.phone(), "error.user.phone.required");
+            String normalizedEmployeeNo = normalizeNullable(request.employeeNo());
+            validatePhone(normalizedPhone, id);
+            validateEmployeeNo(normalizedEmployeeNo, id);
 
-        applyUserFields(user, request, normalizedPhone, normalizedEmployeeNo);
-        if (request.password() != null && !request.password().isBlank()) {
-            user.setPassword(passwordEncoder.encode(request.password()));
+            applyUserFields(user, request, normalizedPhone, normalizedEmployeeNo);
+            if (request.password() != null && !request.password().isBlank()) {
+                log.debug("更新用户密码 - 用户ID: {}", id);
+                user.setPassword(passwordEncoder.encode(request.password()));
+            }
+            OrgUser saved = userRepository.save(user);
+            saveRoles(saved.getId(), request.roleIds());
+            log.info("用户更新成功 - 用户ID: {}, 用户名: {}", saved.getId(), saved.getUsername());
+            return toView(saved);
+        } catch (Exception e) {
+            log.error("更新用户失败 - 用户ID: {}", id, e);
+            throw e;
         }
-        OrgUser saved = userRepository.save(user);
-        saveRoles(saved.getId(), request.roleIds());
-        return toView(saved);
     }
 
     @Transactional
     public AppUserView changeStatus(String id, UserStatusRequest request) {
-        OrgUser user = userRepository.findById(id).orElseThrow(() -> new BusinessException("error.user.notFound"));
-        ensureNotAdminAccount(user);
-        user.setEnabled(request.enabled());
-        OrgUser saved = userRepository.save(user);
-        return toView(saved);
+        log.info("更改用户状态 - 用户ID: {}, 启用状态: {}", id, request.enabled());
+        try {
+            OrgUser user = userRepository.findById(id).orElseThrow(() -> new BusinessException("error.user.notFound"));
+            ensureNotAdminAccount(user);
+            user.setEnabled(request.enabled());
+            OrgUser saved = userRepository.save(user);
+            log.info("用户状态更改成功 - 用户ID: {}, 启用状态: {}", id, request.enabled());
+            return toView(saved);
+        } catch (Exception e) {
+            log.error("更改用户状态失败 - 用户ID: {}", id, e);
+            throw e;
+        }
     }
 
     @Transactional
     public void resetPassword(String id, ResetPasswordRequest request) {
-        OrgUser user = userRepository.findById(id).orElseThrow(() -> new BusinessException("error.user.notFound"));
-        ensureNotAdminAccount(user);
-        String password = request == null || request.password() == null || request.password().isBlank()
-            ? "123456"
-            : request.password();
-        user.setPassword(passwordEncoder.encode(password));
-        userRepository.save(user);
+        log.info("重置用户密码 - 用户ID: {}", id);
+        try {
+            OrgUser user = userRepository.findById(id).orElseThrow(() -> new BusinessException("error.user.notFound"));
+            ensureNotAdminAccount(user);
+            String password = request == null || request.password() == null || request.password().isBlank()
+                ? "123456"
+                : request.password();
+            user.setPassword(passwordEncoder.encode(password));
+            userRepository.save(user);
+            log.info("用户密码重置成功 - 用户ID: {}", id);
+        } catch (Exception e) {
+            log.error("重置用户密码失败 - 用户ID: {}", id, e);
+            throw e;
+        }
     }
 
     public void delete(String id) {
-        OrgUser user = userRepository.findById(id).orElseThrow(() -> new BusinessException("error.user.notFound"));
-        ensureNotAdminAccount(user);
-        user.setDeleted(true);
-        userRepository.save(user);
+        log.info("删除用户 - 用户ID: {}", id);
+        try {
+            OrgUser user = userRepository.findById(id).orElseThrow(() -> new BusinessException("error.user.notFound"));
+            ensureNotAdminAccount(user);
+            user.setDeleted(true);
+            userRepository.save(user);
+            log.info("用户删除成功 - 用户ID: {}", id);
+        } catch (Exception e) {
+            log.error("删除用户失败 - 用户ID: {}", id, e);
+            throw e;
+        }
     }
 
     private void applyUserFields(OrgUser user, UserUpsertRequest request, String normalizedPhone, String normalizedEmployeeNo) {

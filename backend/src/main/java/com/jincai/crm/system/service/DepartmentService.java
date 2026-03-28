@@ -7,12 +7,14 @@ import com.jincai.crm.system.entity.Department;
 import com.jincai.crm.system.entity.OrgUser;
 import com.jincai.crm.system.repository.DepartmentRepository;
 import com.jincai.crm.system.repository.OrgUserRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class DepartmentService {
 
     private final DepartmentRepository departmentRepository;
@@ -32,51 +34,75 @@ public class DepartmentService {
     }
 
     public Department create(DepartmentRequest request) {
-        Department department = new Department();
-        department.setName(request.name());
-        department.setParentId(request.parentId());
-        department.setLeaderUserId(request.leaderUserId());
-        department.setSortOrder(request.sort());
-        department.setTreePath(buildTreePath(request.parentId()));
-        return departmentRepository.save(department);
+        log.info("创建部门 - 部门名称: {}, 父部门ID: {}, 负责人: {}, 排序: {}",
+                request.name(), request.parentId(), request.leaderUserId(), request.sort());
+        try {
+            Department department = new Department();
+            department.setName(request.name());
+            department.setParentId(request.parentId());
+            department.setLeaderUserId(request.leaderUserId());
+            department.setSortOrder(request.sort());
+            department.setTreePath(buildTreePath(request.parentId()));
+            Department saved = departmentRepository.save(department);
+            log.info("部门创建成功 - 部门ID: {}, 名称: {}", saved.getId(), saved.getName());
+            return saved;
+        } catch (Exception e) {
+            log.error("创建部门失败 - 部门名称: {}", request.name(), e);
+            throw e;
+        }
     }
 
     public Department update(String id, DepartmentRequest request) {
-        Department department = departmentRepository.findById(id)
-            .orElseThrow(() -> new BusinessException("error.department.notFound"));
-        if (Boolean.TRUE.equals(department.getDeleted())) {
-            throw new BusinessException("error.department.notFound");
-        }
-        validateParentSelection(id, request.parentId());
-        validateRootDepartmentGuaranteeOnMove(department, request.parentId());
+        log.info("更新部门 - 部门ID: {}, 部门名称: {}, 父部门ID: {}, 负责人: {}, 排序: {}",
+                id, request.name(), request.parentId(), request.leaderUserId(), request.sort());
+        try {
+            Department department = departmentRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("error.department.notFound"));
+            if (Boolean.TRUE.equals(department.getDeleted())) {
+                throw new BusinessException("error.department.notFound");
+            }
+            validateParentSelection(id, request.parentId());
+            validateRootDepartmentGuaranteeOnMove(department, request.parentId());
 
-        department.setName(request.name());
-        department.setParentId(request.parentId());
-        department.setLeaderUserId(request.leaderUserId());
-        department.setSortOrder(request.sort());
-        department.setTreePath(buildTreePath(request.parentId()));
-        Department saved = departmentRepository.save(department);
-        refreshDescendantTreePath(saved.getId());
-        return saved;
+            department.setName(request.name());
+            department.setParentId(request.parentId());
+            department.setLeaderUserId(request.leaderUserId());
+            department.setSortOrder(request.sort());
+            department.setTreePath(buildTreePath(request.parentId()));
+            Department saved = departmentRepository.save(department);
+            refreshDescendantTreePath(saved.getId());
+            log.info("部门更新成功 - 部门ID: {}, 名称: {}", saved.getId(), saved.getName());
+            return saved;
+        } catch (Exception e) {
+            log.error("更新部门失败 - 部门ID: {}", id, e);
+            throw e;
+        }
     }
 
     public void delete(String id) {
-        Department department = departmentRepository.findById(id)
-            .orElseThrow(() -> new BusinessException("error.department.notFound"));
-        if (Boolean.TRUE.equals(department.getDeleted())) {
-            throw new BusinessException("error.department.notFound");
+        log.info("删除部门 - 部门ID: {}", id);
+        try {
+            Department department = departmentRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("error.department.notFound"));
+            if (Boolean.TRUE.equals(department.getDeleted())) {
+                throw new BusinessException("error.department.notFound");
+            }
+            if (!departmentRepository.findByParentIdAndDeletedFalse(id).isEmpty()) {
+                throw new BusinessException("error.department.delete.hasChildren");
+            }
+            if (userRepository.existsByDepartmentIdAndDeletedFalse(id)) {
+                throw new BusinessException("error.department.delete.hasUsers");
+            }
+            if (department.getParentId() == null && departmentRepository.countByParentIdIsNullAndDeletedFalse() <= 1) {
+                throw new BusinessException("error.department.root.required");
+            }
+            department.setDeleted(true);
+            departmentRepository.save(department);
+            log.info("部门删除成功 - 部门ID: {}", id);
+        } catch (Exception e) {
+            log.error("删除部门失败 - 部门ID: {}", id, e);
+            throw e;
         }
-        if (!departmentRepository.findByParentIdAndDeletedFalse(id).isEmpty()) {
-            throw new BusinessException("error.department.delete.hasChildren");
-        }
-        if (userRepository.existsByDepartmentIdAndDeletedFalse(id)) {
-            throw new BusinessException("error.department.delete.hasUsers");
-        }
-        if (department.getParentId() == null && departmentRepository.countByParentIdIsNullAndDeletedFalse() <= 1) {
-            throw new BusinessException("error.department.root.required");
-        }
-        department.setDeleted(true);
-        departmentRepository.save(department);
     }
 
     private void validateParentSelection(String id, String parentId) {

@@ -55,7 +55,7 @@ public class OrderController {
                 SecurityUtils.currentUserId(), page, size, keyword, status, customerId);
         try {
             PageResult<TravelOrder> result = orderService.pageVisible(SecurityUtils.currentUser(), page, size, keyword, status, customerId);
-            log.info("成功获取订单分页列表 - 第{}页, 共{}条记录", result.getPage(), result.getTotal());
+            log.info("成功获取订单分页列表 - 第{}页, 共{}条记录", result.page(), result.total());
             return ApiResponse.ok(result);
         } catch (Exception e) {
             log.error("获取订单分页列表失败 - 页码: {}, 大小: {}", page, size, e);
@@ -103,13 +103,13 @@ public class OrderController {
     @PreAuthorize("hasAuthority('BTN_ORDER_CREATE')")
     public ApiResponse<TravelOrder> create(@Valid @RequestBody OrderRequest request) {
         log.info("创建订单请求 - 用户ID: {}, 订单号: {}, 客户ID: {}",
-                SecurityUtils.currentUserId(), request.getOrderNo(), request.customerId());
+                SecurityUtils.currentUserId(), request.orderNo(), request.customerId());
         try {
             TravelOrder result = orderService.create(request, SecurityUtils.currentUser());
             log.info("成功创建订单 - 订单ID: {}, 订单号: {}", result.getId(), result.getOrderNo());
             return ApiResponse.ok(result);
         } catch (Exception e) {
-            log.error("创建订单失败 - 订单号: {}", request.getOrderNo(), e);
+            log.error("创建订单失败 - 订单号: {}", request.orderNo(), e);
             throw e;
         }
     }
@@ -197,13 +197,13 @@ public class OrderController {
     @PreAuthorize("hasAnyAuthority('BTN_ORDER_SUBMIT','BTN_ORDER_APPROVE','BTN_ORDER_REJECT','BTN_ORDER_EDIT','BTN_ORDER_DELETE')")
     public ApiResponse<TravelOrder> action(@PathVariable String id, @Valid @RequestBody OrderActionRequest request) {
         log.info("订单操作请求 - 用户ID: {}, 订单ID: {}, 操作类型: {}",
-                SecurityUtils.currentUserId(), id, request.actionType());
+                SecurityUtils.currentUserId(), id, request.action());
         try {
             TravelOrder result = orderService.action(id, request, SecurityUtils.currentUser());
-            log.info("成功执行订单操作 - 订单ID: {}, 操作类型: {}", id, request.actionType());
+            log.info("成功执行订单操作 - 订单ID: {}, 操作类型: {}", id, request.action());
             return ApiResponse.ok(result);
         } catch (Exception e) {
-            log.error("执行订单操作失败 - 订单ID: {}, 操作类型: {}", id, request.actionType(), e);
+            log.error("执行订单操作失败 - 订单ID: {}, 操作类型: {}", id, request.action(), e);
             throw e;
         }
     }
@@ -229,7 +229,7 @@ public class OrderController {
                 SecurityUtils.currentUserId(), file.getOriginalFilename(), file.getSize());
         try {
             ImportOrderResult result = orderService.importOrders(file, SecurityUtils.currentUser());
-            log.info("成功导入订单 - 成功: {} 条, 失败: {} 条", result.getSuccessCount(), result.getFailures().size());
+            log.info("成功导入订单 - 成功: {} 条, 失败: {} 条", result.success(), result.errors().size());
             return ApiResponse.ok(result);
         } catch (Exception e) {
             log.error("导入订单失败 - 文件名: {}", file.getOriginalFilename(), e);
