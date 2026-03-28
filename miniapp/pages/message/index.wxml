@@ -1,0 +1,38 @@
+<view class="msg-page">
+  <view class="msg-header">
+    <view class="msg-title">消息中心</view>
+    <view class="msg-sub">按类型查看并快速处理未读消息</view>
+  </view>
+
+  <van-notice-bar left-icon="volume-o" text="当前有 2 条未读消息，建议优先处理审批消息。" />
+
+  <view class="msg-filter">
+    <view
+      wx:for="{{typeOptions}}"
+      wx:key="key"
+      class="msg-filter-item {{activeType === item.key ? 'active' : ''}}"
+      data-key="{{item.key}}"
+      bindtap="handleTypeChange"
+    >
+      {{item.label}}
+    </view>
+  </view>
+
+  <view class="msg-list" wx:if="{{visibleNotices.length}}">
+    <view wx:for="{{visibleNotices}}" wx:key="id" class="msg-item" data-id="{{item.id}}" bindtap="handleOpen">
+      <view class="msg-main">
+        <view class="msg-title-row">
+          <text class="msg-item-title">{{item.title}}</text>
+          <van-tag wx:if="{{item.unread}}" type="danger" plain>未读</van-tag>
+        </view>
+        <view class="msg-item-summary">{{item.summary}}</view>
+      </view>
+      <view class="msg-side">{{item.time}}</view>
+    </view>
+  </view>
+
+  <view wx:else class="msg-empty">
+    <view class="msg-empty-title">暂无消息</view>
+    <view class="msg-empty-copy">当前筛选条件下没有需要处理的消息</view>
+  </view>
+</view>
