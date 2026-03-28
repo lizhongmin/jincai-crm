@@ -66,10 +66,10 @@ export const customerApi = {
   travelerList: (customerId?: string) =>
     http.get<ApiResponse<any[]>>('/travelers', { params: customerId ? { customerId } : {} }),
   createTraveler: (customerId: string, payload: any) =>
-    http.post<ApiResponse<any>>(`/customers/${customerId}/travelers`, payload),
+    http.post<ApiResponse<any>>(`/travelers`, payload, { params: { customerId } }),
   updateTraveler: (travelerId: string, payload: any) =>
-    http.put<ApiResponse<any>>(`/customers/travelers/${travelerId}`, payload),
-  deleteTraveler: (travelerId: string) => http.delete<ApiResponse<void>>(`/customers/travelers/${travelerId}`),
+    http.put<ApiResponse<any>>(`/travelers/${travelerId}`, payload),
+  deleteTraveler: (travelerId: string) => http.delete<ApiResponse<void>>(`/travelers/${travelerId}`),
   importCustomers: (file: File) => {
     const form = new FormData();
     form.append('file', file);

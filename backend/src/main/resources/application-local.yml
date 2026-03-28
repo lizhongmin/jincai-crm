@@ -1,0 +1,37 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/crm_dev?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      max-lifetime: 1800000
+      connection-timeout: 20000
+      idle-timeout: 600000
+      minimum-idle: 5
+      maximum-pool-size: 10
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+
+app:
+  jwt:
+    secret: local-secret-key-change-this-in-production
+    expiration-seconds: 86400
+  file:
+    upload-dir: ./uploads
+
+logging:
+  level:
+    root: INFO
+    com.jincai.crm: DEBUG
+    org.hibernate.SQL: DEBUG
