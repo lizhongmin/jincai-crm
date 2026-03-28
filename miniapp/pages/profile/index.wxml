@@ -1,0 +1,32 @@
+<view class="pf-page">
+  <view class="pf-card">
+    <view class="pf-avatar">{{profile && profile.fullName ? profile.fullName.slice(0, 1) : '袋'}}</view>
+    <view class="pf-info">
+      <view class="pf-name">{{profile && (profile.fullName || profile.username) || '袋鼠旅客通用户'}}</view>
+      <view class="pf-meta">{{profile && profile.username ? profile.username : '已绑定微信登录'}}</view>
+    </view>
+    <van-tag type="primary" plain>已绑定</van-tag>
+  </view>
+
+  <view class="pf-section">
+    <view class="pf-section-title">账户设置</view>
+    <van-cell-group inset border="{{false}}">
+      <van-cell
+        wx:for="{{entries}}"
+        wx:key="id"
+        title="{{item.title}}"
+        label="{{item.desc}}"
+        is-link
+        data-url="{{item.url}}"
+        bindtap="handleOpen"
+      />
+    </van-cell-group>
+  </view>
+
+  <view class="pf-section">
+    <view class="pf-section-title">账号管理</view>
+    <van-button type="default" block custom-class="pf-logout-btn" bindtap="handleLogout">
+      退出登录
+    </van-button>
+  </view>
+</view>

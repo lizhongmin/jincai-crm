@@ -1,0 +1,73 @@
+<view class="cl-page">
+  <view class="cl-header">
+    <view class="cl-title">我的客户</view>
+    <view class="cl-sub">搜索、筛选并进入客户详情</view>
+  </view>
+
+  <view class="cl-toolbar">
+    <van-search
+      value="{{keyword}}"
+      placeholder="搜索客户姓名或手机号"
+      shape="round"
+      bind:change="handleKeywordInput"
+      bind:search="handleSearch"
+    />
+
+    <view class="cl-view-tabs">
+      <view
+        wx:for="{{viewOptions}}"
+        wx:key="key"
+        class="cl-view-tab {{activeView === item.key ? 'active' : ''}}"
+        data-key="{{item.key}}"
+        bindtap="handleViewChange"
+      >
+        {{item.label}}
+      </view>
+    </view>
+  </view>
+
+  <view class="cl-summary">
+    <view class="cl-summary-item">
+      <view class="cl-summary-value">{{summary.total}}</view>
+      <view class="cl-summary-label">全部</view>
+    </view>
+    <view class="cl-summary-item">
+      <view class="cl-summary-value">{{summary.high}}</view>
+      <view class="cl-summary-label">高意向</view>
+    </view>
+    <view class="cl-summary-item">
+      <view class="cl-summary-value">{{summary.recent}}</view>
+      <view class="cl-summary-label">最近更新</view>
+    </view>
+  </view>
+
+  <view wx:if="{{visibleCustomers.length}}" class="cl-list">
+    <view wx:for="{{visibleCustomers}}" wx:key="id" class="cl-item" data-id="{{item.id}}" bindtap="handleOpenDetail">
+      <view class="cl-item-head">
+        <view class="cl-item-main">
+          <view class="cl-item-name">{{item.name}}</view>
+          <view class="cl-item-phone">{{item.phone}}</view>
+        </view>
+        <view class="cl-item-arrow">详情</view>
+      </view>
+
+      <view class="cl-item-tags">
+        <van-tag type="primary" plain custom-class="cl-tag">{{item.sourceLabel}}</van-tag>
+        <van-tag plain custom-class="cl-tag cl-tag-muted">{{item.intentionLevelLabel}}</van-tag>
+      </view>
+
+      <view class="cl-item-meta">
+        <text>负责人 {{item.ownerUserName || '-'}}</text>
+        <text>{{item.updatedAt || '-'}}</text>
+      </view>
+    </view>
+  </view>
+
+  <van-empty wx:else class="cl-empty" image="search" description="暂无客户，先新增一位客户" />
+
+  <view class="cl-fab-wrap">
+    <van-button type="primary" round custom-class="cl-fab" bindtap="handleCreate">
+      新增客户
+    </van-button>
+  </view>
+</view>

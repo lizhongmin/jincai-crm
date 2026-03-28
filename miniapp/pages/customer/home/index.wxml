@@ -1,0 +1,53 @@
+<view class="page-shell">
+  <view class="hero-block compact-hero">
+    <text class="hero-kicker">客户模块</text>
+    <view class="hero-title">客户管理</view>
+  </view>
+
+  <view class="surface-card panel section-stack panel-gap">
+    <view class="panel-head">
+      <view class="panel-title">高频操作</view>
+      <van-tag type="primary" plain>一期核心</van-tag>
+    </view>
+    <view class="action-grid">
+      <view
+        wx:for="{{coreActions}}"
+        wx:key="id"
+        class="action-card {{item.strong ? 'action-card-strong' : ''}}"
+        data-url="{{item.url}}"
+        bindtap="handleOpen"
+      >
+        <view class="action-card-title">{{item.title}}</view>
+        <view class="action-card-copy">{{item.desc}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="surface-card panel section-stack panel-gap">
+    <view class="panel-title">客户分组</view>
+    <view class="segment-grid">
+      <view wx:for="{{segmentStats}}" wx:key="id" class="segment-item">
+        <view class="segment-value">{{item.value}}</view>
+        <view class="segment-label">{{item.label}}</view>
+      </view>
+    </view>
+    <van-button type="primary" block custom-class="entry-btn" data-url="/pages/customer/list/index" bindtap="handleOpen">
+      进入客户列表
+    </van-button>
+  </view>
+
+  <view class="surface-card panel section-stack panel-gap">
+    <view class="panel-title">更多入口</view>
+    <view class="row-list">
+      <view wx:for="{{moreEntries}}" wx:key="id" class="list-card" data-url="{{item.url}}" bindtap="handleOpen">
+        <view class="list-row">
+          <view class="list-main">
+            <view class="list-title">{{item.title}}</view>
+            <view class="list-desc">{{item.desc}}</view>
+          </view>
+          <view class="list-aside">进入</view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

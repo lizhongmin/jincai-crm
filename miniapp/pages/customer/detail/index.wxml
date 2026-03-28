@@ -1,0 +1,52 @@
+<view class="page-shell">
+  <view wx:if="{{customer}}" class="section-stack">
+    <view class="surface-card panel section-stack">
+      <view class="panel-head">
+        <view>
+          <view class="panel-title">{{customer.name}}</view>
+          <view class="panel-copy">{{customer.phone}}</view>
+        </view>
+        <van-button size="small" plain custom-class="tab-inline-btn" bindtap="handleEdit">
+          编辑
+        </van-button>
+      </view>
+      <view class="tag-row">
+        <van-tag type="primary" plain custom-class="inline-tag">{{customer.sourceLabel}}</van-tag>
+        <van-tag plain custom-class="inline-tag muted-tag">{{customer.intentionLevelLabel}}</van-tag>
+      </view>
+    </view>
+
+    <view class="surface-card panel section-stack">
+      <view class="panel-title">客户资料</view>
+      <van-cell-group inset border="{{false}}">
+        <van-cell title="客户类型" value="{{customer.customerTypeLabel}}" />
+        <van-cell title="负责人" value="{{customer.ownerUserName || '-'}}" />
+        <van-cell title="所属部门" value="{{customer.ownerDeptName || '-'}}" />
+        <van-cell title="更新时间" value="{{customer.updatedAt || '-'}}" />
+      </van-cell-group>
+    </view>
+
+    <view class="surface-card panel section-stack">
+      <view class="panel-title">客户动作</view>
+      <view class="panel-copy">先把完整路径搭起来，后续逐步补充真实业务。</view>
+      <view class="inline-actions">
+        <van-button type="default" block custom-class="secondary-product-button" data-url="/pages/customer/follow/index" bindtap="handleOpenModule">
+          跟进记录
+        </van-button>
+        <van-button type="primary" block custom-class="product-button" data-url="/pages/customer/tags/index" bindtap="handleOpenModule">
+          客户标签
+        </van-button>
+      </view>
+    </view>
+
+    <view class="surface-card panel section-stack">
+      <view class="panel-title">备注说明</view>
+      <view class="detail-remark">{{customer.remark || '暂无备注'}}</view>
+    </view>
+  </view>
+
+  <view wx:else class="surface-card empty-panel">
+    <view class="empty-title">正在加载客户详情</view>
+    <view class="empty-copy">请稍候，我们正在同步最新客户信息。</view>
+  </view>
+</view>

@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "工作台",
+  "usingComponents": {
+    "van-button": "@vant/weapp/button/index",
+    "van-notice-bar": "@vant/weapp/notice-bar/index",
+    "van-tag": "@vant/weapp/tag/index"
+  }
+}

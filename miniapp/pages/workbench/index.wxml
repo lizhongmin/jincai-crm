@@ -1,0 +1,61 @@
+<view class="wb-page">
+  <view class="wb-header">
+    <text class="wb-kicker">袋鼠旅客通</text>
+    <view class="wb-title">工作台</view>
+    <view class="wb-sub">今天先处理高优先客户与待审批事项</view>
+  </view>
+
+  <view class="wb-section">
+    <view class="wb-section-title">关键指标</view>
+    <view class="wb-metric-grid">
+      <view wx:for="{{metrics}}" wx:key="id" class="wb-metric-item">
+        <view class="wb-metric-value">{{item.value}}</view>
+        <view class="wb-metric-label">{{item.label}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="wb-section">
+    <view class="wb-section-title">快捷操作</view>
+    <view class="wb-action-grid">
+      <view
+        wx:for="{{quickActions}}"
+        wx:key="id"
+        class="wb-action-item"
+        data-url="{{item.url}}"
+        data-tab="{{item.tab}}"
+        bindtap="handleOpen"
+      >
+        <text class="wb-action-title">{{item.title}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="wb-section">
+    <view class="wb-section-head">
+      <view class="wb-section-title">待办清单</view>
+      <van-tag type="primary" plain>今日</van-tag>
+    </view>
+    <view class="wb-todo-list">
+      <view wx:for="{{todos}}" wx:key="id" class="wb-todo-item">
+        <view class="wb-todo-main">
+          <view class="wb-todo-title">{{item.title}}</view>
+          <view class="wb-todo-meta">{{item.meta}}</view>
+        </view>
+        <view class="wb-todo-side">
+          <view class="wb-todo-level">{{item.level}}</view>
+          <van-button
+            size="small"
+            type="primary"
+            custom-class="wb-todo-btn"
+            data-url="{{item.url}}"
+            data-tab="{{item.tab}}"
+            bindtap="handleOpen"
+          >
+            处理
+          </van-button>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

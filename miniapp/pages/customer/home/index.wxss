@@ -1,0 +1,37 @@
+.compact-hero {
+  padding-bottom: 16rpx;
+}
+
+.action-card {
+  min-height: 166rpx;
+}
+
+.segment-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16rpx;
+}
+
+.segment-item {
+  padding: 18rpx 14rpx;
+  border-radius: 20rpx;
+  border: 1rpx solid rgba(215, 225, 220, 0.9);
+  background: var(--surface-soft);
+  text-align: center;
+}
+
+.segment-value {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.segment-label {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: var(--text-2);
+}
+
+.entry-btn {
+  margin-top: 6rpx;
+}

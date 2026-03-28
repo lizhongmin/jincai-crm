@@ -1,0 +1,69 @@
+<view class="page-shell">
+  <view class="hero-block">
+    <text class="hero-kicker">客户模块</text>
+    <view class="hero-title">{{id ? '编辑客户' : '新增客户'}}</view>
+    <view class="hero-subtitle">保留最常用的基础字段，先把移动端录入路径搭建完整。</view>
+  </view>
+
+  <view class="surface-card panel section-stack">
+    <view>
+      <view class="panel-title">基础信息</view>
+      <view class="panel-copy">适合销售与顾问在外出、跟进或接待场景中快速录入。</view>
+    </view>
+
+    <van-cell-group inset border="{{false}}">
+      <van-field
+        label="客户名称"
+        value="{{form.name}}"
+        placeholder="请输入客户名称"
+        data-field="name"
+        bind:change="handleInput"
+      />
+      <van-field
+        label="手机号"
+        type="number"
+        value="{{form.phone}}"
+        placeholder="请输入手机号"
+        data-field="phone"
+        bind:change="handleInput"
+      />
+      <picker range="{{customerTypeOptions}}" range-key="label" data-field="customerType" bindchange="handlePick">
+        <van-field
+          readonly
+          label="客户类型"
+          value="{{form.customerType === 'ENTERPRISE' ? '企业' : '个人'}}"
+          is-link
+        />
+      </picker>
+      <picker range="{{sourceOptions}}" range-key="label" data-field="source" bindchange="handlePick">
+        <van-field
+          readonly
+          label="来源"
+          value="{{form.source === 'ONLINE' ? '线上咨询' : form.source === 'REFERRAL' ? '老客推荐' : form.source === 'PHONE' ? '电话咨询' : form.source === 'WALK_IN' ? '到店' : '手工录入'}}"
+          is-link
+        />
+      </picker>
+      <picker range="{{intentionLevelOptions}}" range-key="label" data-field="intentionLevel" bindchange="handlePick">
+        <van-field
+          readonly
+          label="意向等级"
+          value="{{form.intentionLevel === 'HIGH' ? '高' : form.intentionLevel === 'LOW' ? '低' : '中'}}"
+          is-link
+        />
+      </picker>
+      <van-field
+        label="备注"
+        type="textarea"
+        autosize
+        value="{{form.remark}}"
+        placeholder="补充客户背景、需求或跟进说明"
+        data-field="remark"
+        bind:change="handleInput"
+      />
+    </van-cell-group>
+
+    <van-button type="primary" block custom-class="product-button" loading="{{submitting}}" bindtap="submit">
+      保存客户
+    </van-button>
+  </view>
+</view>
