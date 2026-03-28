@@ -1,24 +1,32 @@
 ﻿
 <template>
   <div class="customer-manage">
+    <!-- 客户列表视图 -->
     <a-card v-if="!detailMode" class="section-card customer-shell" :bordered="false">
+      <!-- 模块标签页：客户、出行人、公海 -->
       <a-tabs v-model:activeKey="moduleTab" class="module-tabs">
         <a-tab-pane key="customer" tab="客户" />
         <a-tab-pane key="contact" tab="出行人" />
         <a-tab-pane key="pool" tab="公海" />
       </a-tabs>
 
+      <!-- 工具栏区域 -->
       <div class="list-toolbar">
         <div class="toolbar-row">
+          <!-- 新建客户按钮（仅在客户和公海标签页显示） -->
           <a-button v-if="moduleTab !== 'contact'" type="primary" :disabled="!hasButtonPermission('BTN_CUSTOMER_CREATE')" @click="openCustomer()">新建客户</a-button>
+          <!-- 新建出行人按钮（仅在出行人标签页显示） -->
           <a-button v-if="moduleTab === 'contact'" type="primary" @click="openTraveler()">新建出行人</a-button>
+          <!-- 导入客户按钮（仅在客户标签页显示） -->
           <a-upload v-if="moduleTab === 'customer'" :show-upload-list="false" :before-upload="beforeImport">
             <a-button :disabled="!hasButtonPermission('BTN_CUSTOMER_IMPORT')">导入客户</a-button>
           </a-upload>
+          <!-- 导出客户按钮（不显示在出行人标签页） -->
           <a-button v-if="moduleTab !== 'contact'" @click="exportCustomerCsv">导出所有页</a-button>
         </div>
 
         <div class="toolbar-row">
+          <!-- 搜索框：根据当前标签页显示不同的占位符 -->
           <a-input-search
             v-model:value="keyword"
             :placeholder="moduleTab === 'contact' ? '通过出行人关键词搜索' : '通过客户名称搜索'"
@@ -29,6 +37,7 @@
               <a-button type="primary">搜索</a-button>
             </template>
           </a-input-search>
+          <!-- 客户视图筛选（仅在客户和公海标签页显示） -->
           <a-select v-if="moduleTab !== 'contact'" v-model:value="viewLabel" style="width: 170px">
             <a-select-option value="所有客户">所有客户</a-select-option>
             <a-select-option value="重点客户">重点客户</a-select-option>
@@ -37,6 +46,7 @@
         </div>
       </div>
 
+      <!-- 客户/公海表格视图（出行人标签页不显示） -->
       <a-table
         v-if="moduleTab !== 'contact'"
         class="customer-table"
@@ -55,34 +65,46 @@
         @change="onCustomerTableChange"
       >
         <template #bodyCell="{ column, record }">
+          <!-- 客户名称列：可点击查看详情 -->
           <template v-if="column.dataIndex === 'name'">
             <a class="name-link" @click="openCustomerDetail(record)">{{ record.name }}</a>
           </template>
+          <!-- 客户等级列：显示映射后的等级名称 -->
           <template v-else-if="column.dataIndex === 'level'">
             {{ mapLevel(record.level) }}
           </template>
+          <!-- 客户类型列：显示映射后的类型名称 -->
           <template v-else-if="column.dataIndex === 'customerType'">
             {{ mapCustomerType(record.customerType) }}
           </template>
+          <!-- 客户来源列：显示映射后的来源名称 -->
           <template v-else-if="column.dataIndex === 'source'">
             {{ mapSource(record.source) }}
           </template>
+          <!-- 意向等级列：显示映射后的意向等级 -->
           <template v-else-if="column.dataIndex === 'intentionLevel'">
             {{ mapIntention(record.intentionLevel) }}
           </template>
+          <!-- 客户状态列：显示映射后的状态名称 -->
           <template v-else-if="column.dataIndex === 'status'">
             {{ mapStatus(record.status) }}
           </template>
+          <!-- 标签列：显示客户标签 -->
           <template v-else-if="column.dataIndex === 'tags'">
             {{ record.tags || '-' }}
           </template>
+          <!-- 城市列：显示客户所在城市 -->
           <template v-else-if="column.dataIndex === 'city'">
             {{ record.city || '-' }}
           </template>
+          <!-- 操作列：包含编辑、转移、更多操作等按钮 -->
           <template v-else-if="column.dataIndex === 'actions'">
             <a-space :size="8">
+              <!-- 编辑按钮：需要BTN_CUSTOMER_EDIT权限 -->
               <a-button type="link" :disabled="!hasButtonPermission('BTN_CUSTOMER_EDIT')" @click="openCustomer(record)">编辑</a-button>
+              <!-- 转移按钮：允许转移客户给其他负责人 -->
               <a-button type="link" @click="openTransfer(record)">转移</a-button>
+              <!-- 更多操作下拉菜单 -->
               <a-dropdown>
                 <a-button type="link">更多</a-button>
                 <template #overlay>
@@ -99,6 +121,7 @@
         </template>
       </a-table>
 
+      <!-- 出行人表格视图（仅在出行人标签页显示） -->
       <TravelerTable
         v-else
         class="customer-table"
@@ -107,6 +130,8 @@
         @remove="removeTraveler"
       />
     </a-card>
+
+    <!-- 客户详情面板视图 -->
     <CustomerDetailPanel
       v-else
       :customer="selectedCustomer"
@@ -149,6 +174,7 @@
       @detail-order-table-change="onDetailOrderTableChange"
     />
 
+    <!-- 客户转移模态框 -->
     <a-modal v-model:open="transferOpen" title="客户转移" :confirm-loading="saving" @ok="confirmTransfer">
       <a-form layout="vertical">
         <a-form-item label="当前客户">
@@ -164,6 +190,7 @@
       </a-form>
     </a-modal>
 
+    <!-- 客户编辑/新建抽屉 -->
     <a-drawer v-model:open="customerModal" :title="customerForm.id ? '编辑客户' : '新增客户'" placement="right" :width="760">
       <template #extra>
         <a-space>
@@ -249,6 +276,7 @@
       </a-form>
     </a-drawer>
 
+    <!-- 出行人表单抽屉 -->
     <TravelerFormDrawer
       v-model:open="travelerModal"
       :record="selectedTravelerRecord"

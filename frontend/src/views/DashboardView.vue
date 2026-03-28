@@ -1,5 +1,6 @@
 <template>
   <div class="dashboard">
+    <!-- 核心指标概览区域 -->
     <div class="metric-grid biz-summary">
       <div class="item">
         <span class="label">订单总数</span>
@@ -50,10 +51,20 @@ import { computed, onMounted, ref } from 'vue';
 import { reportApi } from '../api/crm';
 import { notifyError } from '../utils/notify';
 
+/**
+ * 仪表板数据模型
+ * funnel: 销售漏斗数据，包含订单状态统计和转化率
+ * aging: 账龄分析数据，按账龄区间统计应收款
+ * profit: 线路利润数据，用于展示毛利排行
+ */
 const funnel = ref<any>({});
 const aging = ref<any>({});
 const profit = ref<any[]>([]);
 
+/**
+ * 格式化账龄数据为展示用格式
+ * 将后端返回的账龄区间数据转换为固定的展示顺序
+ */
 const agingRows = computed(() => {
   const receivableAging = aging.value?.receivableAging || {};
   return [
@@ -64,8 +75,16 @@ const agingRows = computed(() => {
   ];
 });
 
+/**
+ * 计算顶级利润线路
+ * 只展示前8条高毛利线路
+ */
 const profitTop = computed(() => [...profit.value].slice(0, 8));
 
+/**
+ * 线路毛利表格列配置
+ * 显示线路名称、收入、成本和毛利信息
+ */
 const profitCols = [
   { title: '线路', dataIndex: 'routeName' },
   { title: '收入', dataIndex: 'income' },
@@ -73,9 +92,17 @@ const profitCols = [
   { title: '毛利', dataIndex: 'grossProfit' }
 ];
 
+/**
+ * 加载仪表板数据
+ * 并行发起三个报表API请求以提高加载性能
+ */
 const load = async () => {
   try {
-    const [f, a, p] = await Promise.all([reportApi.funnel(), reportApi.aging(), reportApi.profit()]);
+    const [f, a, p] = await Promise.all([
+      reportApi.funnel(),    // 销售漏斗数据
+      reportApi.aging(),     // 账龄分析数据
+      reportApi.profit()     // 利润分析数据
+    ]);
     funnel.value = f.data.data || {};
     aging.value = a.data.data || {};
     profit.value = p.data.data || [];
@@ -84,6 +111,9 @@ const load = async () => {
   }
 };
 
+/**
+ * 组件挂载时自动加载数据
+ */
 onMounted(load);
 </script>
 

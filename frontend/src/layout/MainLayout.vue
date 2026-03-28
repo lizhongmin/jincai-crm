@@ -112,13 +112,17 @@ import { useAuthStore } from '../stores/auth';
 import { authApi, notificationApi, permissionApi } from '../api/crm';
 import { notifyError } from '../utils/notify';
 
+/**
+ * 菜单节点类型定义
+ * 用于构建左侧导航菜单的树形结构
+ */
 type MenuNode = {
-  key: string;
-  title: string;
-  path?: string;
-  permissionPath?: string;
-  icon?: any;
-  children?: MenuNode[];
+  key: string;              // 菜单项唯一标识
+  title: string;            // 菜单项显示名称
+  path?: string;            // 路由路径
+  permissionPath?: string;  // 权限检查路径（可与path不同）
+  icon?: any;               // 菜单图标组件
+  children?: MenuNode[];    // 子菜单项
 };
 
 const route = useRoute();
@@ -128,6 +132,11 @@ const collapsed = ref(false);
 const notificationOpen = ref(false);
 const notifications = ref<any[]>([]);
 
+/**
+ * 应用菜单配置
+ * 定义了整个应用的导航菜单结构和权限控制
+ * 注意：系统管理模块的子菜单项通过 permissionPath 控制权限访问
+ */
 const allMenuItems: MenuNode[] = [
   { key: '/dashboard', path: '/dashboard', title: '经营看板', icon: PieChartOutlined },
   { key: '/customers', path: '/customers', title: '客户管理', icon: UserOutlined },
@@ -150,36 +159,66 @@ const allMenuItems: MenuNode[] = [
   },
 ];
 
+/**
+ * 检查菜单项权限
+ * 根据用户权限数据判断是否显示某个菜单项
+ * @param item 菜单项
+ * @returns boolean 是否有权限访问该菜单项
+ */
 const hasPermission = (item: MenuNode) => {
+  // 如果没有权限数据（如首次加载），默认显示所有菜单
   if (!auth.allowedMenuPaths.length) {
     return true;
   }
+  // 获取权限检查路径（优先使用permissionPath，否则使用path）
   const target = String(item.permissionPath || item.path || '');
+  // 如果没有指定路径，默认允许访问
   return target ? auth.allowedMenuPaths.includes(target) : true;
 };
 
+/**
+ * 过滤菜单节点
+ * 递归过滤菜单树，只保留用户有权限访问的菜单项
+ * @param nodes 菜单节点数组
+ * @returns 过滤后的菜单节点数组
+ */
 const filterMenuNodes = (nodes: MenuNode[]): MenuNode[] =>
   nodes
     .map((node) => {
+      // 叶子节点（无子菜单）直接检查权限
       if (!node.children?.length) {
         return hasPermission(node) ? node : null;
       }
+      // 父节点需要递归检查子节点权限
       const children = filterMenuNodes(node.children);
+      // 如果没有子节点有权限，当前父节点也不显示
       if (!children.length) {
         return null;
       }
+      // 返回包含有权限子节点的父节点
       return { ...node, children };
     })
     .filter(Boolean) as MenuNode[];
 
+/**
+ * 计算用户有权限访问的菜单项
+ * 基于权限过滤后的菜单项列表
+ */
 const menuItems = computed(() => filterMenuNodes(allMenuItems));
+
+/**
+ * 计算所有叶子菜单路径
+ * 用于在用户无权限访问当前页面时进行重定向
+ */
 const menuLeafPaths = computed(() => {
   const result: string[] = [];
   const walk = (nodes: MenuNode[]) => {
     for (const node of nodes) {
       if (node.children?.length) {
+        // 递归处理子菜单
         walk(node.children);
       } else if (node.path) {
+        // 收集叶子节点路径
         result.push(node.path);
       }
     }
@@ -188,16 +227,27 @@ const menuLeafPaths = computed(() => {
   return result;
 });
 
+/**
+ * 计算当前激活的菜单项
+ * 用于设置菜单高亮状态
+ */
 const activeMenuKey = computed(() => {
+  // 特殊路径处理
   if (route.path === '/org') return '/system/org';
   if (route.path.startsWith('/orders/')) return '/orders';
   return route.path;
 });
 
+/**
+ * 计算当前展开的菜单项
+ * 用于控制侧边栏菜单的展开/收起状态
+ */
 const openMenuKeys = computed(() => {
+  // 菜单收起时不需要展开任何项
   if (collapsed.value) {
     return [];
   }
+  // 根据当前路由自动展开对应的父菜单
   if (activeMenuKey.value.startsWith('/system/')) {
     return ['system'];
   }
@@ -207,14 +257,37 @@ const openMenuKeys = computed(() => {
   return [];
 });
 
+/**
+ * 计算页面标题
+ * 从路由元信息中获取页面标题
+ */
 const pageTitle = computed(() => String(route.meta.title || '工作台'));
+
+/**
+ * 计算未读通知数量
+ * 用于在通知按钮上显示未读数量徽章
+ */
 const unreadCount = computed(() => notifications.value.filter((n) => !n.readFlag).length);
+
+/**
+ * 计算用户头像初始字符
+ * 用于在用户头像上显示用户名首字母
+ */
 const userInitial = computed(() => (auth.profile?.username?.[0] || 'U').toUpperCase());
 
+/**
+ * 菜单项点击处理函数
+ * 负责页面导航跳转
+ * @param key 菜单项key
+ */
 const onMenuClick = ({ key }: { key: string }) => {
   router.push(key);
 };
 
+/**
+ * 加载用户资料
+ * 从后端获取当前登录用户的完整资料
+ */
 const loadProfile = async () => {
   const { data } = await authApi.me();
   if (data.success) {
@@ -222,6 +295,10 @@ const loadProfile = async () => {
   }
 };
 
+/**
+ * 加载用户权限数据
+ * 从后端获取用户的菜单权限和按钮权限
+ */
 const loadPermissions = async () => {
   const { data } = await permissionApi.menus();
   const permissions = data.data || [];
@@ -243,36 +320,58 @@ const loadPermissions = async () => {
     )
   );
 
+  // 更新权限存储
   auth.setAllowedMenuPaths(menuPaths);
   auth.setButtonPermissions(buttonCodes);
   auth.setAllPermissions(permissions);
 
+  // 权限检查：如果用户无权限访问当前页面，重定向到第一个可用页面
   const currentPermissionPath = String(route.meta.permissionPath || route.path);
   if (menuPaths.length > 0 && !menuPaths.includes(currentPermissionPath)) {
     await router.replace(menuLeafPaths.value[0] || '/dashboard');
   }
 };
 
+/**
+ * 加载通知列表
+ * 从后端获取用户的通知消息
+ */
 const loadNotifications = async () => {
   const { data } = await notificationApi.list();
   notifications.value = data.data || [];
 };
 
+/**
+ * 打开通知抽屉
+ * 显示系统通知列表
+ */
 const openNotifications = async () => {
   notificationOpen.value = true;
   await loadNotifications();
 };
 
+/**
+ * 标记通知为已读
+ * @param id 通知ID
+ */
 const markRead = async (id: number) => {
   await notificationApi.read(id);
   await loadNotifications();
 };
 
+/**
+ * 用户登出处理
+ * 清除认证信息并跳转到登录页
+ */
 const logout = () => {
   auth.logout();
   router.replace('/login');
 };
 
+/**
+ * 组件挂载时执行初始化操作
+ * 并行加载用户资料、权限数据和通知列表
+ */
 onMounted(async () => {
   try {
     await Promise.all([loadProfile(), loadPermissions(), loadNotifications()]);
