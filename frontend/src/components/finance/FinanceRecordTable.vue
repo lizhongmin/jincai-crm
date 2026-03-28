@@ -37,8 +37,12 @@ const props = withDefaults(defineProps<{
   mode: 'receipt' | 'payment';
   items: any[];
   canReviewPermission?: boolean;
+  canEditPermission?: boolean;
+  canDeletePermission?: boolean;
 }>(), {
-  canReviewPermission: true
+  canReviewPermission: true,
+  canEditPermission: true,
+  canDeletePermission: true
 });
 
 const emit = defineEmits<{

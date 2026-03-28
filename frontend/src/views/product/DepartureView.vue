@@ -10,7 +10,7 @@
         >
           <a-select-option v-for="item in routes" :key="item.id" :value="item.id">{{ item.name }}</a-select-option>
         </a-select>
-        <a-button type="primary" @click="openDeparture()">新增团期</a-button>
+        <a-button type="primary" :disabled="!hasButtonPermission('BTN_PRODUCT_DEPARTURE_CREATE')" @click="openDeparture()">新增团期</a-button>
       </div>
       <departure-table
         style="margin-top: 10px"
@@ -36,7 +36,7 @@
       <a-empty v-if="!activeDeparture" description="未选择团期" />
       <template v-else>
         <div class="toolbar-row" style="margin-bottom: 8px">
-          <a-button type="primary" @click="openDeparturePolicy">编辑团期策略覆盖</a-button>
+          <a-button type="primary" :disabled="!hasButtonPermission('BTN_PRODUCT_DEPARTURE_EDIT')" @click="openDeparturePolicy">编辑团期策略覆盖</a-button>
         </div>
         <a-descriptions :column="2" bordered size="small">
           <a-descriptions-item label="团期编码">{{ activeDeparture.code }}</a-descriptions-item>
@@ -229,6 +229,8 @@ import {
   PRICE_TYPE_OPTIONS,
   enumLabel
 } from '../../constants/display';
+import { useAuthStore } from '../../stores/auth';
+import { hasButtonPermission } from '../../utils/permission';
 import { notifyError, notifySuccess } from '../../utils/notify';
 
 const saving = ref(false);

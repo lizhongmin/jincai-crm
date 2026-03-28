@@ -7,9 +7,9 @@
       <template v-else-if="column.dataIndex === 'actions'">
         <a-space>
           <a-button type="link" @click="$emit('view', record)">详情</a-button>
-          <a-button type="link" @click="$emit('edit', record)">编辑</a-button>
+          <a-button type="link" :disabled="!hasButtonPermission('BTN_PRODUCT_ROUTE_EDIT')" @click="$emit('edit', record)">编辑</a-button>
           <a-popconfirm title="确认删除该线路？" @confirm="$emit('remove', record)">
-            <a-button type="link" danger>删除</a-button>
+            <a-button type="link" danger :disabled="!hasButtonPermission('BTN_PRODUCT_ROUTE_DELETE')">删除</a-button>
           </a-popconfirm>
         </a-space>
       </template>
@@ -19,7 +19,9 @@
 
 <script setup lang="ts">
 import ProTable from '../common/ProTable.vue';
-defineProps<{ items: any[] }>();
+import { hasButtonPermission } from '../../utils/permission';
+
+const props = withDefaults(defineProps<{ items: any[] }>(), {});
 defineEmits<{
   (event: 'view', value: any): void;
   (event: 'edit', value: any): void;

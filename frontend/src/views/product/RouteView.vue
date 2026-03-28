@@ -3,7 +3,7 @@
     <a-card class="section-card" :bordered="false">
       <div class="toolbar-row">
         <a-input-search v-model:value="routeKeyword" placeholder="按线路名称、出发地、目的地筛选" style="width: 320px" />
-        <a-button type="primary" @click="openRoute()">新增线路</a-button>
+        <a-button type="primary" :disabled="!hasButtonPermission('BTN_PRODUCT_ROUTE_CREATE')" @click="openRoute()">新增线路</a-button>
       </div>
       <route-table
         style="margin-top: 10px"
@@ -30,7 +30,7 @@
       <a-empty v-if="!activeRoute" description="未选择线路" />
       <template v-else>
         <div class="toolbar-row" style="margin-bottom: 8px">
-          <a-button type="primary" @click="openRoutePolicy">编辑下单策略</a-button>
+          <a-button type="primary" :disabled="!hasButtonPermission('BTN_PRODUCT_ROUTE_EDIT')" @click="openRoutePolicy">编辑下单策略</a-button>
         </div>
         <a-descriptions :column="2" bordered size="small">
           <a-descriptions-item label="编码">{{ activeRoute.code }}</a-descriptions-item>
@@ -191,6 +191,8 @@ import {
   PAYMENT_POLICY_LABEL_MAP,
   enumLabel
 } from '../../constants/display';
+import { useAuthStore } from '../../stores/auth';
+import { hasButtonPermission } from '../../utils/permission';
 import { notifyError, notifySuccess } from '../../utils/notify';
 
 const saving = ref(false);

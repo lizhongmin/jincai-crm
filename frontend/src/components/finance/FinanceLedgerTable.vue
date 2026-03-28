@@ -43,11 +43,11 @@
               </a-tooltip>
             </template>
             <a-tooltip title="编辑">
-              <a-button size="small" @click="emit('edit', record)">编辑</a-button>
+              <a-button size="small" :disabled="!props.canEditPermission" @click="emit('edit', record)">编辑</a-button>
             </a-tooltip>
             <a-tooltip title="删除">
               <a-popconfirm title="确认删除这条记录？" @confirm="emit('remove', record)">
-                <a-button size="small" danger ghost>删除</a-button>
+                <a-button size="small" danger ghost :disabled="!props.canDeletePermission">删除</a-button>
               </a-popconfirm>
             </a-tooltip>
           </a-space>
@@ -66,8 +66,12 @@ const props = withDefaults(defineProps<{
   mode: 'receivable' | 'payable' | 'refund';
   items: any[];
   canReviewPermission?: boolean;
+  canEditPermission?: boolean;
+  canDeletePermission?: boolean;
 }>(), {
-  canReviewPermission: true
+  canReviewPermission: true,
+  canEditPermission: true,
+  canDeletePermission: true
 });
 
 const emit = defineEmits<{

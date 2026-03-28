@@ -9,6 +9,7 @@ import {
   SETTLEMENT_STATUS_LABEL_MAP,
   enumLabel
 } from '../../constants/display';
+import { hasButtonPermission } from '../../utils/permission';
 
 type OrderAction =
   | 'SUBMIT'
@@ -22,8 +23,15 @@ type OrderAction =
   | 'MARK_TRAVEL_FINISHED'
   | 'CANCEL';
 
-const props = withDefaults(defineProps<{ items: any[]; canReviewPermission?: boolean }>(), {
-  canReviewPermission: true
+const props = withDefaults(defineProps<{
+  items: any[];
+  canReviewPermission?: boolean;
+  canEditPermission?: boolean;
+  canDeletePermission?: boolean;
+}>(), {
+  canReviewPermission: true,
+  canEditPermission: true,
+  canDeletePermission: true
 });
 
 const emit = defineEmits<{
@@ -88,6 +96,25 @@ const statusColor = (status?: string) => statusColorMap[status || ''] || 'defaul
 
 const canEdit = (record: any) => ['DRAFT', 'REJECTED'].includes(record.status);
 const canDelete = (record: any) => ['DRAFT', 'REJECTED'].includes(record.status);
+
+const quickActionPermissionMap: Record<OrderAction, string> = {
+  SUBMIT: 'BTN_ORDER_SUBMIT',
+  RESUBMIT: 'BTN_ORDER_SUBMIT',
+  WITHDRAW: 'BTN_ORDER_SUBMIT',
+  APPROVE: 'BTN_ORDER_APPROVE',
+  REJECT: 'BTN_ORDER_REJECT',
+  SIGN_CONTRACT: 'BTN_ORDER_EDIT',
+  LOCK_INVENTORY: 'BTN_ORDER_EDIT',
+  MARK_IN_TRAVEL: 'BTN_ORDER_EDIT',
+  MARK_TRAVEL_FINISHED: 'BTN_ORDER_EDIT',
+  CANCEL: 'BTN_ORDER_DELETE'
+};
+
+const hasQuickActionPermission = (action: OrderAction): boolean => {
+  const permissionCode = quickActionPermissionMap[action];
+  if (!permissionCode) return false;
+  return hasButtonPermission(permissionCode);
+};
 
 const quickAction = (record: any): OrderAction | null => {
   if (record.status === 'DRAFT') return 'SUBMIT';
@@ -162,9 +189,9 @@ const onTableChange = (pagination: { current?: number; pageSize?: number }) => {
         <div class="action-cell" @click.stop>
           <a-space>
             <a-button size="small" @click="emit('view', record)">详情</a-button>
-            <a-button size="small" :disabled="!canEdit(record)" @click="emit('edit', record)">编辑</a-button>
+            <a-button size="small" :disabled="!canEdit(record) || !props.canEditPermission" @click="emit('edit', record)">编辑</a-button>
             <a-button
-              v-if="quickAction(record)"
+              v-if="quickAction(record) && hasQuickActionPermission(quickAction(record)!)"
               size="small"
               type="primary"
               @click="emit('action', record, quickAction(record)!)"
@@ -186,7 +213,7 @@ const onTableChange = (pagination: { current?: number; pageSize?: number }) => {
               </template>
             </a-dropdown>
             <a-popconfirm title="确认删除该订单？" @confirm="emit('remove', record)">
-              <a-button size="small" danger ghost :disabled="!canDelete(record)">删除</a-button>
+              <a-button size="small" danger ghost :disabled="!canDelete(record) || !props.canDeletePermission">删除</a-button>
             </a-popconfirm>
           </a-space>
         </div>

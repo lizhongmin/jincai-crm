@@ -36,7 +36,7 @@
         </a-form-item>
         <a-form-item label="团期" required>
           <a-select v-model:value="model.departureId" placeholder="请选择团期" @change="handleDepartureChange" option-label-prop="label">
-            <a-select-option v-for="item in routeDepartures" :key="item.id" :value="item.id" :label="item.name || item.code">
+            <a-select-option v-for="item in routeDepartures" :key="item.id" :value="item.id" :label="`${item.name || item.code} (${item.startDate || '-'} ~ ${item.endDate || '-'})`">
               {{ item.name || item.code }} （{{ item.startDate }} ~ {{ item.endDate }}）
             </a-select-option>
           </a-select>
@@ -150,7 +150,6 @@ const selectedRoute = computed(() => props.routes.find((item) => item.id === pro
 const selectedTravelerIds = computed(() => props.model.travelerSelections.map((item: any) => item.travelerId));
 const travelerOptions = computed(() =>
   props.travelers
-    .filter(t => t.documents && t.documents.some((doc: any) => doc.documentType === 'NATIONAL_ID'))
     .map((item) => ({ label: `${item.name}${item.phone ? ` (${item.phone})` : ''}`, value: item.id }))
 );
 const travelerQuoteMap = computed(() => {

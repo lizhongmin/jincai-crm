@@ -12,6 +12,9 @@
       :active-order-id="activeOrderId"
       :active-order="activeOrder"
       :order-status-label="orderStatusLabel"
+      :can-receivable-permission="hasButtonPermission('BTN_FINANCE_RECEIVABLE_CREATE')"
+      :can-payable-permission="hasButtonPermission('BTN_FINANCE_PAYABLE_CREATE')"
+      :can-refund-permission="hasButtonPermission('BTN_FINANCE_REFUND_CREATE')"
       @add-receivable="openReceivable()"
       @add-payable="openPayable()"
       @add-refund="openRefund()"
@@ -24,6 +27,8 @@
           title="应收列表"
           mode="receivable"
           :items="receivables"
+          :can-edit-permission="hasButtonPermission('BTN_FINANCE_RECEIVABLE_EDIT')"
+          :can-delete-permission="hasButtonPermission('BTN_FINANCE_RECEIVABLE_DELETE')"
           @primary="openReceipt"
           @secondary="loadReceipts"
           @edit="openReceivable"
@@ -33,6 +38,8 @@
           title="应付列表"
           mode="payable"
           :items="payables"
+          :can-edit-permission="hasButtonPermission('BTN_FINANCE_PAYABLE_EDIT')"
+          :can-delete-permission="hasButtonPermission('BTN_FINANCE_PAYABLE_DELETE')"
           @primary="openPayment"
           @secondary="loadPayments"
           @edit="openPayable"
@@ -43,6 +50,8 @@
           mode="refund"
           :items="refunds"
           :can-review-permission="canReviewPermission"
+          :can-edit-permission="hasButtonPermission('BTN_FINANCE_REFUND_EDIT')"
+          :can-delete-permission="hasButtonPermission('BTN_FINANCE_REFUND_DELETE')"
           @approve="(record) => reviewRefund(record, true)"
           @reject="(record) => reviewRefund(record, false)"
           @edit="openRefund"
@@ -102,7 +111,7 @@ import FinanceSummaryBar from '../components/finance/FinanceSummaryBar.vue';
 import FinanceOrderToolbar from '../components/finance/FinanceOrderToolbar.vue';
 import { ORDER_STATUS_LABEL_MAP, enumLabel } from '../constants/display';
 import { useAuthStore } from '../stores/auth';
-import { canFinanceReviewByRole } from '../utils/role';
+import { hasButtonPermission } from '../utils/permission';
 import { notifyError, notifySuccess } from '../utils/notify';
 
 const auth = useAuthStore();
@@ -138,7 +147,7 @@ const receivableTotal = computed(() => Number(receivables.value.reduce((sum, ite
 const receivedTotal = computed(() => Number(receivables.value.reduce((sum, item) => sum + Number(item.received || 0), 0).toFixed(2)));
 const payableTotal = computed(() => Number(payables.value.reduce((sum, item) => sum + Number(item.amount || 0), 0).toFixed(2)));
 const refundTotal = computed(() => Number(refunds.value.reduce((sum, item) => sum + Number(item.amount || 0), 0).toFixed(2)));
-const canReviewPermission = computed(() => canFinanceReviewByRole(auth.profile?.roles));
+const canReviewPermission = computed(() => hasButtonPermission('BTN_FINANCE_REVIEW'));
 const orderStatusLabel = (value?: string) => enumLabel(ORDER_STATUS_LABEL_MAP, value);
 
 const itemModalTitle = computed(() => {

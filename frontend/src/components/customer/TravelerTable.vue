@@ -3,9 +3,9 @@
     <template #bodyCell="{ column, record }">
       <template v-if="column.dataIndex === 'actions'">
         <a-space>
-          <a-button type="link" @click="$emit('edit', record)">编辑</a-button>
+          <a-button type="link" :disabled="!hasButtonPermission('BTN_TRAVELER_EDIT')" @click="$emit('edit', record)">编辑</a-button>
           <a-popconfirm title="确认删除该出行人？" @confirm="$emit('remove', record)">
-            <a-button type="link" danger>删除</a-button>
+            <a-button type="link" danger :disabled="!hasButtonPermission('BTN_TRAVELER_DELETE')">删除</a-button>
           </a-popconfirm>
         </a-space>
       </template>
@@ -16,6 +16,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import ProTable from '../common/ProTable.vue';
+import { hasButtonPermission } from '../../utils/permission';
 
 const props = withDefaults(defineProps<{ items: any[]; scrollX?: number | string | false }>(), {
   scrollX: 'max-content'

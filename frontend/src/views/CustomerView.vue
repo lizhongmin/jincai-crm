@@ -10,10 +10,10 @@
 
       <div class="list-toolbar">
         <div class="toolbar-row">
-          <a-button v-if="moduleTab !== 'contact'" type="primary" @click="openCustomer()">新建客户</a-button>
+          <a-button v-if="moduleTab !== 'contact'" type="primary" :disabled="!hasButtonPermission('BTN_CUSTOMER_CREATE')" @click="openCustomer()">新建客户</a-button>
           <a-button v-if="moduleTab === 'contact'" type="primary" @click="openTraveler()">新建出行人</a-button>
           <a-upload v-if="moduleTab === 'customer'" :show-upload-list="false" :before-upload="beforeImport">
-            <a-button>导入客户</a-button>
+            <a-button :disabled="!hasButtonPermission('BTN_CUSTOMER_IMPORT')">导入客户</a-button>
           </a-upload>
           <a-button v-if="moduleTab !== 'contact'" @click="exportCustomerCsv">导出所有页</a-button>
         </div>
@@ -81,14 +81,14 @@
           </template>
           <template v-else-if="column.dataIndex === 'actions'">
             <a-space :size="8">
-              <a-button type="link" @click="openCustomer(record)">编辑</a-button>
+              <a-button type="link" :disabled="!hasButtonPermission('BTN_CUSTOMER_EDIT')" @click="openCustomer(record)">编辑</a-button>
               <a-button type="link" @click="openTransfer(record)">转移</a-button>
               <a-dropdown>
                 <a-button type="link">更多</a-button>
                 <template #overlay>
                   <a-menu @click="(info) => onMoreAction(String(info.key), record)">
                     <a-menu-item key="movePool">移入公海</a-menu-item>
-                    <a-menu-item key="delete">
+                    <a-menu-item key="delete" :disabled="!hasButtonPermission('BTN_CUSTOMER_DELETE')">
                       <span class="danger-text">删除</span>
                     </a-menu-item>
                   </a-menu>
@@ -267,6 +267,7 @@ import TravelerFormDrawer from '../components/customer/TravelerFormDrawer.vue';
 import CustomerDetailPanel from '../components/customer/CustomerDetailPanel.vue';
 import { customerApi, orderApi } from '../api/crm';
 import { useAuthStore } from '../stores/auth';
+import { hasButtonPermission } from '../utils/permission';
 import { notifyError, notifySuccess } from '../utils/notify';
 
 type ListFilter = 'all' | 'mine' | 'cooperate';

@@ -224,17 +224,31 @@ const loadProfile = async () => {
 
 const loadPermissions = async () => {
   const { data } = await permissionApi.menus();
-  const paths = Array.from(
+  const permissions = data.data || [];
+
+  // 分离菜单路径和按钮权限
+  const menuPaths = Array.from(
     new Set(
-      (data.data || [])
+      permissions
         .map((item: any) => String(item.menuPath || '').trim())
         .filter((path: string) => path.startsWith('/'))
     )
   );
-  auth.setAllowedMenuPaths(paths);
+
+  const buttonCodes = Array.from(
+    new Set(
+      permissions
+        .map((item: any) => String(item.code || '').trim())
+        .filter((code: string) => code && code !== '')
+    )
+  );
+
+  auth.setAllowedMenuPaths(menuPaths);
+  auth.setButtonPermissions(buttonCodes);
+  auth.setAllPermissions(permissions);
 
   const currentPermissionPath = String(route.meta.permissionPath || route.path);
-  if (paths.length > 0 && !paths.includes(currentPermissionPath)) {
+  if (menuPaths.length > 0 && !menuPaths.includes(currentPermissionPath)) {
     await router.replace(menuLeafPaths.value[0] || '/dashboard');
   }
 };

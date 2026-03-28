@@ -7,6 +7,7 @@ import OrderFormModal from '../components/order/OrderFormModal.vue';
 import OrderTable from '../components/order/OrderTable.vue';
 import { useAuthStore } from '../stores/auth';
 import { canOrderReviewByRole } from '../utils/role';
+import { hasButtonPermission } from '../utils/permission';
 import { notifyError, notifySuccess } from '../utils/notify';
 
 type OrderAction =
@@ -78,7 +79,7 @@ const statusOptions = computed(() =>
   statusOrder.map((value) => ({ value, label: statusLabelMap[value] || value }))
 );
 
-const canReviewPermission = computed(() => canOrderReviewByRole(auth.profile?.roles));
+const canReviewPermission = computed(() => hasButtonPermission('BTN_ORDER_APPROVE'));
 
 const customerMap = computed(() => Object.fromEntries(customers.value.map((item) => [item.id, item.name])));
 const routeMap = computed(() => Object.fromEntries(routes.value.map((item) => [item.id, item.name])));
@@ -453,9 +454,9 @@ onMounted(async () => {
     <a-card class="section-card" :bordered="false">
       <div class="toolbar-row">
         <a-input-search v-model:value="keyword" placeholder="按订单号、客户、线路筛选" style="width: 340px" />
-        <a-button type="primary" @click="openCreate()">新建订单</a-button>
+        <a-button type="primary" :disabled="!hasButtonPermission('BTN_ORDER_CREATE')" @click="openCreate()">新建订单</a-button>
         <a-upload :show-upload-list="false" :before-upload="beforeImportOrder">
-          <a-button>导入订单</a-button>
+          <a-button :disabled="!hasButtonPermission('BTN_ORDER_CREATE')">导入订单</a-button>
         </a-upload>
       </div>
 
@@ -471,6 +472,8 @@ onMounted(async () => {
             style="margin-top: 10px"
             :items="allOrders"
             :can-review-permission="canReviewPermission"
+            :can-edit-permission="hasButtonPermission('BTN_ORDER_EDIT')"
+            :can-delete-permission="hasButtonPermission('BTN_ORDER_DELETE')"
             @view="viewOrder"
             @edit="openCreate"
             @action="openAction"
@@ -493,6 +496,8 @@ onMounted(async () => {
             style="margin-top: 10px"
             :items="pendingOrders"
             :can-review-permission="canReviewPermission"
+            :can-edit-permission="hasButtonPermission('BTN_ORDER_EDIT')"
+            :can-delete-permission="hasButtonPermission('BTN_ORDER_DELETE')"
             @view="viewOrder"
             @edit="openCreate"
             @action="openAction"
@@ -523,6 +528,8 @@ onMounted(async () => {
               <order-table
                 :items="group.items"
                 :can-review-permission="canReviewPermission"
+                :can-edit-permission="hasButtonPermission('BTN_ORDER_EDIT')"
+                :can-delete-permission="hasButtonPermission('BTN_ORDER_DELETE')"
                 @view="viewOrder"
                 @edit="openCreate"
                 @action="openAction"

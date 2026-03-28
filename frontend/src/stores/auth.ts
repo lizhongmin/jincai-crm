@@ -12,7 +12,9 @@ export const useAuthStore = defineStore('auth', {
   state: () => ({
     token: localStorage.getItem('crm_token') || '',
     profile: null as UserProfile | null,
-    allowedMenuPaths: [] as string[]
+    allowedMenuPaths: [] as string[],
+    buttonPermissions: [] as string[],  // 按钮权限 code
+    allPermissions: [] as any[]          // 完整权限数据
   }),
   getters: {
     isLogin: (state) => Boolean(state.token)
@@ -28,10 +30,18 @@ export const useAuthStore = defineStore('auth', {
     setAllowedMenuPaths(paths: string[]) {
       this.allowedMenuPaths = paths;
     },
+    setButtonPermissions(codes: string[]) {
+      this.buttonPermissions = codes;
+    },
+    setAllPermissions(permissions: any[]) {
+      this.allPermissions = permissions;
+    },
     logout() {
       this.token = '';
       this.profile = null;
       this.allowedMenuPaths = [];
+      this.buttonPermissions = [];
+      this.allPermissions = [];
       localStorage.removeItem('crm_token');
     }
   }

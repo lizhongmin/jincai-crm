@@ -18,14 +18,14 @@
 
       <a-button
         type="primary"
-        :disabled="!localActiveOrderId"
+        :disabled="!localActiveOrderId || !props.canReceivablePermission"
         @click="emit('add-receivable')"
       >
         新增应收
       </a-button>
 
       <a-button
-        :disabled="!localActiveOrderId"
+        :disabled="!localActiveOrderId || !props.canPayablePermission"
         @click="emit('add-payable')"
       >
         新增应付
@@ -33,7 +33,7 @@
 
       <a-button
         danger
-        :disabled="!localActiveOrderId"
+        :disabled="!localActiveOrderId || !props.canRefundPermission"
         @click="emit('add-refund')"
       >
         新增退款
@@ -54,12 +54,19 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   orders: any[];
   activeOrderId: string | null;
   activeOrder: any;
   orderStatusLabel: (value?: string) => string;
-}>();
+  canReceivablePermission?: boolean;
+  canPayablePermission?: boolean;
+  canRefundPermission?: boolean;
+}>(), {
+  canReceivablePermission: true,
+  canPayablePermission: true,
+  canRefundPermission: true
+});
 
 const emit = defineEmits<{
   (e: 'add-receivable'): void;
