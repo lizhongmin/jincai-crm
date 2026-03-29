@@ -126,6 +126,15 @@
         v-else
         class="customer-table"
         :items="visibleContacts"
+        :pagination="{
+          current: travelerPage,
+          pageSize: travelerPageSize,
+          total: travelerTotal,
+          showSizeChanger: true,
+          pageSizeOptions: ['10', '20', '50'],
+          showTotal: (total: number) => `共 ${total} 条`
+        }"
+        @change="onTravelerTableChange"
         @edit="openTraveler"
         @remove="removeTraveler"
       />
@@ -325,6 +334,9 @@ const detailOrderKeyword = ref('');
 
 const customers = ref<any[]>([]);
 const travelers = ref<any[]>([]);
+const travelerPage = ref(1);
+const travelerPageSize = ref(10);
+const travelerTotal = ref(0);
 const users = ref<any[]>([]);
 const detailOrderRows = ref<any[]>([]);
 const detailOrderPage = ref(1);
@@ -415,13 +427,7 @@ const visibleCustomers = computed(() => {
 });
 
 const visibleContacts = computed(() => {
-  const normalizedKeyword = keyword.value.trim().toLowerCase();
-  if (!normalizedKeyword) {
-    return decoratedTravelers.value;
-  }
-  return decoratedTravelers.value.filter((item) =>
-    [item.name, item.phone, item.customerName, item.idNo].filter(Boolean).some((value) => String(value).toLowerCase().includes(normalizedKeyword))
-  );
+  return decoratedTravelers.value;
 });
 
 const detailContacts = computed(() => {
@@ -507,8 +513,13 @@ const loadCustomers = async () => {
 const travelersLoaded = ref(false);
 
 const loadTravelers = async () => {
-  const { data } = await customerApi.travelerList();
-  travelers.value = data.data || [];
+  const { data } = await customerApi.travelerPage({
+    page: travelerPage.value,
+    size: travelerPageSize.value,
+    keyword: keyword.value.trim() || undefined
+  });
+  travelers.value = data.data?.items || [];
+  travelerTotal.value = Number(data.data?.total || 0);
   travelersLoaded.value = true;
 };
 
@@ -535,7 +546,8 @@ const loadDetailOrders = async () => {
 
 const onSearch = () => {
   if (moduleTab.value === 'contact') {
-    // 前端过滤，直接依赖计算属性变化，但如果未来要请求可以加在这里
+    travelerPage.value = 1;
+    void loadTravelers();
   } else {
     customerPage.value = 1;
     void loadCustomers();
@@ -546,6 +558,12 @@ const onCustomerTableChange = (pagination: { current?: number; pageSize?: number
   customerPage.value = pagination.current || 1;
   customerPageSize.value = pagination.pageSize || 10;
   void loadCustomers();
+};
+
+const onTravelerTableChange = (pagination: { current?: number; pageSize?: number }) => {
+  travelerPage.value = pagination.current || 1;
+  travelerPageSize.value = pagination.pageSize || 10;
+  void loadTravelers();
 };
 
 const onDetailOrderTableChange = (pagination: { current?: number; pageSize?: number }) => {
@@ -748,6 +766,8 @@ watch([detailMode, detailTab], async ([dMode, dTab]) => {
 
 watch(keyword, async () => {
   if (moduleTab.value === 'contact') {
+    travelerPage.value = 1;
+    await loadTravelers();
     return;
   }
   customerPage.value = 1;

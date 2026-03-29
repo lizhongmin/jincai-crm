@@ -1,5 +1,12 @@
 <template>
-  <pro-table :columns="tableColumns" :data-source="items" row-key="id" :scroll="tableScroll">
+  <pro-table
+    :columns="tableColumns"
+    :data-source="items"
+    row-key="id"
+    :scroll="tableScroll"
+    :pagination="pagination"
+    @change="$emit('change', $event)"
+  >
     <template #bodyCell="{ column, record }">
       <template v-if="column.dataIndex === 'actions'">
         <a-space>
@@ -18,10 +25,19 @@ import { computed } from 'vue';
 import ProTable from '../common/ProTable.vue';
 import { hasButtonPermission } from '../../utils/permission';
 
-const props = withDefaults(defineProps<{ items: any[]; scrollX?: number | string | false }>(), {
-  scrollX: 'max-content'
+const props = withDefaults(defineProps<{
+  items: any[];
+  scrollX?: number | string | false;
+  pagination?: any;
+}>(), {
+  scrollX: 'max-content',
+  pagination: false
 });
-defineEmits<{ (event: 'edit', value: any): void; (event: 'remove', value: any): void }>();
+defineEmits<{
+  (event: 'edit', value: any): void;
+  (event: 'remove', value: any): void;
+  (event: 'change', pagination: any): void;
+}>();
 
 const idTypeLabelMap: Record<string, string> = {
   ID_CARD: '身份证',

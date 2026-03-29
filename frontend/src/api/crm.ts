@@ -133,6 +133,8 @@ export const customerApi = {
   deleteCustomer: (id: string) => http.delete<ApiResponse<void>>(`/customers/${id}`),
 
   // 出行人管理
+  travelerPage: (params: { page?: number; size?: number; keyword?: string; customerId?: string }) =>
+    http.get<ApiResponse<PageResult<any>>>('/travelers/page', { params }),
   travelers: (customerId: string) =>
     http.get<ApiResponse<any[]>>(`/customers/${customerId}/travelers`),
   travelerList: (customerId?: string) =>
