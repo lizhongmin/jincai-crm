@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -47,10 +48,14 @@ public class AuditController {
     @PreAuthorize("hasAuthority('MENU_SYSTEM_AUDIT')")
     public ApiResponse<com.jincai.crm.common.PageResult<ApiAuditLog>> apiLogsPage(
             @RequestParam(value = "page", defaultValue = "1") int page,
-            @RequestParam(value = "size", defaultValue = "20") int size) {
-        log.debug("AuditController.apiLogsPage() called by user: {}, page: {}, size: {}", SecurityUtils.currentUserId(), page, size);
+            @RequestParam(value = "size", defaultValue = "20") int size,
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "startTime", required = false) LocalDateTime startTime,
+            @RequestParam(value = "endTime", required = false) LocalDateTime endTime) {
+        log.debug("AuditController.apiLogsPage() called by user: {}, page: {}, size: {}, keyword: {}, startTime: {}, endTime: {}",
+                SecurityUtils.currentUserId(), page, size, keyword, startTime, endTime);
         try {
-            com.jincai.crm.common.PageResult<ApiAuditLog> result = apiAuditLogService.page(page, size);
+            com.jincai.crm.common.PageResult<ApiAuditLog> result = apiAuditLogService.page(page, size, keyword, startTime, endTime);
             log.debug("AuditController.apiLogsPage() succeeded for user: {}", SecurityUtils.currentUserId());
             return ApiResponse.ok(result);
         } catch (Exception e) {

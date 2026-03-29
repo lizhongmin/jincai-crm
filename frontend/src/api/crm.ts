@@ -248,8 +248,13 @@ export const workflowApi = {
 export const orderApi = {
   // 订单查询
   list: () => http.get<ApiResponse<any[]>>('/orders'),
-  page: (params: { page?: number; size?: number; keyword?: string; status?: string; customerId?: string }) =>
+  page: (params: { page?: number; size?: number; keyword?: string; status?: string; customerId?: string; ownerUserId?: string; departmentId?: string }) =>
     http.get<ApiResponse<PageResult<any>>>('/orders/page', { params }),
+  /**
+   * 获取订单上下文选项（用于表单选择器）
+   * 注意：为避免数据量过大，建议实现分页或搜索加载
+   * @deprecated 建议使用分页接口替代
+   */
   contextOptions: () => http.get<ApiResponse<any>>('/orders/context-options'),
   routeDepartures: (routeId: string) =>
     http.get<ApiResponse<any[]>>(`/orders/context-options/routes/${routeId}/departures`),
@@ -334,7 +339,7 @@ export const auditApi = {
    * @param params 分页参数
    * @returns 包含分页API日志数据的响应
    */
-  apiLogsPage: (params: { page?: number; size?: number }) =>
+  apiLogsPage: (params: { page?: number; size?: number; keyword?: string; startTime?: string; endTime?: string }) =>
     http.get<ApiResponse<PageResult<any>>>('/audits/api-logs', { params })
 };
 
