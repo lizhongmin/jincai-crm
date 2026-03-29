@@ -13,6 +13,7 @@ import com.jincai.crm.order.repository.OrderPriceItemRepository;
 import com.jincai.crm.order.repository.OrderStatusLogRepository;
 import com.jincai.crm.order.repository.OrderTravelerSnapshotRepository;
 import com.jincai.crm.order.repository.TravelOrderRepository;
+import com.jincai.crm.product.dto.OrderPolicyView;
 import com.jincai.crm.product.entity.Departure;
 import com.jincai.crm.product.entity.DeparturePrice;
 import com.jincai.crm.product.entity.RouteProduct;
@@ -425,21 +426,17 @@ public class OrderService {
                 requireAnyPermission(user, "BTN_ORDER_EDIT");
                 statusService.lockInventory(order);
             }
-            case RELEASE_INVENTORY -> {
+            case UNLOCK_INVENTORY -> {  // 改为正确的枚举值
                 requireAnyPermission(user, "BTN_ORDER_EDIT");
                 statusService.releaseInventory(order);
             }
-            case CONFIRM_TRAVEL -> {
+            case MARK_IN_TRAVEL -> {  // 改为正确的枚举值
                 requireAnyPermission(user, "BTN_ORDER_TRAVEL");
                 statusService.confirmTravel(order);
             }
-            case COMPLETE_TRAVEL -> {
+            case MARK_TRAVEL_FINISHED -> {  // 改为正确的枚举值
                 requireAnyPermission(user, "BTN_ORDER_TRAVEL");
                 statusService.completeTravel(order);
-            }
-            case COMPLETE_ORDER -> {
-                requireAnyPermission(user, "BTN_ORDER_TRAVEL");
-                statusService.completeOrder(order);
             }
             case CANCEL -> {
                 requireAnyPermission(user, "BTN_ORDER_CANCEL");
@@ -620,7 +617,7 @@ public class OrderService {
         // 新订单时设置默认值
         if (isNew) {
             order.setStatus(OrderStatus.DRAFT);
-            order.setContractStatus(policy.contractRequired() ? ContractStatus.REQUIRED : ContractStatus.NOT_REQUIRED);
+            order.setContractStatus(policy.contractRequired() ? ContractStatus.PENDING_SIGN : ContractStatus.NOT_REQUIRED);
             order.setPaymentStatus(PaymentStatus.UNPAID);
             order.setInventoryStatus(InventoryStatus.UNLOCKED);
             order.setSettlementStatus(SettlementStatus.UNSETTLED);

@@ -76,26 +76,24 @@ public class OrderPricingService {
             List<DeparturePrice> matchedPrices = matchPricesForTraveler(prices, traveler, request.priceSelections());
             for (DeparturePrice price : matchedPrices) {
                 OrderPriceItem item = new OrderPriceItem();
-                item.setPriceId(price.getId());
+                item.setDeparturePriceId(price.getId());
                 item.setPriceType(price.getPriceType());
-                item.setPriceLabel(price.getPriceLabel());
+                item.setItemName(price.getPriceLabel() != null ? price.getPriceLabel() : price.getPriceType());
                 item.setAmount(price.getPrice());
                 item.setQuantity(1);
-                item.setSubtotal(price.getPrice());
+                item.setUnitPrice(price.getPrice());
+                item.setCurrency(CNY);
                 priceItems.add(item);
                 totalAmount = totalAmount.add(price.getPrice());
             }
 
             // 创建旅客快照
             OrderTravelerSnapshot snapshot = new OrderTravelerSnapshot();
-            snapshot.setCustomerId(traveler.getCustomerId());
             snapshot.setTravelerId(traveler.getId());
             snapshot.setName(traveler.getName());
-            snapshot.setGender(traveler.getGender());
             snapshot.setPhone(traveler.getPhone());
             snapshot.setIdType(traveler.getIdType());
             snapshot.setIdNo(traveler.getIdNo());
-            snapshot.setBirthday(traveler.getBirthday());
             travelerSnapshots.add(snapshot);
         }
 
@@ -204,10 +202,10 @@ public class OrderPricingService {
         // 附加价格匹配（如单房差、附加费等）
         if (selections != null) {
             for (OrderPriceSelectionRequest selection : selections) {
-                List<DeparturePrice> candidates = pricesByType.getOrDefault(selection.priceType(), List.of());
-                for (DeparturePrice candidate : candidates) {
-                    if (candidate.getId().equals(selection.priceId())) {
-                        matched.add(candidate);
+                // 直接通过ID查找特定的价格项
+                for (DeparturePrice price : availablePrices) {
+                    if (price.getId().equals(selection.departurePriceId())) {
+                        matched.add(price);
                         break;
                     }
                 }

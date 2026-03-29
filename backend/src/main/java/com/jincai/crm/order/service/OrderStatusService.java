@@ -41,7 +41,7 @@ import java.util.Objects;
  */
 @Slf4j
 @Service
-@RequiredAwait
+@RequiredArgsConstructor
 public class OrderStatusService {
 
     private final TravelOrderRepository orderRepository;
@@ -51,22 +51,6 @@ public class OrderStatusService {
     private final CustomerRepository customerRepository;
     private final RouteProductRepository routeRepository;
     private final DepartureRepository departureRepository;
-
-    public OrderStatusService(TravelOrderRepository orderRepository,
-                              OrderStatusLogRepository logRepository,
-                              WorkflowService workflowService,
-                              AuditLogService auditLogService,
-                              CustomerRepository customerRepository,
-                              RouteProductRepository routeRepository,
-                              DepartureRepository departureRepository) {
-        this.orderRepository = orderRepository;
-        this.logRepository = logRepository;
-        this.workflowService = workflowService;
-        this.auditLogService = auditLogService;
-        this.customerRepository = customerRepository;
-        this.routeRepository = routeRepository;
-        this.departureRepository = departureRepository;
-    }
 
     /**
      * 验证订单是否可以编辑（仅草稿或已驳回状态可编辑）。
@@ -112,6 +96,11 @@ public class OrderStatusService {
             throw new BusinessException("error.departure.notOpen");
         }
 
+        // 检查合同要求
+        if (order.getContractRequired() && order.getContractStatus() != ContractStatus.SIGNED) {
+            throw new BusinessException("error.order.contract.required");
+        }
+
         // 检查库存
         Integer stock = departure.getStock();
         if (stock != null && order.getTravelerCount() != null && order.getTravelerCount() > stock) {
@@ -129,7 +118,7 @@ public class OrderStatusService {
 
         // 首次提交时创建工作流实例
         if (!resubmitOnly) {
-            workflowService.createInstance(saved);
+            workflowService.startWorkflow(saved);
         }
 
         log.info("订单提交成功 - 订单ID: {}, 订单号: {}", saved.getId(), saved.getOrderNo());
@@ -160,7 +149,7 @@ public class OrderStatusService {
         }
 
         // 完成工作流节点
-        workflowService.completeNode(saved.getId(), user, comment);
+        workflowService.approve(saved.getId(), user, comment);
 
         // 记录状态日志
         addStatusLog(saved.getId(), oldStatus, OrderStatus.APPROVED, comment);
@@ -187,7 +176,7 @@ public class OrderStatusService {
         TravelOrder saved = orderRepository.save(order);
 
         // 完成工作流节点（驳回）
-        workflowService.completeNode(saved.getId(), user, comment);
+        workflowService.reject(saved.getId(), user, comment);
 
         // 记录状态日志
         addStatusLog(saved.getId(), oldStatus, OrderStatus.REJECTED, comment);
@@ -214,7 +203,7 @@ public class OrderStatusService {
         TravelOrder saved = orderRepository.save(order);
 
         // 撤回工作流节点
-        workflowService.withdrawNode(saved.getId(), user, comment);
+        workflowService.withdraw(saved.getId(), user, comment);
 
         // 记录状态日志
         addStatusLog(saved.getId(), oldStatus, OrderStatus.DRAFT, comment);
@@ -233,7 +222,7 @@ public class OrderStatusService {
         if (order.getStatus() != OrderStatus.APPROVED && order.getStatus() != OrderStatus.SETTLING) {
             throw new BusinessException("error.order.contract.sign.invalidStatus");
         }
-        if (order.getContractStatus() != ContractStatus.REQUIRED) {
+        if (order.getContractStatus() != ContractStatus.PENDING_SIGN) {
             throw new BusinessException("error.order.contract.notRequired");
         }
 
@@ -434,14 +423,14 @@ public class OrderStatusService {
      * @param orderId 订单ID
      * @param fromStatus 原状态
      * @param toStatus 新状态
-     * @param comment 备注
+     * @param remark 备注
      */
-    public void addStatusLog(String orderId, Object fromStatus, Object toStatus, String comment) {
+    public void addStatusLog(String orderId, Object fromStatus, Object toStatus, String remark) {
         OrderStatusLog logEntry = new OrderStatusLog();
         logEntry.setOrderId(orderId);
         logEntry.setFromStatus(fromStatus == null ? null : fromStatus.toString());
         logEntry.setToStatus(toStatus.toString());
-        logEntry.setComment(comment);
+        logEntry.setRemark(remark);
         logRepository.save(logEntry);
     }
 
