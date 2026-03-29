@@ -30,24 +30,26 @@ public class ApiAuditLogService {
      * 分页查询 API 审计日志（无条件）。
      */
     public PageResult<ApiAuditLog> page(int page, int size) {
-        return page(page, size, null, null, null);
+        return page(page, size, null, null, null, null);
     }
 
     /**
      * 分页查询 API 审计日志（带条件）。
      *
-     * @param page      页码（从 1 开始）
-     * @param size      每页大小
-     * @param keyword   关键词（匹配 traceId / requestUrl / classMethod / createdBy）
-     * @param startTime 起始时间（含）
-     * @param endTime   结束时间（含）
+     * @param page       页码（从 1 开始）
+     * @param size       每页大小
+     * @param keyword    关键词（匹配 traceId / requestUrl / classMethod）
+     * @param operator   执行人
+     * @param httpMethod 请求方式
+     * @param startTime  起始时间（含）
+     * @param endTime    结束时间（含）
      */
-    public PageResult<ApiAuditLog> page(int page, int size, String keyword, LocalDateTime startTime, LocalDateTime endTime) {
-        log.debug("分页查询API审计日志 - 页码: {}, 大小: {}, 关键词: {}, 起始: {}, 结束: {}", page, size, keyword, startTime, endTime);
+    public PageResult<ApiAuditLog> page(int page, int size, String keyword, String operator, String httpMethod, LocalDateTime startTime, LocalDateTime endTime) {
+        log.debug("分页查询API审计日志 - 页码: {}, 大小: {}, 关键词: {}, 执行人: {}, 请求方式: {}, 起始: {}, 结束: {}", page, size, keyword, operator, httpMethod, startTime, endTime);
         try {
             Pageable pageable = PageRequest.of(Math.max(page - 1, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "createdAt"));
 
-            Specification<ApiAuditLog> spec = buildSpec(keyword, startTime, endTime);
+            Specification<ApiAuditLog> spec = buildSpec(keyword, operator, httpMethod, startTime, endTime);
             Page<ApiAuditLog> pageData = repository.findAll(spec, pageable);
 
             log.debug("API审计日志查询完成 - 总记录: {}", pageData.getTotalElements());
@@ -58,7 +60,7 @@ public class ApiAuditLogService {
         }
     }
 
-    private Specification<ApiAuditLog> buildSpec(String keyword, LocalDateTime startTime, LocalDateTime endTime) {
+    private Specification<ApiAuditLog> buildSpec(String keyword, String operator, String httpMethod, LocalDateTime startTime, LocalDateTime endTime) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -67,10 +69,16 @@ public class ApiAuditLogService {
                 predicates.add(cb.or(
                     cb.like(cb.lower(root.get("traceId")), like),
                     cb.like(cb.lower(root.get("requestUrl")), like),
-                    cb.like(cb.lower(root.get("classMethod")), like),
-                    cb.like(cb.lower(root.get("createdBy")), like),
-                    cb.like(cb.lower(root.get("httpMethod")), like)
+                    cb.like(cb.lower(root.get("classMethod")), like)
                 ));
+            }
+
+            if (operator != null && !operator.isBlank()) {
+                predicates.add(cb.like(cb.lower(root.get("createdBy")), "%" + operator.trim().toLowerCase() + "%"));
+            }
+
+            if (httpMethod != null && !httpMethod.isBlank()) {
+                predicates.add(cb.equal(cb.upper(root.get("httpMethod")), httpMethod.trim().toUpperCase()));
             }
 
             if (startTime != null) {

@@ -36,4 +36,8 @@ public class ApiAuditLog extends BaseEntity {
 
     @Column(name = "time_consuming")
     private Long timeConsuming;
+
+    /** HTTP 响应状态码，用于标识接口调用成功/失败 */
+    @Column(name = "http_status")
+    private Integer httpStatus;
 }

@@ -339,7 +339,7 @@ export const auditApi = {
    * @param params 分页参数
    * @returns 包含分页API日志数据的响应
    */
-  apiLogsPage: (params: { page?: number; size?: number; keyword?: string; startTime?: string; endTime?: string }) =>
+  apiLogsPage: (params: { page?: number; size?: number; keyword?: string; operator?: string; httpMethod?: string; startTime?: string; endTime?: string }) =>
     http.get<ApiResponse<PageResult<any>>>('/audits/api-logs', { params })
 };
 

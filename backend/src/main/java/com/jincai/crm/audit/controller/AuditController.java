@@ -50,12 +50,14 @@ public class AuditController {
             @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "size", defaultValue = "20") int size,
             @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "operator", required = false) String operator,
+            @RequestParam(value = "httpMethod", required = false) String httpMethod,
             @RequestParam(value = "startTime", required = false) LocalDateTime startTime,
             @RequestParam(value = "endTime", required = false) LocalDateTime endTime) {
-        log.debug("AuditController.apiLogsPage() called by user: {}, page: {}, size: {}, keyword: {}, startTime: {}, endTime: {}",
-                SecurityUtils.currentUserId(), page, size, keyword, startTime, endTime);
+        log.debug("AuditController.apiLogsPage() called by user: {}, page: {}, size: {}, keyword: {}, operator: {}, httpMethod: {}, startTime: {}, endTime: {}",
+                SecurityUtils.currentUserId(), page, size, keyword, operator, httpMethod, startTime, endTime);
         try {
-            com.jincai.crm.common.PageResult<ApiAuditLog> result = apiAuditLogService.page(page, size, keyword, startTime, endTime);
+            com.jincai.crm.common.PageResult<ApiAuditLog> result = apiAuditLogService.page(page, size, keyword, operator, httpMethod, startTime, endTime);
             log.debug("AuditController.apiLogsPage() succeeded for user: {}", SecurityUtils.currentUserId());
             return ApiResponse.ok(result);
         } catch (Exception e) {

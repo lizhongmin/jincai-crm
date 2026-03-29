@@ -13,9 +13,27 @@
             <a-input
               v-model:value="queryForm.keyword"
               allow-clear
-              placeholder="搜索 Trace ID / URL / 类方法 / 执行人"
-              style="width: 320px"
+              placeholder="搜索 Trace ID / URL / 类方法"
+              style="width: 280px"
               @pressEnter="handleSearch"
+            />
+          </a-form-item>
+          <a-form-item>
+            <a-input
+              v-model:value="queryForm.operator"
+              allow-clear
+              placeholder="执行人"
+              style="width: 140px"
+              @pressEnter="handleSearch"
+            />
+          </a-form-item>
+          <a-form-item>
+            <a-select
+              v-model:value="queryForm.httpMethod"
+              allow-clear
+              placeholder="请求方式"
+              style="width: 140px"
+              :options="httpMethodOptions"
             />
           </a-form-item>
           <a-form-item>
@@ -41,7 +59,7 @@
         :row-key="record => record.id"
         :pagination="pagination"
         :loading="loading"
-        :scroll="{ x: 1320 }"
+        :scroll="{ x: 1420 }"
         bordered
         size="middle"
         @change="handleTableChange"
@@ -61,6 +79,12 @@
 
           <template v-else-if="column.dataIndex === 'operator'">
             {{ record.createdBy || '-' }}
+          </template>
+
+          <template v-else-if="column.dataIndex === 'httpStatus'">
+            <a-tag :color="getHttpStatusColor(record.httpStatus)">
+              {{ record.httpStatus || '-' }}
+            </a-tag>
           </template>
 
           <template v-else-if="column.dataIndex === 'timeConsuming'">
@@ -90,6 +114,11 @@
         <a-descriptions-item label="Trace ID">{{ activeRecord?.traceId || '-' }}</a-descriptions-item>
         <a-descriptions-item label="执行人">{{ activeRecord?.createdBy || '-' }}</a-descriptions-item>
         <a-descriptions-item label="请求方式">{{ activeRecord?.httpMethod || '-' }}</a-descriptions-item>
+        <a-descriptions-item label="响应状态">
+          <a-tag :color="getHttpStatusColor(activeRecord?.httpStatus)">
+            {{ activeRecord?.httpStatus || '-' }}
+          </a-tag>
+        </a-descriptions-item>
         <a-descriptions-item label="请求URL">{{ activeRecord?.requestUrl || '-' }}</a-descriptions-item>
         <a-descriptions-item label="来源IP">{{ activeRecord?.sourceIp || '-' }}</a-descriptions-item>
         <a-descriptions-item label="类与方法">{{ activeRecord?.classMethod || '-' }}</a-descriptions-item>
@@ -124,6 +153,8 @@ const dateRange = ref<[string, string] | []>([]);
 
 const queryForm = ref({
   keyword: '',
+  operator: '',
+  httpMethod: undefined as string | undefined,
   startTime: undefined as string | undefined,
   endTime: undefined as string | undefined
 });
@@ -140,6 +171,7 @@ const pagination = ref({
 const columns = [
   { title: 'Trace ID', dataIndex: 'traceId', width: 240 },
   { title: '请求方式', dataIndex: 'httpMethod', width: 100 },
+  { title: '状态码', dataIndex: 'httpStatus', width: 90 },
   { title: '请求URL', dataIndex: 'requestUrl', width: 280 },
   { title: '执行人', dataIndex: 'operator', width: 140 },
   { title: '来源IP', dataIndex: 'sourceIp', width: 150 },
@@ -149,10 +181,20 @@ const columns = [
   { title: '操作', dataIndex: 'action', width: 90, fixed: 'right' as const }
 ];
 
+const httpMethodOptions = [
+  { label: 'GET', value: 'GET' },
+  { label: 'POST', value: 'POST' },
+  { label: 'PUT', value: 'PUT' },
+  { label: 'PATCH', value: 'PATCH' },
+  { label: 'DELETE', value: 'DELETE' }
+];
+
 const buildParams = () => ({
   page: pagination.value.current,
   size: pagination.value.pageSize,
   keyword: queryForm.value.keyword.trim() || undefined,
+  operator: queryForm.value.operator.trim() || undefined,
+  httpMethod: queryForm.value.httpMethod,
   startTime: queryForm.value.startTime,
   endTime: queryForm.value.endTime
 });
@@ -181,6 +223,8 @@ const handleSearch = () => {
 
 const handleReset = () => {
   queryForm.value.keyword = '';
+  queryForm.value.operator = '';
+  queryForm.value.httpMethod = undefined;
   queryForm.value.startTime = undefined;
   queryForm.value.endTime = undefined;
   dateRange.value = [];
@@ -207,6 +251,14 @@ const openDetail = (record: any) => {
 const formatDateTime = (val?: string) => {
   if (!val) return '-';
   return dayjs(val).format('YYYY-MM-DD HH:mm:ss');
+};
+
+const getHttpStatusColor = (status?: number) => {
+  if (!status) return 'default';
+  if (status >= 200 && status < 300) return 'success';
+  if (status >= 300 && status < 400) return 'processing';
+  if (status >= 400 && status < 500) return 'warning';
+  return 'error';
 };
 
 const formatJson = (value?: string) => {

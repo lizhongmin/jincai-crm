@@ -129,6 +129,10 @@ public class ApiLogAspect {
                 }
             }
 
+            if (response != null) {
+                apiLog.setHttpStatus(response.getStatus());
+            }
+
             // 输出组装好的日志审计对象
             try {
                 log.info("API Audit Log: {}", objectMapper.writeValueAsString(apiLog));
