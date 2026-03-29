@@ -27,7 +27,7 @@ public class AttachmentController {
     @PostMapping("/upload")
     @PreAuthorize("hasAuthority('BTN_FILE_UPLOAD')")
     public ApiResponse<Attachment> upload(@RequestParam("bizType") String bizType,
-                                          @RequestParam("bizId") Long bizId,
+                                          @RequestParam("bizId") String bizId,
                                           @RequestParam("file") MultipartFile file) {
         log.info("AttachmentController.upload() called by user: {}, bizType: {}, bizId: {}, filename: {}", SecurityUtils.currentUserId(), bizType, bizId, file.getOriginalFilename());
         try {
@@ -43,7 +43,7 @@ public class AttachmentController {
     @GetMapping
     @PreAuthorize("hasAnyAuthority('MENU_ORDER','MENU_CUSTOMER','MENU_PRODUCT','MENU_FINANCE')")
     public ApiResponse<java.util.List<Attachment>> list(@RequestParam("bizType") String bizType,
-                                                         @RequestParam("bizId") Long bizId) {
+                                                         @RequestParam("bizId") String bizId) {
         log.debug("AttachmentController.list() called by user: {}, bizType: {}, bizId: {}", SecurityUtils.currentUserId(), bizType, bizId);
         try {
             java.util.List<Attachment> result = service.list(bizType, bizId);

@@ -7,6 +7,6 @@ import java.util.List;
 
 public interface AttachmentRepository extends JpaRepository<Attachment, String> {
 
-    List<Attachment> findByBizTypeAndBizIdAndDeletedFalse(String bizType, Long bizId);
+    List<Attachment> findByBizTypeAndBizIdAndDeletedFalse(String bizType, String bizId);
 }
 

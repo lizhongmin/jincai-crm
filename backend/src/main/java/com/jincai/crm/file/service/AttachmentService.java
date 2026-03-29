@@ -29,7 +29,7 @@ public class AttachmentService {
         this.properties = properties;
     }
 
-    public Attachment upload(String bizType, Long bizId, MultipartFile file) {
+    public Attachment upload(String bizType, String bizId, MultipartFile file) {
         log.info("上传附件 - 业务类型: {}, 业务ID: {}, 文件名: {}, 文件大小: {}",
                 bizType, bizId, file.getOriginalFilename(), file.getSize());
         try {
@@ -119,7 +119,7 @@ public class AttachmentService {
         return false;
     }
 
-    public List<Attachment> list(String bizType, Long bizId) {
+    public List<Attachment> list(String bizType, String bizId) {
         return repository.findByBizTypeAndBizIdAndDeletedFalse(bizType, bizId);
     }
 

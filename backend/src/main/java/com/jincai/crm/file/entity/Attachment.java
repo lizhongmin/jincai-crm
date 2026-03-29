@@ -16,8 +16,8 @@ public class Attachment extends BaseEntity {
     @Column(name = "biz_type", nullable = false)
     private String bizType;
 
-    @Column(name = "biz_id", nullable = false)
-    private Long bizId;
+    @Column(name = "biz_id", nullable = false, length = 64)
+    private String bizId;
 
     @Column(name = "file_name", nullable = false)
     private String fileName;
