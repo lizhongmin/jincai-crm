@@ -4,6 +4,8 @@ backend/target/
 # Node / Vite
 frontend/node_modules/
 frontend/dist/
+miniapp/node_modules/
+miniapp/dist/
 
 # IDE
 .idea/
@@ -15,3 +17,13 @@ Thumbs.db
 
 # Uploads
 uploads/
+
+# 本地环境配置（含敏感信息，不提交到版本库）
+backend/src/main/resources/application-local.yml
+backend/src/main/resources/application-local.yaml
+
+# 配置模板（仅保留示例文件）
+# application-template.yml 可提交，用于指导配置
+
+# 增强脚本临时文件
+*.enhanced

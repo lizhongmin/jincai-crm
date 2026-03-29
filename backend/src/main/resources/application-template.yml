@@ -12,19 +12,17 @@ spring:
     encoding: UTF-8
     fallback-to-system-locale: false
   datasource:
-    # 生产环境必须通过环境变量 DB_URL / DB_USER / DB_PASSWORD 注入，不要在此写明文密码
-    # 示例: export DB_URL="jdbc:mysql://your-host:3306/crm?..."
     url: ${DB_URL:jdbc:mysql://localhost:3306/crm?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
     username: ${DB_USER:root}
     password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
-    # HikariCP 连接池配置
+    # HikariCP连接池配置
     hikari:
-      # 连接最大存活时间(建议小于 MySQL 的 wait_timeout，默认 28000 秒)
+      # 连接最大存活时间(建议小于MySQL的wait_timeout, 默认28000秒)
       max-lifetime: 1800000
-      # 获取连接的最大等待时间
+      # 连接超时时间
       connection-timeout: 20000
-      # 空闲连接的最大存活时间
+      # 空闲连接超时时间
       idle-timeout: 600000
       # 池中维持的最小空闲连接数
       minimum-idle: 5
@@ -39,19 +37,15 @@ spring:
         format_sql: true
   data:
     redis:
-      # 生产环境通过环境变量 REDIS_HOST / REDIS_PORT / REDIS_PASSWORD 注入
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
 
 app:
   jwt:
-    # 生产环境必须通过环境变量 JWT_SECRET 注入，且不能少于 32 字节（256 位），不要在此写明文密钥
-    # 生成示例: openssl rand -hex 32
     secret: ${JWT_SECRET:}
     expiration-seconds: ${JWT_EXPIRE_SECONDS:86400}
   file:
-    # 文件上传目录，建议使用绝对路径或挂载外部存储
     upload-dir: ${UPLOAD_DIR:./uploads}
   order:
     auto-cancel:

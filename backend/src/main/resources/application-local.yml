@@ -25,7 +25,9 @@ spring:
 
 app:
   jwt:
-    secret: local-secret-key-change-this-in-production
+    # 本地开发密钥，仅用于开发环境，生产环境务必替换为更强密钥(>=32字节)
+    # 生成示例: openssl rand -hex 32
+    secret: local-dev-secret-key-32bytes-min!!
     expiration-seconds: 86400
   file:
     upload-dir: ./uploads
