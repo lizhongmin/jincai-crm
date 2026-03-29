@@ -5,7 +5,7 @@ const TRACE_HEADER_NAME = 'X-Trace-Id';
 
 function createTraceId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID().replaceAll('-', '');
+    return crypto.randomUUID().replace(/-/g, '');
   }
   const fallback = `${Date.now().toString(16)}${Math.random().toString(16).slice(2)}${Math.random().toString(16).slice(2)}`;
   return fallback.slice(0, 32);
@@ -22,7 +22,7 @@ function readHeaderValue(
     return headers.get(headerName) ?? headers.get(headerName.toLowerCase());
   }
   const matchedKey = Object.keys(headers).find((key) => key.toLowerCase() === headerName.toLowerCase());
-  return matchedKey ? headers[matchedKey] : undefined;
+  return matchedKey ? (headers as Record<string, string | undefined>)[matchedKey] : undefined;
 }
 
 /**
