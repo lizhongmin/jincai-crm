@@ -37,7 +37,6 @@ import java.util.List;
 public class OrderImportService {
 
     private final I18nService i18nService;
-    private final OrderService orderService; // 循环依赖，实际应该通过事件或接口解耦
 
     /**
      * 从 Excel 文件导入订单。
