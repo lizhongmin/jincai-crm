@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { orderApi } from '../api/crm';
 import OrderActionModal from '../components/order/OrderActionModal.vue';
@@ -40,6 +40,10 @@ const orderPage = ref(1);
 const orderPageSize = ref(10);
 const orderTotal = ref(0);
 const saving = ref(false);
+
+// 搜索防抖定时器
+let customerSearchTimeout: number | null = null;
+let routeSearchTimeout: number | null = null;
 
 const createModal = ref(false);
 const actionModal = ref(false);
@@ -183,22 +187,116 @@ const listStatusParam = computed(() => {
 });
 
 const loadOrders = async () => {
-  const { data } = await orderApi.page({
+  // 添加数据权限过滤参数
+  const params: any = {
     page: orderPage.value,
     size: orderPageSize.value,
     keyword: keyword.value.trim() || undefined,
     status: listStatusParam.value
-  });
+  };
+
+  // 根据用户数据权限范围添加过滤条件
+  if (auth.profile) {
+    // 如果用户有特定的数据权限范围，添加相应过滤
+    if (auth.profile.dataScope === 'SELF') {
+      params.ownerUserId = auth.profile.userId;
+    } else if (auth.profile.dataScope === 'DEPARTMENT') {
+      params.departmentId = auth.profile.departmentId;
+    }
+    // ALL范围不添加过滤条件，可以看到所有数据
+  }
+
+  const { data } = await orderApi.page(params);
   orders.value = data.data?.items || [];
   orderTotal.value = Number(data.data?.total || 0);
 };
 
+/**
+ * 加载订单上下文数据（客户和线路列表）
+ * 优化：使用分页加载避免一次性加载大量数据
+ * 后续可进一步优化为搜索加载模式
+ */
 const loadContextOptions = async () => {
-  const { data } = await orderApi.contextOptions();
-  customers.value = data.data?.customers || [];
-  routes.value = data.data?.routes || [];
-  // departures 不再从 contextOptions 全量加载，改为按需加载
-  departures.value = [];
+  try {
+    // 使用分页接口加载客户和线路数据（初始加载第一页，适当增加页大小）
+    const [customerRes, routeRes] = await Promise.all([
+      customerApi.customersPage({ page: 1, size: 200 }), // 初始加载前200个客户
+      productApi.routePage({ page: 1, size: 200 })        // 初始加载前200个线路
+    ]);
+
+    customers.value = customerRes.data?.items || [];
+    routes.value = routeRes.data?.items || [];
+
+    // departures 不再从 contextOptions 全量加载，改为按需加载
+    departures.value = [];
+  } catch (error) {
+    // 降级到原来的 contextOptions 接口
+    console.warn('分页加载失败，降级到全量加载:', error);
+    const { data } = await orderApi.contextOptions();
+    customers.value = data.data?.customers || [];
+    routes.value = data.data?.routes || [];
+    departures.value = [];
+  }
+};
+
+/**
+ * 搜索客户（用于客户选择器的远程搜索）
+ * 包含防抖处理，避免频繁API调用
+ * @param value 搜索关键字
+ */
+const searchCustomers = (value: string) => {
+  if (customerSearchTimeout) {
+    clearTimeout(customerSearchTimeout);
+  }
+
+  customerSearchTimeout = window.setTimeout(async () => {
+    try {
+      const { data } = await customerApi.customersPage({
+        page: 1,
+        size: 50,
+        keyword: value.trim() || undefined
+      });
+      // 只在有搜索关键字时更新客户列表，避免清空已有数据
+      if (value.trim()) {
+        customers.value = data.data?.items || [];
+      }
+    } catch (error) {
+      console.error('搜索客户失败:', error);
+      notifyError(error);
+    } finally {
+      customerSearchTimeout = null;
+    }
+  }, 300);
+};
+
+/**
+ * 搜索线路（用于线路选择器的远程搜索）
+ * 包含防抖处理，避免频繁API调用
+ * @param value 搜索关键字
+ */
+const searchRoutes = (value: string) => {
+  if (routeSearchTimeout) {
+    clearTimeout(routeSearchTimeout);
+  }
+
+  routeSearchTimeout = window.setTimeout(async () => {
+    try {
+      const { data } = await productApi.routePage({
+        page: 1,
+        size: 50,
+        keyword: value.trim() || undefined
+      });
+      // 只在有搜索关键字时更新线路列表，避免清空已有数据
+      if (value.trim()) {
+        routes.value = data.data?.items || [];
+      }
+    } catch (error) {
+      console.error('搜索线路失败:', error);
+      notifyError(error);
+    } finally {
+      routeSearchTimeout = null;
+    }
+  }, 300);
 };
 
 const loadBase = async () => {
@@ -428,6 +526,16 @@ onMounted(async () => {
     notifyError(error);
   }
 });
+
+// 组件卸载时清理定时器
+onUnmounted(() => {
+  if (customerSearchTimeout) {
+    clearTimeout(customerSearchTimeout);
+  }
+  if (routeSearchTimeout) {
+    clearTimeout(routeSearchTimeout);
+  }
+});
 </script>
 
 <template>
@@ -553,6 +661,8 @@ onMounted(async () => {
       :quote="quote"
       @save="saveOrder"
       @route-change="handleRouteChange"
+      @route-search="searchRoutes"
+      @customer-search="searchCustomers"
       @customer-change="handleCustomerChange"
       @departure-change="handleDepartureChange"
       @request-quote="requestQuote"

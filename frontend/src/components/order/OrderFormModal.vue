@@ -28,7 +28,16 @@
 
       <div class="grid-3">
         <a-form-item label="线路" required>
-          <a-select v-model:value="model.routeId" placeholder="请选择线路" @change="handleRouteChange">
+          <a-select
+            v-model:value="model.routeId"
+            placeholder="请选择线路"
+            show-search
+            :filter-option="false"
+            :show-arrow="false"
+            :default-active-first-option="false"
+            @search="handleRouteSearch"
+            @change="handleRouteChange"
+          >
             <a-select-option v-for="item in routes" :key="item.id" :value="item.id">
               {{ item.name }}
             </a-select-option>
@@ -48,7 +57,16 @@
 
       <div class="grid-3">
         <a-form-item label="客户" required>
-          <a-select v-model:value="model.customerId" placeholder="请选择客户" @change="handleCustomerChange">
+          <a-select
+            v-model:value="model.customerId"
+            placeholder="请选择客户"
+            show-search
+            :filter-option="false"
+            :show-arrow="false"
+            :default-active-first-option="false"
+            @search="handleCustomerSearch"
+            @change="handleCustomerChange"
+          >
             <a-select-option v-for="item in customers" :key="item.id" :value="item.id">
               {{ item.name }} ({{ item.phone }})
             </a-select-option>
@@ -140,10 +158,44 @@ const emit = defineEmits<{
   (e: 'update:open', value: boolean): void;
   (e: 'save'): void;
   (e: 'route-change', routeId?: string): void;
+  (e: 'route-search', keyword: string): void;
+  (e: 'customer-search', keyword: string): void;
   (e: 'customer-change', customerId?: string): void;
   (e: 'departure-change', departureId?: string): void;
   (e: 'request-quote'): void;
 }>();
+
+/**
+ * 线路选择器过滤函数
+ * 支持按线路名称搜索
+ */
+const filterRouteOption = (input: string, option: any) => {
+  const route = props.routes.find(r => r.id === option.value);
+  if (!route) return false;
+  return String(route.name || '').toLowerCase().includes(input.toLowerCase());
+};
+
+/**
+ * 客户选择器过滤函数
+ * 支持按客户名称或手机号搜索
+ */
+/**
+ * 处理线路搜索
+ * @param value 搜索关键字
+ */
+const handleRouteSearch = (value: string) => {
+  // 防抖处理，避免频繁搜索
+  emit('route-search', value);
+};
+
+/**
+ * 处理客户搜索
+ * @param value 搜索关键字
+ */
+const handleCustomerSearch = (value: string) => {
+  // 防抖处理
+  emit('customer-search', value);
+};
 
 const routeDepartures = computed(() => props.departures.filter((item) => item.routeId === props.model.routeId));
 const selectedRoute = computed(() => props.routes.find((item) => item.id === props.model.routeId));
