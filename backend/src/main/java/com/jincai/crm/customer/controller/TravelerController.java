@@ -28,7 +28,7 @@ public class TravelerController {
      * 分页查询出行人（含数据权限过滤）
      */
     @GetMapping("/travelers/page")
-    @PreAuthorize("hasAuthority('MENU_CUSTOMER')")
+    @PreAuthorize("hasAuthority('MENU_TRAVELER_MANAGE')")
     public ApiResponse<PageResult<Traveler>> page(
         @RequestParam(defaultValue = "1") int page,
         @RequestParam(defaultValue = "10") int size,

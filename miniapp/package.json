@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "description": "袋鼠旅客通微信小程序",
+  "scripts": {
+    "test": "node --test"
+  },
   "dependencies": {
     "@vant/weapp": "^1.11.7"
   }

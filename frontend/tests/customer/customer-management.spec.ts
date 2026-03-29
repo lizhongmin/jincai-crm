@@ -1,30 +1,36 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { mockLoginToken, setupMockApi } from '../support/mockApi';
 
 test.describe('Customer Management', () => {
-  test('should navigate to customer management page when authenticated', async ({ page }) => {
-    // This test assumes the backend is running and authentication works
-    // In a real CI environment, you would need to:
-    // 1. Start the backend server
-    // 2. Start the frontend dev server
-    // 3. Run the tests
+  test.beforeEach(async ({ page }) => {
+    await mockLoginToken(page);
+    await setupMockApi(page, {
+      menuPaths: ['/customers', '/dashboard']
+    });
+  });
 
-    // For now, we'll just check that the page loads without errors
-    test.skip('Skipping customer management tests - requires backend server');
+  test('should create and edit customer in customer page', async ({ page }) => {
+    await page.goto('/customers');
+    await expect(page).toHaveURL(/.*customers/);
+    await expect(page.getByText('Auto Customer A')).toBeVisible();
 
-    // Example of what the test would look like when backend is available:
-    /*
-    await page.goto('/');
-    await page.getByPlaceholder('用户名').fill('admin');
-    await page.getByPlaceholder('密码').fill('Admin@123');
-    await page.getByRole('button', { name: '登录' }).click();
-    await expect(page).toHaveURL(/.*dashboard/);
+    await page.locator('.list-toolbar .toolbar-row .ant-btn-primary').first().click();
 
-    // Navigate to customer management
-    await page.getByRole('link', { name: '客户管理' }).click();
-    await expect(page).toHaveURL(/.*customer/);
+    const drawer = page.locator('.ant-drawer-open');
+    await expect(drawer).toBeVisible();
+    const textInputs = drawer.locator('input.ant-input');
+    await textInputs.nth(0).fill('E2E Customer');
+    await textInputs.nth(1).fill('13900000002');
+    await drawer.locator('.ant-drawer-header .ant-btn-primary').click();
 
-    // Should show customer table
-    await expect(page.getByText('客户列表')).toBeVisible();
-    */
+    const createdRow = page.locator('.customer-table .ant-table-row', { hasText: 'E2E Customer' }).first();
+    await expect(createdRow).toBeVisible();
+
+    await createdRow.locator('.ant-btn-link').first().click();
+    const editDrawer = page.locator('.ant-drawer-open');
+    await editDrawer.locator('input.ant-input').nth(0).fill('E2E Customer Updated');
+    await editDrawer.locator('.ant-drawer-header .ant-btn-primary').click();
+
+    await expect(page.locator('.customer-table .ant-table-row', { hasText: 'E2E Customer Updated' }).first()).toBeVisible();
   });
 });

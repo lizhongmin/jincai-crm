@@ -17,6 +17,9 @@ Thumbs.db
 
 # Uploads
 uploads/
+/miniapp/node_modules/
+/miniapp/miniprogram_npm/
+/miniapp/package-lock.json
 
 # 本地环境配置（含敏感信息，不提交到版本库）
 backend/src/main/resources/application-local.yml
@@ -27,3 +30,4 @@ backend/src/main/resources/application-local.yaml
 
 # 增强脚本临时文件
 *.enhanced
+/logs/

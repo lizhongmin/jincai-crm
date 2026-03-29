@@ -2,6 +2,7 @@ package com.jincai.crm.config;
 
 import com.jincai.crm.security.JwtAuthFilter;
 import com.jincai.crm.security.JwtProperties;
+import com.jincai.crm.miniapp.MiniAppProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,7 +21,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableMethodSecurity
-@EnableConfigurationProperties(JwtProperties.class)
+@EnableConfigurationProperties({JwtProperties.class, MiniAppProperties.class})
 public class SecurityConfig {
 
     @Bean
@@ -35,7 +36,14 @@ public class SecurityConfig {
                 response.getWriter().write("{\"success\":false,\"code\":\"UNAUTHORIZED\",\"message\":\"未登录或登录已失效\"}");
             }))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/login", "/auth/login-state", "/auth/captcha", "/actuator/health").permitAll()
+                .requestMatchers(
+                    "/auth/login",
+                    "/auth/login-state",
+                    "/auth/captcha",
+                    "/miniapp/auth/login",
+                    "/miniapp/auth/bind",
+                    "/actuator/health"
+                ).permitAll()
                 .anyRequest().authenticated())
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

@@ -2,6 +2,10 @@
   "navigationBarTitleText": "工作台",
   "usingComponents": {
     "van-button": "@vant/weapp/button/index",
+    "van-cell": "@vant/weapp/cell/index",
+    "van-cell-group": "@vant/weapp/cell-group/index",
+    "van-grid": "@vant/weapp/grid/index",
+    "van-grid-item": "@vant/weapp/grid-item/index",
     "van-notice-bar": "@vant/weapp/notice-bar/index",
     "van-tag": "@vant/weapp/tag/index"
   }

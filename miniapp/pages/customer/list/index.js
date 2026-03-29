@@ -4,11 +4,12 @@ const { SOURCE_OPTIONS, INTENTION_LEVEL_OPTIONS, findOptionLabel } = require('..
 const { readEventValue } = require('../../../utils/event-value');
 
 const TEXT = {
-  loadFailed: '\u52a0\u8f7d\u5ba2\u6237\u5931\u8d25',
-  unknownSource: '\u672a\u77e5\u6765\u6e90',
-  unsetIntention: '\u672a\u8bbe\u7f6e',
-  noMoreData: '\u6ca1\u6709\u66f4\u591a\u5ba2\u6237\u4e86'
+  loadFailed: '加载客户失败',
+  unknownSource: '未知来源',
+  unsetIntention: '未设置'
 };
+
+const VIEW_MAP = ['all', 'high', 'recent'];
 
 function mapCustomer(item) {
   return {
@@ -21,20 +22,15 @@ function mapCustomer(item) {
 Page({
   data: {
     keyword: '',
-    activeView: 'all',
-    viewOptions: [
-      { key: 'all', label: '全部' },
-      { key: 'high', label: '高意向' },
-      { key: 'recent', label: '最近更新' }
-    ],
+    activeTab: 0,
     customers: [],
     visibleCustomers: [],
     page: 1,
     size: 10,
     total: 0,
     loading: false,
-    summary: {
-      total: 0,
+    stats: {
+      all: 0,
       high: 0,
       recent: 0
     }
@@ -46,6 +42,7 @@ Page({
       wx.reLaunch({ url: '/pages/launch/index' });
       return;
     }
+
     this.loadCustomers(true);
   },
 
@@ -54,9 +51,10 @@ Page({
   },
 
   onReachBottom() {
-    if (this.data.customers.length >= this.data.total || this.data.loading) {
+    if (this.data.loading || this.data.customers.length >= this.data.total) {
       return;
     }
+
     this.loadCustomers(false);
   },
 
@@ -68,18 +66,15 @@ Page({
     this.loadCustomers(true);
   },
 
-  handleCreate() {
-    wx.navigateTo({ url: '/pages/customer/form/index' });
-  },
-
-  handleViewChange(event) {
-    const key = event.currentTarget.dataset.key;
-    if (!key || key === this.data.activeView) {
+  handleTabChange(event) {
+    const detail = readEventValue(event.detail);
+    const nextTab = Number(detail && detail.name !== undefined ? detail.name : detail);
+    if (Number.isNaN(nextTab) || nextTab === this.data.activeTab) {
       return;
     }
 
-    this.setData({ activeView: key });
-    this.applyView();
+    this.setData({ activeTab: nextTab });
+    this.applyFilter();
   },
 
   handleOpenDetail(event) {
@@ -87,7 +82,12 @@ Page({
     if (!id) {
       return;
     }
+
     wx.navigateTo({ url: `/pages/customer/detail/index?id=${id}` });
+  },
+
+  handleCreate() {
+    wx.navigateTo({ url: '/pages/customer/form/index' });
   },
 
   loadCustomers(reset) {
@@ -106,18 +106,18 @@ Page({
       ownerScope: 'mine'
     })
       .then((result) => {
-        const mappedItems = (result.items || []).map(mapCustomer);
-        const items = reset ? mappedItems : this.data.customers.concat(mappedItems);
+        const incoming = (result.items || []).map(mapCustomer);
+        const customers = reset ? incoming : this.data.customers.concat(incoming);
 
         this.setData({
-          customers: items,
+          customers,
           page: result.page || nextPage,
           size: result.size || this.data.size,
           total: result.total || 0
         });
 
-        this.refreshSummary();
-        this.applyView();
+        this.updateStats();
+        this.applyFilter();
       })
       .catch((error) => {
         wx.showToast({ title: error.message || TEXT.loadFailed, icon: 'none' });
@@ -128,28 +128,28 @@ Page({
       });
   },
 
-  refreshSummary() {
+  updateStats() {
     const all = this.data.customers;
     const high = all.filter((item) => item.intentionLevel === 'HIGH').length;
-    const recent = all.filter((item) => Boolean(item.updatedAt)).slice(0, 7).length;
+    const recent = all.filter((item) => Boolean(item.updatedAt)).length;
 
     this.setData({
-      summary: {
-        total: all.length,
+      stats: {
+        all: all.length,
         high,
         recent
       }
     });
   },
 
-  applyView() {
-    const activeView = this.data.activeView;
+  applyFilter() {
+    const viewKey = VIEW_MAP[this.data.activeTab] || 'all';
     const source = this.data.customers;
 
     let visibleCustomers = source;
-    if (activeView === 'high') {
+    if (viewKey === 'high') {
       visibleCustomers = source.filter((item) => item.intentionLevel === 'HIGH');
-    } else if (activeView === 'recent') {
+    } else if (viewKey === 'recent') {
       visibleCustomers = source.filter((item) => Boolean(item.updatedAt));
     }
 

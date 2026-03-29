@@ -1,29 +1,26 @@
 # Travel CRM Monorepo
 
-面向旅行社的一期 CRM 系统，包含：
+闈㈠悜鏃呰绀剧殑涓€鏈?CRM 绯荤粺锛屽寘鍚細
 
-- `backend/`：Spring Boot 3 后端（组织、RBAC、客户、产品、订单流程、财务、报表、附件、审计）
-- `frontend/`：Vue 3 + TypeScript + Ant Design Vue 管理后台（PC）
-
-## 快速启动
-
-### 1) 后端
+- `backend/`锛歋pring Boot 3 鍚庣锛堢粍缁囥€丷BAC銆佸鎴枫€佷骇鍝併€佽鍗曟祦绋嬨€佽储鍔°€佹姤琛ㄣ€侀檮浠躲€佸璁★級
+- `frontend/`锛歏ue 3 + TypeScript + Ant Design Vue 绠＄悊鍚庡彴锛圥C锛?
+## 蹇€熷惎鍔?
+### 1) 鍚庣
 
 ```bash
 cd backend
 mvn spring-boot:run
 ```
 
-环境变量（可选）：
-
+鐜鍙橀噺锛堝彲閫夛級锛?
 - `DB_URL` / `DB_USER` / `DB_PASSWORD`
 - `REDIS_HOST` / `REDIS_PORT`
 - `JWT_SECRET`
 - `UPLOAD_DIR`
 
-默认管理员账号：`admin / Admin@123`
+榛樿绠＄悊鍛樿处鍙凤細`admin / Admin@123`
 
-### 2) 前端
+### 2) 鍓嶇
 
 ```bash
 cd frontend
@@ -31,27 +28,61 @@ npm install
 npm run dev
 ```
 
-默认代理：`/api -> http://localhost:8080`
+榛樿浠ｇ悊锛歚/api -> http://localhost:8080`
 
-## 已实现 API（核心）
+## 宸插疄鐜?API锛堟牳蹇冿級
 
-- 鉴权：`POST /auth/login`、`GET /auth/me`
-- 菜单权限：`GET /permissions/menus`
-- 角色授权：`POST /roles/{id}/grant`、`GET /roles/{id}/permissions`
-- 组织：`CRUD /departments`、`CRUD /users`、`CRUD /roles`
-- 客户：`CRUD /customers`、`CRUD /customers/{id}/travelers`、`POST /customers/import`
-- 产品：`CRUD /routes`、`CRUD /departures`、`CRUD /departures/{id}/prices`
-- 订单：`CRUD /orders`、`POST /orders/{id}/submit`、`POST /orders/{id}/approve`、`POST /orders/{id}/reject`
-- 流程：`GET /workflow/templates`、`POST /workflow/templates`、`PUT /workflow/templates/{id}`、`DELETE /workflow/templates/{id}`
-- 财务：`POST /orders/{id}/receivables`、`POST /receipts`、`POST /refunds`、`POST /payables`、`POST /payments`、`POST /finance/{id}/review`
-- 报表：`GET /reports/sales-funnel`、`GET /reports/cashflow-aging`、`GET /reports/profit`
-- 报表导出：`GET /reports/sales-funnel/export`、`GET /reports/cashflow-aging/export`、`GET /reports/profit/export`
+- 閴存潈锛歚POST /auth/login`銆乣GET /auth/me`
+- 鑿滃崟鏉冮檺锛歚GET /permissions/menus`
+- 瑙掕壊鎺堟潈锛歚POST /roles/{id}/grant`銆乣GET /roles/{id}/permissions`
+- 缁勭粐锛歚CRUD /departments`銆乣CRUD /users`銆乣CRUD /roles`
+- 瀹㈡埛锛歚CRUD /customers`銆乣CRUD /customers/{id}/travelers`銆乣POST /customers/import`
+- 浜у搧锛歚CRUD /routes`銆乣CRUD /departures`銆乣CRUD /departures/{id}/prices`
+- 璁㈠崟锛歚CRUD /orders`銆乣POST /orders/{id}/submit`銆乣POST /orders/{id}/approve`銆乣POST /orders/{id}/reject`
+- 娴佺▼锛歚GET /workflow/templates`銆乣POST /workflow/templates`銆乣PUT /workflow/templates/{id}`銆乣DELETE /workflow/templates/{id}`
+- 璐㈠姟锛歚POST /orders/{id}/receivables`銆乣POST /receipts`銆乣POST /refunds`銆乣POST /payables`銆乣POST /payments`銆乣POST /finance/{id}/review`
+- 鎶ヨ〃锛歚GET /reports/sales-funnel`銆乣GET /reports/cashflow-aging`銆乣GET /reports/profit`
+- 鎶ヨ〃瀵煎嚭锛歚GET /reports/sales-funnel/export`銆乣GET /reports/cashflow-aging/export`銆乣GET /reports/profit/export`
 
-## 测试
+## 娴嬭瘯
 
 ```bash
 cd backend
 mvn test
 ```
 
-当前环境下若出现 `JAVA_HOME` 未配置，请先安装 JDK 17 并设置 `JAVA_HOME`。
+褰撳墠鐜涓嬭嫢鍑虹幇 `JAVA_HOME` 鏈厤缃紝璇峰厛瀹夎 JDK 17 骞惰缃?`JAVA_HOME`銆?
+
+## 自动化测试（本地执行）
+
+### Frontend（Vitest + Playwright）
+
+```bash
+cd frontend
+npm install
+npm run test:unit
+npm run test:coverage
+npm run test:e2e:chromium
+```
+
+- 覆盖率报告目录：`frontend/coverage/unit/`
+- Web 自动化默认使用 Chromium
+
+### Backend（Spring Boot Test + MockMvc）
+
+```bash
+cd backend
+mvn test
+mvn verify -Pcoverage-gate
+```
+
+- 覆盖率报告目录：`backend/target/coverage/backend/`
+- `coverage-gate` profile 开启 70% 行覆盖率门禁
+
+### Miniapp（Node Test Runner）
+
+```bash
+cd miniapp
+npm run test
+```
+

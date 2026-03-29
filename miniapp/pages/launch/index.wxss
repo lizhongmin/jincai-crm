@@ -1,0 +1,98 @@
+.login-page {
+  min-height: 100vh;
+  padding: 20rpx 24rpx 36rpx;
+  background: #f5f7f9;
+}
+
+.login-header {
+  padding: 8rpx 2rpx 16rpx;
+}
+
+.login-kicker {
+  display: inline-flex;
+  min-height: 38rpx;
+  padding: 0 14rpx;
+  border-radius: 20rpx;
+  background: #e6f0eb;
+  color: #1f6b57;
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.login-title {
+  margin-top: 16rpx;
+  font-size: 42rpx;
+  line-height: 1.2;
+  color: #16362f;
+  font-weight: 700;
+}
+
+.login-subtitle {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #6f837c;
+}
+
+.login-panel {
+  margin-top: 14rpx;
+  padding: 20rpx;
+  border-radius: 16rpx;
+  border: 1rpx solid #e5ece8;
+  background: #ffffff;
+}
+
+.login-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10rpx;
+}
+
+.login-panel-title {
+  font-size: 28rpx;
+  color: #16362f;
+  font-weight: 700;
+}
+
+.login-status-row {
+  margin-top: 14rpx;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.login-status-text {
+  font-size: 26rpx;
+  color: #2d4942;
+  line-height: 1.5;
+}
+
+.login-error-block {
+  margin-top: 16rpx;
+  padding-top: 14rpx;
+  border-top: 1rpx solid #edf2ef;
+}
+
+.login-error-text {
+  font-size: 24rpx;
+  color: #7a8d86;
+  line-height: 1.6;
+}
+
+.login-actions {
+  margin-top: 14rpx;
+  display: flex;
+  gap: 12rpx;
+}
+
+.login-action-item {
+  flex: 1;
+}
+
+.login-primary-btn,
+.login-secondary-btn {
+  width: 100%;
+  height: 80rpx;
+  line-height: 80rpx;
+  border-radius: 12rpx;
+}

@@ -42,7 +42,7 @@ public class CustomerController {
     }
 
     @GetMapping("/page")
-    @PreAuthorize("hasAuthority('MENU_CUSTOMER')")
+    @PreAuthorize("hasAuthority('MENU_CUSTOMER_MANAGE')")
     public ApiResponse<PageResult<CustomerView>> page(
         @RequestParam(defaultValue = "1") int page,
         @RequestParam(defaultValue = "10") int size,
@@ -61,6 +61,12 @@ public class CustomerController {
             log.error("获取客户分页列表失败 - 页码: {}, 大小: {}", page, size, e);
             throw e;
         }
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('BTN_TRAVELER_VIEW')")
+    public ApiResponse<CustomerView> detail(@PathVariable String id) {
+        return ApiResponse.ok(customerService.detailVisible(id, SecurityUtils.currentUser()));
     }
 
     @PostMapping

@@ -23,6 +23,9 @@ app:
   jwt:
     secret: test-secret-test-secret-test-secret
     expiration-seconds: 3600
+  miniapp:
+    mock-enabled: true
+    mock-code-prefix: "mock:"
   file:
     upload-dir: ./target/test-uploads
   order:

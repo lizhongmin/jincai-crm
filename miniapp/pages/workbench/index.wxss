@@ -1,161 +1,70 @@
 .wb-page {
   min-height: 100vh;
-  padding: 20rpx 24rpx 40rpx;
+  padding: 20rpx 24rpx 36rpx;
   background: #f5f7f9;
 }
 
 .wb-header {
-  padding: 8rpx 4rpx 18rpx;
-}
-
-.wb-kicker {
-  display: inline-flex;
-  min-height: 40rpx;
-  padding: 0 14rpx;
-  border-radius: 20rpx;
-  background: #e6f0eb;
-  color: #1f6b57;
-  font-size: 22rpx;
-  font-weight: 700;
+  padding: 6rpx 2rpx 14rpx;
 }
 
 .wb-title {
-  margin-top: 16rpx;
-  font-size: 48rpx;
+  font-size: 42rpx;
   line-height: 1.2;
   font-weight: 700;
-  color: #142f29;
+  color: #16362f;
 }
 
-.wb-sub {
-  margin-top: 10rpx;
-  font-size: 26rpx;
-  color: #5f736c;
+.wb-subtitle {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #6f837c;
 }
 
 .wb-section {
-  margin-top: 16rpx;
-  padding: 24rpx;
-  border-radius: 18rpx;
-  background: #fff;
+  margin-top: 14rpx;
+  padding: 20rpx;
+  border-radius: 16rpx;
   border: 1rpx solid #e5ece8;
+  background: #ffffff;
 }
 
 .wb-section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12rpx;
+  gap: 10rpx;
 }
 
 .wb-section-title {
-  font-size: 30rpx;
+  font-size: 28rpx;
   font-weight: 700;
   color: #16362f;
+  margin-bottom: 12rpx;
 }
 
-.wb-metric-grid {
+.wb-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12rpx;
-  margin-top: 16rpx;
+  gap: 10rpx;
 }
 
 .wb-metric-item {
-  padding: 18rpx 12rpx;
-  border-radius: 14rpx;
-  border: 1rpx solid #e7eeea;
+  padding: 16rpx 10rpx;
+  border-radius: 12rpx;
+  border: 1rpx solid #e8efeb;
   background: #f9fbfa;
   text-align: center;
 }
 
 .wb-metric-value {
-  font-size: 34rpx;
+  font-size: 32rpx;
   font-weight: 700;
   color: #16362f;
 }
 
 .wb-metric-label {
-  margin-top: 8rpx;
-  font-size: 22rpx;
-  color: #6f837c;
-}
-
-.wb-action-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10rpx;
-  margin-top: 16rpx;
-}
-
-.wb-action-item {
-  min-height: 90rpx;
-  padding: 12rpx 8rpx;
-  border-radius: 12rpx;
-  border: 1rpx solid #d7e4de;
-  background: #f8fbf9;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-
-.wb-action-title {
-  font-size: 24rpx;
-  line-height: 1.4;
-  font-weight: 600;
-  color: #1f6b57;
-}
-
-.wb-todo-list {
-  margin-top: 16rpx;
-  display: flex;
-  flex-direction: column;
-  gap: 12rpx;
-}
-
-.wb-todo-item {
-  padding: 18rpx;
-  border-radius: 14rpx;
-  border: 1rpx solid #e5ece8;
-  background: #fafcfb;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16rpx;
-}
-
-.wb-todo-main {
-  flex: 1;
-  min-width: 0;
-}
-
-.wb-todo-title {
-  font-size: 28rpx;
-  line-height: 1.35;
-  color: #16362f;
-  font-weight: 700;
-}
-
-.wb-todo-meta {
   margin-top: 6rpx;
-  font-size: 24rpx;
-  color: #6f837c;
-}
-
-.wb-todo-side {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8rpx;
-}
-
-.wb-todo-level {
   font-size: 22rpx;
-  color: #1f6b57;
-  font-weight: 600;
-}
-
-.wb-todo-btn {
-  min-width: 110rpx;
+  color: #6f837c;
 }

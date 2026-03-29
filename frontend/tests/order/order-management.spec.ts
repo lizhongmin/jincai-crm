@@ -1,30 +1,36 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { mockLoginToken, setupMockApi } from '../support/mockApi';
 
-test.describe('Order Management', () => {
-  test('should navigate to order management page when authenticated', async ({ page }) => {
-    // This test assumes the backend is running and authentication works
-    // In a real CI environment, you would need to:
-    // 1. Start the backend server
-    // 2. Start the frontend dev server
-    // 3. Run the tests
+test.describe('订单管理流程', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockLoginToken(page);
+  });
 
-    // For now, we'll just check that the page loads without errors
-    test.skip('Skipping order management tests - requires backend server');
+  test('应支持订单提交并审批通过的完整流程', async ({ page }) => {
+    const state = await setupMockApi(page, {
+      menuPaths: ['/orders', '/dashboard']
+    });
 
-    // Example of what the test would look like when backend is available:
-    /*
-    await page.goto('/');
-    await page.getByPlaceholder('用户名').fill('admin');
-    await page.getByPlaceholder('密码').fill('Admin@123');
-    await page.getByRole('button', { name: '登录' }).click();
-    await expect(page).toHaveURL(/.*dashboard/);
+    const row = page.locator('.ant-table-row', { hasText: 'SO-001' }).first();
 
-    // Navigate to order management
-    await page.getByRole('link', { name: '订单管理' }).click();
-    await expect(page).toHaveURL(/.*order/);
+    await test.step('打开订单页面并确认目标订单可见', async () => {
+      await page.goto('/orders');
+      await expect(page).toHaveURL(/.*orders/);
+      await expect(row).toBeVisible();
+    });
 
-    // Should show order table
-    await expect(page.getByText('订单列表')).toBeVisible();
-    */
+    await test.step('执行提交操作并确认动作日志更新', async () => {
+      await row.locator('.ant-btn-primary').click();
+      await page.locator('.ant-drawer-open .ant-btn-primary').click();
+      await expect.poll(() => state.orderActionLog.length).toBe(1);
+    });
+
+    await test.step('执行审批操作并确认动作日志更新', async () => {
+      await row.locator('.ant-btn-primary').click();
+      await page.locator('.ant-drawer-open .ant-btn-primary').click();
+      await expect.poll(() => state.orderActionLog.length).toBe(2);
+    });
+
+    expect(state.orderActionLog).toEqual(['SUBMIT', 'APPROVE']);
   });
 });

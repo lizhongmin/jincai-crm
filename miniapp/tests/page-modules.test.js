@@ -22,6 +22,7 @@ function installMiniAppGlobals() {
     showToast() {},
     reLaunch() {},
     navigateTo() {},
+    switchTab() {},
     redirectTo() {},
     stopPullDownRefresh() {},
     setNavigationBarTitle() {},

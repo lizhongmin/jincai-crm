@@ -98,7 +98,8 @@
                         <div class="section-title">数据权限</div>
                         <a-radio-group v-model:value="activeDataScope" class="data-scope-radio" :disabled="!grantEditable">
                           <a-radio value="ALL">全部数据</a-radio>
-                          <a-radio value="DEPARTMENT_TREE">本部门数据</a-radio>
+                          <a-radio value="DEPARTMENT_TREE">本部门及子部门数据</a-radio>
+                          <a-radio value="DEPARTMENT">本部门数据</a-radio>
                           <a-radio value="SELF">仅本人数据</a-radio>
                         </a-radio-group>
                       </div>

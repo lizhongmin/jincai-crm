@@ -14,7 +14,7 @@ spring:
   datasource:
     # 生产环境必须通过环境变量 DB_URL / DB_USER / DB_PASSWORD 注入，不要在此写明文密码
     # 示例: export DB_URL="jdbc:mysql://your-host:3306/crm?..."
-    url: ${DB_URL:jdbc:mysql://localhost:3306/crm?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
+    url: ${DB_URL:jdbc:mysql://rm-2zed2788wv8404p1alo.mysql.rds.aliyuncs.com:8306/crm?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
     username: ${DB_USER:root}
     password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -40,16 +40,21 @@ spring:
   data:
     redis:
       # 生产环境通过环境变量 REDIS_HOST / REDIS_PORT / REDIS_PASSWORD 注入
-      host: ${REDIS_HOST:localhost}
+      host: ${REDIS_HOST:123.56.146.152}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
+      password: ${REDIS_PASSWORD:RuiYu@2023}
 
 app:
   jwt:
     # 生产环境必须通过环境变量 JWT_SECRET 注入，且不能少于 32 字节（256 位），不要在此写明文密钥
     # 生成示例: openssl rand -hex 32
-    secret: ${JWT_SECRET:}
+    secret: ${JWT_SECRET:cf84815551e41c9a43c38a9548a7f360fec41d8b468fa4e724dc997365b0ed1b}
     expiration-seconds: ${JWT_EXPIRE_SECONDS:86400}
+  miniapp:
+    app-id: ${WECHAT_MINIAPP_APP_ID:wx8022614930c8e8f5}
+    secret: ${WECHAT_MINIAPP_SECRET:d8226ce88cbd43ee8ef75987c36e8867}
+    mock-enabled: ${WECHAT_MINIAPP_MOCK_ENABLED:false}
+    mock-code-prefix: ${WECHAT_MINIAPP_MOCK_CODE_PREFIX:mock:}
   file:
     # 文件上传目录，建议使用绝对路径或挂载外部存储
     upload-dir: ${UPLOAD_DIR:./uploads}
@@ -57,11 +62,3 @@ app:
     auto-cancel:
       enabled: ${ORDER_AUTO_CANCEL_ENABLED:true}
       cron: ${ORDER_AUTO_CANCEL_CRON:0 */10 * * * ?}
-
-logging:
-  level:
-    root: INFO
-    com.jincai.crm: INFO
-    org.hibernate.SQL: WARN
-    org.springframework.security: WARN
-    org.springframework.web: WARN

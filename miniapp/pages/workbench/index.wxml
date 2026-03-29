@@ -1,13 +1,14 @@
 <view class="wb-page">
   <view class="wb-header">
-    <text class="wb-kicker">袋鼠旅客通</text>
     <view class="wb-title">工作台</view>
-    <view class="wb-sub">今天先处理高优先客户与待审批事项</view>
+    <view class="wb-subtitle">今天优先处理高意向客户与审批任务</view>
   </view>
+
+  <van-notice-bar left-icon="volume-o" text="当前有 3 项待办，请优先处理高优先任务。" />
 
   <view class="wb-section">
     <view class="wb-section-title">关键指标</view>
-    <view class="wb-metric-grid">
+    <view class="wb-metrics">
       <view wx:for="{{metrics}}" wx:key="id" class="wb-metric-item">
         <view class="wb-metric-value">{{item.value}}</view>
         <view class="wb-metric-label">{{item.label}}</view>
@@ -17,18 +18,16 @@
 
   <view class="wb-section">
     <view class="wb-section-title">快捷操作</view>
-    <view class="wb-action-grid">
-      <view
+    <van-grid column-num="4" gutter="10" border="{{false}}">
+      <van-grid-item
         wx:for="{{quickActions}}"
         wx:key="id"
-        class="wb-action-item"
+        text="{{item.title}}"
         data-url="{{item.url}}"
         data-tab="{{item.tab}}"
         bindtap="handleOpen"
-      >
-        <text class="wb-action-title">{{item.title}}</text>
-      </view>
-    </view>
+      />
+    </van-grid>
   </view>
 
   <view class="wb-section">
@@ -36,26 +35,18 @@
       <view class="wb-section-title">待办清单</view>
       <van-tag type="primary" plain>今日</van-tag>
     </view>
-    <view class="wb-todo-list">
-      <view wx:for="{{todos}}" wx:key="id" class="wb-todo-item">
-        <view class="wb-todo-main">
-          <view class="wb-todo-title">{{item.title}}</view>
-          <view class="wb-todo-meta">{{item.meta}}</view>
-        </view>
-        <view class="wb-todo-side">
-          <view class="wb-todo-level">{{item.level}}</view>
-          <van-button
-            size="small"
-            type="primary"
-            custom-class="wb-todo-btn"
-            data-url="{{item.url}}"
-            data-tab="{{item.tab}}"
-            bindtap="handleOpen"
-          >
-            处理
-          </van-button>
-        </view>
-      </view>
-    </view>
+    <van-cell-group inset="{{false}}" border="{{false}}">
+      <van-cell
+        wx:for="{{todos}}"
+        wx:key="id"
+        title="{{item.title}}"
+        label="{{item.meta}}"
+        value="{{item.level}}"
+        is-link
+        data-url="{{item.url}}"
+        data-tab="{{item.tab}}"
+        bindtap="handleOpen"
+      />
+    </van-cell-group>
   </view>
 </view>

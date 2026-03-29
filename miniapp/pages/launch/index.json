@@ -1,1 +1,9 @@
-{"navigationBarTitleText":"登录中"}
+{
+  "navigationBarTitleText": "登录中",
+  "usingComponents": {
+    "van-button": "@vant/weapp/button/index",
+    "van-loading": "@vant/weapp/loading/index",
+    "van-notice-bar": "@vant/weapp/notice-bar/index",
+    "van-tag": "@vant/weapp/tag/index"
+  }
+}

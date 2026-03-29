@@ -49,24 +49,37 @@ public class AuthService {
     }
 
     public LoginResponse login(LoginRequest request) {
-        String normalizedUsername = request.username() == null ? null : request.username().trim();
-        log.info("Attempting login for user: {}", normalizedUsername);
-        loginSecurityService.ensureLoginAllowedAndValidateCaptcha(normalizedUsername, request.captchaId(), request.captchaCode());
+        LoginUser user = authenticateCredentials(request.username(), request.password(), true, request.captchaId(), request.captchaCode());
+        OrgUser orgUser = userRepository.findById(user.getUserId())
+            .orElseThrow(() -> new BusinessException("error.user.notFound"));
+        String token = jwtService.generateToken(user.getUsername());
+        return new LoginResponse(token, orgUser.getId(), orgUser.getUsername(), orgUser.getFullName(), user.getRoleCodes());
+    }
+
+    public LoginUser authenticateCredentials(String username, String password, boolean requireCaptcha, String captchaId, String captchaCode) {
+        String normalizedUsername = username == null ? null : username.trim();
+        log.info("Attempting credential authentication for user: {}", normalizedUsername);
+        if (requireCaptcha) {
+            loginSecurityService.ensureLoginAllowedAndValidateCaptcha(normalizedUsername, captchaId, captchaCode);
+        } else {
+            LoginStateResponse state = loginSecurityService.getLoginState(normalizedUsername);
+            if (state.locked()) {
+                long minutes = state.lockSeconds() <= 0 ? 0 : (long) Math.ceil(state.lockSeconds() / 60.0);
+                throw new BusinessException("error.auth.accountLocked", minutes);
+            }
+        }
         try {
             Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.username(), request.password()));
+                new UsernamePasswordAuthenticationToken(username, password));
             LoginUser user = (LoginUser) authentication.getPrincipal();
-            OrgUser orgUser = userRepository.findById(user.getUserId())
-                .orElseThrow(() -> new BusinessException("error.user.notFound"));
             loginSecurityService.onLoginSuccess(normalizedUsername);
-            String token = jwtService.generateToken(user.getUsername());
-            log.info("Login successful for user: {}", normalizedUsername);
-            return new LoginResponse(token, orgUser.getId(), orgUser.getUsername(), orgUser.getFullName(), user.getRoleCodes());
+            log.info("Credential authentication successful for user: {}", normalizedUsername);
+            return user;
         } catch (DisabledException ex) {
-            log.warn("Login failed: account disabled for user: {}", normalizedUsername);
+            log.warn("Credential authentication failed: account disabled for user: {}", normalizedUsername);
             throw ex;
         } catch (AuthenticationException ex) {
-            log.warn("Login failed: authentication rejected for user: {}", normalizedUsername);
+            log.warn("Credential authentication failed for user: {}", normalizedUsername);
             LoginStateResponse state = loginSecurityService.onLoginFailure(normalizedUsername);
             if (state.locked()) {
                 long minutes = state.lockSeconds() <= 0 ? 0 : (long) Math.ceil(state.lockSeconds() / 60.0);

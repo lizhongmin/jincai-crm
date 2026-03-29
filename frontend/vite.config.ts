@@ -6,11 +6,20 @@ export default defineConfig({
     environment: 'happy-dom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    include: ['src/test/stores/**/*.test.ts', 'src/test/utils/**/*.test.ts'],
+    exclude: ['tests/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      include: ['src/**/*.{ts,vue}'],
-      exclude: ['src/test/**', 'src/main.ts', 'src/router/**']
+      reportsDirectory: './coverage/unit',
+      include: ['src/stores/**/*.ts', 'src/utils/**/*.ts'],
+      exclude: ['src/test/**'],
+      thresholds: {
+        lines: 70,
+        functions: 70,
+        branches: 70,
+        statements: 70
+      }
     }
   },
   plugins: [vue()],

@@ -1,7 +1,7 @@
 <view class="pf-page">
-  <view class="pf-card">
+  <view class="pf-user-card">
     <view class="pf-avatar">{{profile && profile.fullName ? profile.fullName.slice(0, 1) : '袋'}}</view>
-    <view class="pf-info">
+    <view class="pf-user-main">
       <view class="pf-name">{{profile && (profile.fullName || profile.username) || '袋鼠旅客通用户'}}</view>
       <view class="pf-meta">{{profile && profile.username ? profile.username : '已绑定微信登录'}}</view>
     </view>
@@ -9,8 +9,22 @@
   </view>
 
   <view class="pf-section">
+    <view class="pf-section-title">快捷入口</view>
+    <van-grid column-num="4" gutter="10" border="{{false}}">
+      <van-grid-item
+        wx:for="{{quickEntries}}"
+        wx:key="id"
+        text="{{item.title}}"
+        data-url="{{item.url}}"
+        data-tab="{{item.tab}}"
+        bindtap="handleOpen"
+      />
+    </van-grid>
+  </view>
+
+  <view class="pf-section">
     <view class="pf-section-title">账户设置</view>
-    <van-cell-group inset border="{{false}}">
+    <van-cell-group inset="{{false}}" border="{{false}}">
       <van-cell
         wx:for="{{entries}}"
         wx:key="id"
@@ -24,7 +38,6 @@
   </view>
 
   <view class="pf-section">
-    <view class="pf-section-title">账号管理</view>
     <van-button type="default" block custom-class="pf-logout-btn" bindtap="handleLogout">
       退出登录
     </van-button>

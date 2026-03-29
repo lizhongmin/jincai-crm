@@ -126,6 +126,17 @@ public class CustomerService {
         }
     }
 
+    public CustomerView detailVisible(String id, LoginUser user) {
+        if (user == null) {
+            throw new BusinessException("error.auth.unauthenticated");
+        }
+        Specification<Customer> spec = buildCustomerSpec(user, null, null, null)
+            .and((root, query, cb) -> cb.equal(root.get("id"), id));
+        Customer customer = customerRepository.findOne(spec)
+            .orElseThrow(() -> new BusinessException("error.customer.notFound"));
+        return toView(customer);
+    }
+
     public CustomerView create(CustomerRequest request, LoginUser user) {
         if (user == null) {
             throw new BusinessException("error.auth.unauthenticated");

@@ -1,1 +1,33 @@
-<view class="page-shell"><view class="hero-block"><text class="hero-kicker">袋鼠旅客通</text><view class="hero-title">企业旅行客户平台</view><view class="hero-subtitle">围绕客户、协同和消息建立移动产品框架，让销售与顾问在微信里也能高效工作。</view></view><view class="surface-card panel section-stack"><view><view class="panel-title">正在准备工作台</view><view class="panel-copy">系统会先检查你的登录状态，未绑定账号时会自动进入绑定流程。</view></view><view class="list-card"><view class="list-row"><view class="list-main"><view class="list-title">身份校验中</view><view class="list-desc">{{loadingText}}</view></view><view class="list-aside">处理中</view></view></view></view></view>
+<view class="login-page">
+  <view class="login-header">
+    <view class="login-kicker">袋鼠旅客通</view>
+    <view class="login-title">登录验证</view>
+    <view class="login-subtitle">自动检测微信身份与账号绑定状态</view>
+  </view>
+
+  <van-notice-bar left-icon="volume-o" text="首次使用将自动跳转到账号绑定页。" />
+
+  <view class="login-panel">
+    <view class="login-panel-head">
+      <view class="login-panel-title">身份校验</view>
+      <van-tag type="primary" plain>{{statusTag}}</van-tag>
+    </view>
+
+    <view class="login-status-row">
+      <van-loading wx:if="{{loading}}" size="18px" color="#1f6b57" />
+      <text class="login-status-text">{{statusText}}</text>
+    </view>
+
+    <view wx:if="{{showRetry}}" class="login-error-block">
+      <view class="login-error-text">{{errorText}}</view>
+      <view class="login-actions">
+        <view class="login-action-item">
+          <van-button type="primary" block custom-class="login-primary-btn" bindtap="handleRetry">重试</van-button>
+        </view>
+        <view class="login-action-item">
+          <van-button type="default" block custom-class="login-secondary-btn" bindtap="handleGoBind">去绑定</van-button>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,7 +1,7 @@
 <view class="cl-page">
   <view class="cl-header">
-    <view class="cl-title">我的客户</view>
-    <view class="cl-sub">搜索、筛选并进入客户详情</view>
+    <view class="cl-title">客户</view>
+    <view class="cl-subtitle">列表、筛选与快速新增</view>
   </view>
 
   <view class="cl-toolbar">
@@ -13,61 +13,29 @@
       bind:search="handleSearch"
     />
 
-    <view class="cl-view-tabs">
-      <view
-        wx:for="{{viewOptions}}"
-        wx:key="key"
-        class="cl-view-tab {{activeView === item.key ? 'active' : ''}}"
-        data-key="{{item.key}}"
-        bindtap="handleViewChange"
-      >
-        {{item.label}}
-      </view>
-    </view>
+    <van-tabs active="{{activeTab}}" color="#1f6b57" line-width="24" bind:change="handleTabChange">
+      <van-tab name="0" title="全部({{stats.all}})" />
+      <van-tab name="1" title="高意向({{stats.high}})" />
+      <van-tab name="2" title="最近更新({{stats.recent}})" />
+    </van-tabs>
   </view>
 
-  <view class="cl-summary">
-    <view class="cl-summary-item">
-      <view class="cl-summary-value">{{summary.total}}</view>
-      <view class="cl-summary-label">全部</view>
-    </view>
-    <view class="cl-summary-item">
-      <view class="cl-summary-value">{{summary.high}}</view>
-      <view class="cl-summary-label">高意向</view>
-    </view>
-    <view class="cl-summary-item">
-      <view class="cl-summary-value">{{summary.recent}}</view>
-      <view class="cl-summary-label">最近更新</view>
-    </view>
-  </view>
+  <van-cell-group wx:if="{{visibleCustomers.length}}" inset="{{false}}" border="{{false}}" class="cl-list-group">
+    <van-cell
+      wx:for="{{visibleCustomers}}"
+      wx:key="id"
+      is-link
+      data-id="{{item.id}}"
+      bindtap="handleOpenDetail"
+      title="{{item.name}}"
+      value="详情"
+      label="{{item.phone}} · {{item.sourceLabel}} · {{item.intentionLevelLabel}}"
+    />
+  </van-cell-group>
 
-  <view wx:if="{{visibleCustomers.length}}" class="cl-list">
-    <view wx:for="{{visibleCustomers}}" wx:key="id" class="cl-item" data-id="{{item.id}}" bindtap="handleOpenDetail">
-      <view class="cl-item-head">
-        <view class="cl-item-main">
-          <view class="cl-item-name">{{item.name}}</view>
-          <view class="cl-item-phone">{{item.phone}}</view>
-        </view>
-        <view class="cl-item-arrow">详情</view>
-      </view>
+  <van-empty wx:else class="cl-empty" image="search" description="暂无客户数据" />
 
-      <view class="cl-item-tags">
-        <van-tag type="primary" plain custom-class="cl-tag">{{item.sourceLabel}}</van-tag>
-        <van-tag plain custom-class="cl-tag cl-tag-muted">{{item.intentionLevelLabel}}</van-tag>
-      </view>
-
-      <view class="cl-item-meta">
-        <text>负责人 {{item.ownerUserName || '-'}}</text>
-        <text>{{item.updatedAt || '-'}}</text>
-      </view>
-    </view>
-  </view>
-
-  <van-empty wx:else class="cl-empty" image="search" description="暂无客户，先新增一位客户" />
-
-  <view class="cl-fab-wrap">
-    <van-button type="primary" round custom-class="cl-fab" bindtap="handleCreate">
-      新增客户
-    </van-button>
+  <view class="cl-bottom-bar">
+    <van-button type="primary" block custom-class="cl-create-btn" bindtap="handleCreate">新增客户</van-button>
   </view>
 </view>

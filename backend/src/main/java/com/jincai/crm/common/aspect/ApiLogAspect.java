@@ -42,6 +42,7 @@ public class ApiLogAspect {
     private final TaskExecutor auditLogExecutor;
 
     private static final String TRACE_ID = "traceId";
+    private static final String TRACE_HEADER_NAME = "X-Trace-Id";
 
     /** 需要记录响应体的写操作 HTTP 方法 */
     private static final java.util.Set<String> WRITE_METHODS = java.util.Set.of("POST", "PUT", "PATCH", "DELETE");
@@ -57,18 +58,24 @@ public class ApiLogAspect {
     public Object doAround(ProceedingJoinPoint joinPoint) throws Throwable {
         long startTime = System.currentTimeMillis();
 
-        // 生成 TraceId
-        String traceId = UUID.randomUUID().toString().replace("-", "");
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        HttpServletRequest request = attributes == null ? null : attributes.getRequest();
+        String traceId = resolveTraceId(request);
         MDC.put(TRACE_ID, traceId);
 
-        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attributes == null) {
-            Object result = joinPoint.proceed();
-            MDC.remove(TRACE_ID);
-            return result;
+            try {
+                return joinPoint.proceed();
+            } finally {
+                MDC.remove(TRACE_ID);
+            }
         }
 
-        HttpServletRequest request = attributes.getRequest();
+        HttpServletResponse response = attributes.getResponse();
+        if (response != null) {
+            response.setHeader(TRACE_HEADER_NAME, traceId);
+        }
+
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         String methodName = signature.getDeclaringTypeName() + "." + signature.getName();
 
@@ -149,6 +156,7 @@ public class ApiLogAspect {
 
         return result;
     }
+
     private void fillOperatorInfo(ApiAuditLog apiLog) {
         LoginUser currentUser = SecurityUtils.currentUser();
         if (currentUser == null) {
@@ -178,6 +186,21 @@ public class ApiLogAspect {
             }
         }
         return request.getRemoteAddr();
+    }
+
+    private String resolveTraceId(HttpServletRequest request) {
+        if (request == null) {
+            return generateTraceId();
+        }
+        String traceIdFromRequest = request.getHeader(TRACE_HEADER_NAME);
+        if (traceIdFromRequest == null || traceIdFromRequest.isBlank()) {
+            return generateTraceId();
+        }
+        return traceIdFromRequest.trim();
+    }
+
+    private String generateTraceId() {
+        return UUID.randomUUID().toString().replace("-", "");
     }
 }
 
